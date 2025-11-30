@@ -6,6 +6,8 @@ import ProductPlanning from './pages/ProductPlanning';
 import SupplyDemand from './pages/SupplyDemand';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import Settings from './pages/Settings';
+import Support from './pages/Support';
 import { UserRole } from './types';
 
 const App: React.FC = () => {
@@ -27,9 +29,9 @@ const App: React.FC = () => {
   // Layout for Authenticated User
   const AuthenticatedLayout = () => (
     <div className="flex min-h-screen bg-slate-50">
-      <Sidebar 
-        activePage={activePage} 
-        setActivePage={setActivePage} 
+      <Sidebar
+        activePage={activePage}
+        setActivePage={setActivePage}
         userRole={userRole || UserRole.FARMER}
         onLogout={handleLogout}
       />
@@ -42,8 +44,8 @@ const App: React.FC = () => {
           {activePage === 'models' && <div className="p-12 text-center text-slate-400 font-medium text-lg">Tahmin Modelleri Modülü (Yapım Aşamasında)</div>}
           {activePage === 'climate' && <div className="p-12 text-center text-slate-400 font-medium text-lg">İklim Risk Haritası (Yapım Aşamasında)</div>}
           {activePage === 'reports' && <div className="p-12 text-center text-slate-400 font-medium text-lg">Raporlama Modülü (Yapım Aşamasında)</div>}
-          {activePage === 'settings' && <div className="p-12 text-center text-slate-400 font-medium text-lg">Ayarlar (Yapım Aşamasında)</div>}
-          {activePage === 'help' && <div className="p-12 text-center text-slate-400 font-medium text-lg">Yardım ve Destek (Yapım Aşamasında)</div>}
+          {activePage === 'settings' && <Settings />}
+          {activePage === 'help' && <Support />}
         </div>
       </main>
     </div>
@@ -54,9 +56,9 @@ const App: React.FC = () => {
       <Routes>
         <Route path="/login" element={!isLoggedIn ? <Login onLogin={handleLogin} /> : <Navigate to="/" />} />
         <Route path="/register" element={!isLoggedIn ? <Register onLogin={handleLogin} /> : <Navigate to="/" />} />
-        <Route 
-          path="/" 
-          element={isLoggedIn ? <AuthenticatedLayout /> : <Navigate to="/login" />} 
+        <Route
+          path="/"
+          element={isLoggedIn ? <AuthenticatedLayout /> : <Navigate to="/login" />}
         />
       </Routes>
     </Router>

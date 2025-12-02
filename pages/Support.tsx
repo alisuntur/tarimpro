@@ -31,31 +31,31 @@ const Support: React.FC = () => {
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-800">Yardım ve Destek</h1>
-                    <p className="text-slate-600">Sorularınız için buradayız</p>
+                    <h1 className="text-2xl font-bold text-slate-800 dark:text-white">Yardım ve Destek</h1>
+                    <p className="text-slate-600 dark:text-slate-400">Sorularınız için buradayız</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* FAQ Section */}
                 <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                             <HelpCircle className="text-emerald-600" size={24} />
                             Sıkça Sorulan Sorular
                         </h2>
                         <div className="space-y-3">
                             {faqs.map((faq, index) => (
-                                <div key={index} className="border border-slate-100 rounded-lg overflow-hidden">
+                                <div key={index} className="border border-slate-100 dark:border-slate-700 rounded-lg overflow-hidden">
                                     <button
                                         onClick={() => toggleFaq(index)}
-                                        className="w-full flex justify-between items-center p-4 bg-slate-50 hover:bg-slate-100 transition-colors text-left"
+                                        className="w-full flex justify-between items-center p-4 bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors text-left"
                                     >
-                                        <span className="font-medium text-slate-700">{faq.question}</span>
-                                        {openFaq === index ? <ChevronUp size={20} className="text-slate-500" /> : <ChevronDown size={20} className="text-slate-500" />}
+                                        <span className="font-medium text-slate-700 dark:text-slate-200">{faq.question}</span>
+                                        {openFaq === index ? <ChevronUp size={20} className="text-slate-500 dark:text-slate-400" /> : <ChevronDown size={20} className="text-slate-500 dark:text-slate-400" />}
                                     </button>
                                     {openFaq === index && (
-                                        <div className="p-4 bg-white text-slate-600 border-t border-slate-100">
+                                        <div className="p-4 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-t border-slate-100 dark:border-slate-700">
                                             {faq.answer}
                                         </div>
                                     )}
@@ -65,16 +65,16 @@ const Support: React.FC = () => {
                     </div>
 
                     {/* Contact Form */}
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <h2 className="text-lg font-semibold text-slate-800 mb-4 flex items-center gap-2">
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        <h2 className="text-lg font-semibold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
                             <MessageCircle className="text-emerald-600" size={24} />
                             Bize Ulaşın
                         </h2>
                         <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">Konu</label>
-                                    <select className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white">
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Konu</label>
+                                    <select className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
                                         <option>Genel Soru</option>
                                         <option>Teknik Destek</option>
                                         <option>Öneri / Şikayet</option>
@@ -82,19 +82,19 @@ const Support: React.FC = () => {
                                     </select>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">E-posta</label>
+                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">E-posta</label>
                                     <input
                                         type="email"
-                                        className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
                                         placeholder="ornek@email.com"
                                     />
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-medium text-slate-700 mb-1">Mesajınız</label>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Mesajınız</label>
                                 <textarea
                                     rows={4}
-                                    className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none"
+                                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none bg-white dark:bg-slate-700 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
                                     placeholder="Size nasıl yardımcı olabiliriz?"
                                 ></textarea>
                             </div>
@@ -137,8 +137,8 @@ const Support: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <h3 className="font-semibold text-slate-800 mb-4">Diğer Kaynaklar</h3>
+                    <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+                        <h3 className="font-semibold text-slate-800 dark:text-white mb-4">Diğer Kaynaklar</h3>
                         <ul className="space-y-2">
                             <li>
                                 <a href="#" className="text-emerald-600 hover:text-emerald-700 hover:underline text-sm">Kullanım Kılavuzu</a>

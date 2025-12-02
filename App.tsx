@@ -28,7 +28,7 @@ const App: React.FC = () => {
 
   // Layout for Authenticated User
   const AuthenticatedLayout = () => (
-    <div className="flex min-h-screen bg-slate-50">
+    <div className="flex min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
       <Sidebar
         activePage={activePage}
         setActivePage={setActivePage}
@@ -41,9 +41,9 @@ const App: React.FC = () => {
           {activePage === 'planning' && <ProductPlanning />}
           {activePage === 'supply-demand' && <SupplyDemand />}
           {/* Placeholders for other modules to keep the code concise but routing functional */}
-          {activePage === 'models' && <div className="p-12 text-center text-slate-400 font-medium text-lg">Tahmin Modelleri Modülü (Yapım Aşamasında)</div>}
-          {activePage === 'climate' && <div className="p-12 text-center text-slate-400 font-medium text-lg">İklim Risk Haritası (Yapım Aşamasında)</div>}
-          {activePage === 'reports' && <div className="p-12 text-center text-slate-400 font-medium text-lg">Raporlama Modülü (Yapım Aşamasında)</div>}
+          {activePage === 'models' && <div className="p-12 text-center text-slate-400 dark:text-slate-500 font-medium text-lg">Tahmin Modelleri Modülü (Yapım Aşamasında)</div>}
+          {activePage === 'climate' && <div className="p-12 text-center text-slate-400 dark:text-slate-500 font-medium text-lg">İklim Risk Haritası (Yapım Aşamasında)</div>}
+          {activePage === 'reports' && <div className="p-12 text-center text-slate-400 dark:text-slate-500 font-medium text-lg">Raporlama Modülü (Yapım Aşamasında)</div>}
           {activePage === 'settings' && <Settings />}
           {activePage === 'help' && <Support />}
         </div>

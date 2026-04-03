@@ -29,20 +29,20 @@ from security import generate_session_token, hash_session_token, verify_password
 
 
 CROP_LABELS = {
-    "wheat": "Bu?day",
-    "Bugday": "Bu?day",
-    "sunflower": "Ay?i?e?i",
-    "Aycicegi": "Ay?i?e?i",
+    "wheat": "Buğday",
+    "Bugday": "Buğday",
+    "sunflower": "Ayçiçeği",
+    "Aycicegi": "Ayçiçeği",
     "cotton": "Pamuk",
-    "corn": "M?s?r",
-    "Misir": "M?s?r",
-    "sugar_beet": "?eker Pancar?",
+    "corn": "Mısır",
+    "Misir": "Mısır",
+    "sugar_beet": "Şeker Pancarı",
     "olive": "Zeytin",
-    "hazelnut": "F?nd?k",
-    "grape": "?z?m",
+    "hazelnut": "Fındık",
+    "grape": "Üzüm",
     "apple": "Elma",
 }
-MONTH_LABELS = ["Oca", "?ub", "Mar", "Nis", "May", "Haz", "Tem", "A?u", "Eyl", "Eki", "Kas", "Ara"]
+MONTH_LABELS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
 
 
 @asynccontextmanager
@@ -51,7 +51,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Tar?m Yapay Zeka API", lifespan=lifespan)
+app = FastAPI(title="Tarım Yapay Zeka API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -98,21 +98,21 @@ class FieldUpsertRequest(BaseModel):
 
 def _display_crop_name(value: str | None) -> str:
     if not value:
-        return "?r?n"
+        return "Ürün"
     return CROP_LABELS.get(value, value)
 
 
 
 def _condition_from_climate(temp: float, rainfall: float) -> str:
     if rainfall >= 80:
-        return "Ya?murlu"
+        return "Yağmurlu"
     if rainfall >= 40:
-        return "Par?al? Bulutlu"
+        return "Parçalı Bulutlu"
     if temp >= 24:
-        return "G?ne?li"
+        return "Güneşli"
     if temp <= 8:
         return "Serin"
-    return "A??k"
+    return "Açık"
 
 
 
@@ -127,14 +127,14 @@ def _soil_status(soil_moisture: float) -> str:
 
 def _format_relative_time(value) -> str:
     if not value:
-        return "Az ?nce"
+        return "Az önce"
     now = datetime.now(value.tzinfo) if getattr(value, "tzinfo", None) else datetime.now()
     delta = now - value.replace(tzinfo=now.tzinfo) if getattr(value, "tzinfo", None) and now.tzinfo else now - value.replace(tzinfo=None)
     hours = max(1, int(delta.total_seconds() // 3600))
     if hours < 24:
-        return f"{hours} saat ?nce"
+        return f"{hours} saat önce"
     days = max(1, hours // 24)
-    return f"{days} g?n ?nce"
+    return f"{days} gün önce"
 
 
 
@@ -196,9 +196,9 @@ def _serialize_field(field: dict) -> dict:
 
 def _normalize_profile_payload(payload: ProfileUpdateRequest) -> dict[str, object]:
     if not payload.fullName.strip():
-        raise HTTPException(status_code=400, detail="Ad soyad bo? b?rak?lamaz.")
+        raise HTTPException(status_code=400, detail="Ad soyad boş bırakılamaz.")
     if not payload.phone.strip():
-        raise HTTPException(status_code=400, detail="Telefon numaras? bo? b?rak?lamaz.")
+        raise HTTPException(status_code=400, detail="Telefon numarası boş bırakılamaz.")
     return {
         "full_name": payload.fullName.strip(),
         "phone": payload.phone.strip(),
@@ -211,9 +211,9 @@ def _normalize_profile_payload(payload: ProfileUpdateRequest) -> dict[str, objec
 
 def _normalize_field_payload(payload: FieldUpsertRequest, user: dict) -> dict[str, object]:
     if not payload.name.strip():
-        raise HTTPException(status_code=400, detail="Tarla ad? bo? b?rak?lamaz.")
+        raise HTTPException(status_code=400, detail="Tarla adı boş bırakılamaz.")
     if payload.areaDecare <= 0:
-        raise HTTPException(status_code=400, detail="Tarla b?y?kl??? s?f?rdan b?y?k olmal?d?r.")
+        raise HTTPException(status_code=400, detail="Tarla büyüklüğü sıfırdan büyük olmalıdır.")
     return {
         "name": payload.name.strip(),
         "city": (payload.city or user.get("city") or "").strip() or None,
@@ -238,8 +238,8 @@ def _build_profile_response(user: dict) -> dict:
             {
                 "id": str(plan["id"]),
                 "date": _format_date(plan["created_at"]),
-                "field": plan.get("field_name") or "Kay?tl? Tarla",
-                "type": f"{_display_crop_name(plan['selected_crop_name'])} ?retim Plan?",
+                "field": plan.get("field_name") or "Kayıtlı Tarla",
+                "type": f"{_display_crop_name(plan['selected_crop_name'])} Üretim Planı",
                 "status": plan["status"],
             }
             for plan in plans
@@ -249,7 +249,7 @@ def _build_profile_response(user: dict) -> dict:
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to Tar?m Yapay Zeka API"}
+    return {"message": "Welcome to Tarım Yapay Zeka API"}
 
 
 @app.post("/api/auth/login")
@@ -259,7 +259,7 @@ def login(request: LoginRequest):
 
     user = get_user_by_identifier(request.identifier.strip())
     if not user or not user.get("is_active") or not verify_password(request.password, user.get("password_hash")):
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Ge?ersiz kimlik bilgileri.")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz kimlik bilgileri.")
 
     raw_token = generate_session_token()
     create_user_session(user["id"], hash_session_token(raw_token), remember_me=request.rememberMe)
@@ -306,15 +306,15 @@ def get_dashboard_summary(city: str | None = None, user=Depends(require_current_
         market_delta = ((current - base) / base) * 100 if base else 0.0
 
     if market_delta > 1:
-        market_status = "Y?kseli?"
+        market_status = "Yükseliş"
     elif market_delta < -1:
-        market_status = "D????"
+        market_status = "Düşüş"
     else:
-        market_status = "Dura?an"
+        market_status = "Durağan"
 
     return {
         "weather": {
-            "temp": f"{temp}?C",
+            "temp": f"{temp}°C",
             "condition": _condition_from_climate(temp, rainfall),
             "humidity": f"%{humidity}",
             "city": city_name,
@@ -401,7 +401,7 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
                 "id": index,
                 "crop": _display_crop_name(item["product_name"]),
                 "expectedReturn": f"%{expected_return}",
-                "reason": f"{city_name} i?in 2025 model tahminlerinde y?ksek ?retim potansiyeli g?steriyor. Yakla??k {production_value:,.0f} tonluk ?retim projeksiyonu sayesinde g??l? bir alternatif olarak ?ne ??k?yor.",
+                "reason": f"{city_name} için 2025 model tahminlerinde yüksek üretim potansiyeli gösteriyor. Yaklaşık {production_value:,.0f} tonluk üretim projeksiyonu sayesinde güçlü bir alternatif olarak öne çıkıyor.",
             }
         )
 
@@ -440,14 +440,14 @@ def get_climate_data(period: str = "1Y", city: str | None = None, user=Depends(r
     temperature_values = [item["temperature"] for item in series]
     avg_temp = sum(temperature_values) / len(temperature_values) if temperature_values else 0
     avg_rainfall = sum(rainfall_values) / len(rainfall_values) if rainfall_values else 0
-    risk_comment = "y?ksek" if avg_temp > 22 and avg_rainfall < 45 else "orta"
+    risk_comment = "yüksek" if avg_temp > 22 and avg_rainfall < 45 else "orta"
 
     return {
         "period": period,
         "city": city_name,
         "rainfall": rainfall_values,
         "temperature": temperature_values,
-        "ai_comment": f"{city_name} i?in son {period} d?nemi verilerine g?re s?cakl?k ortalamas? {avg_temp:.1f}?C, ya??? ortalamas? {avg_rainfall:.1f} mm seviyesinde. Bu desen {risk_comment} kurakl?k riski i?aret ediyor.",
+        "ai_comment": f"{city_name} için son {period} dönemi verilerine göre sıcaklık ortalaması {avg_temp:.1f}°C, yağış ortalaması {avg_rainfall:.1f} mm seviyesinde. Bu desen {risk_comment} kuraklık riski işaret ediyor.",
         "series": series,
     }
 
@@ -485,7 +485,7 @@ def create_user_field(request: FieldUpsertRequest, user=Depends(require_current_
 def update_user_field(field_id: str, request: FieldUpsertRequest, user=Depends(require_current_user)):
     existing = get_field_for_user(user["id"], field_id)
     if not existing:
-        raise HTTPException(status_code=404, detail="Tarla bulunamad?.")
+        raise HTTPException(status_code=404, detail="Tarla bulunamadı.")
 
     field = update_field(user["id"], field_id, _normalize_field_payload(request, user))
     return {
@@ -498,5 +498,5 @@ def update_user_field(field_id: str, request: FieldUpsertRequest, user=Depends(r
 def delete_user_field(field_id: str, user=Depends(require_current_user)):
     deleted = delete_field(user["id"], field_id)
     if not deleted:
-        raise HTTPException(status_code=404, detail="Tarla bulunamad?.")
+        raise HTTPException(status_code=404, detail="Tarla bulunamadı.")
     return {"success": True}

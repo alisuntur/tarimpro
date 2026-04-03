@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000';
+﻿const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000';
 const AUTH_STORAGE_KEY = 'tarimpro.auth';
 const AUTH_EVENT = 'tarimpro-auth-changed';
 
@@ -51,7 +51,7 @@ export async function apiFetch(path, options = {}) {
   }
 
   if (!response.ok) {
-    const message = typeof payload === 'string' ? payload : payload?.detail || payload?.message || 'API iste?i ba?ar?s?z oldu';
+    const message = typeof payload === 'string' ? payload : payload?.detail || payload?.message || 'API isteği başarısız oldu';
     throw new Error(message);
   }
 

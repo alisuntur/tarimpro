@@ -1,4 +1,4 @@
-from fastapi import Depends, HTTPException, status
+﻿from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from db.repositories import get_user_by_session_token_hash, touch_user_session
@@ -24,6 +24,6 @@ def require_current_user(user=Depends(get_optional_current_user)):
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Oturum gerekli. L?tfen tekrar giri? yap?n.",
+            detail="Oturum gerekli. Lütfen tekrar giriş yapın.",
         )
     return user

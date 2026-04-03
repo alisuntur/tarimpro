@@ -1,0 +1,14 @@
+cd frontend
+npm install
+npm run dev
+
+cd backend
+conda activate base
+pip install -r requirements.txt
+python -m uvicorn main:app --reload
+
+
+Giriş için demo hesap:
+
+Telefon: 05551234567
+Şifre: demo123

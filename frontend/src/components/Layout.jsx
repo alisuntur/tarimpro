@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
     Home,
@@ -49,14 +49,14 @@ const Layout = () => {
         navigate('/login', { replace: true });
     };
 
-    const firstName = user?.name?.split(' ')[0] || '?ift?i';
+    const firstName = user?.name?.split(' ')[0] || 'Çiftçi';
 
     const menuItems = [
         { path: '/dashboard', label: 'Ana Sayfa', icon: <Home size={20} /> },
-        { path: '/plan-wizard', label: 'Yeni ?retim Plan?', icon: <Map size={20} /> },
-        { path: '/regional-analysis', label: 'B?lgesel Analiz', icon: <Globe size={20} /> },
-        { path: '/ai-recommendations', label: 'Yapay Zeka ?nerileri', icon: <BrainCircuit size={20} /> },
-        { path: '/climate-market', label: '?klim ve Risk Raporlar?', icon: <CloudSun size={20} /> },
+        { path: '/plan-wizard', label: 'Yeni Üretim Planı', icon: <Map size={20} /> },
+        { path: '/regional-analysis', label: 'Bölgesel Analiz', icon: <Globe size={20} /> },
+        { path: '/ai-recommendations', label: 'Yapay Zeka Önerileri', icon: <BrainCircuit size={20} /> },
+        { path: '/climate-market', label: 'İklim ve Risk Raporları', icon: <CloudSun size={20} /> },
         { path: '/profile', label: 'Profil', icon: <User size={20} /> },
     ];
 
@@ -68,7 +68,7 @@ const Layout = () => {
                         {sidebarOpen ? (
                             <div className="logo-full">
                                 <Sprout color="var(--color-accent)" size={28} />
-                                <span>Tar?mZeka</span>
+                                <span>TarımZeka</span>
                             </div>
                         ) : (
                             <Sprout color="var(--color-accent)" size={28} />
@@ -92,7 +92,7 @@ const Layout = () => {
                 <div className="sidebar-footer">
                     <button className="nav-item logout-btn" onClick={handleLogout}>
                         <div className="nav-icon"><LogOut size={20} color="var(--color-danger)" /></div>
-                        {sidebarOpen && <span className="nav-label text-danger">??k?? Yap</span>}
+                        {sidebarOpen && <span className="nav-label text-danger">Çıkış Yap</span>}
                     </button>
                 </div>
             </aside>
@@ -103,7 +103,7 @@ const Layout = () => {
                         <button className="menu-toggle" onClick={toggleSidebar}>
                             <Menu size={24} color="var(--color-text-main)" />
                         </button>
-                        <h2 className="welcome-text">Ho? geldiniz, {firstName}!</h2>
+                        <h2 className="welcome-text">Hoş geldiniz, {firstName}!</h2>
                     </div>
 
                     <div className="header-right">

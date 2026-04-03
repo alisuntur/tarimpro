@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
@@ -9,7 +9,7 @@ const ProtectedRoute = ({ children }) => {
     return (
       <div className="loading-state">
         <div className="spinner"></div>
-        <p>Oturum do?rulan?yor...</p>
+        <p>Oturum doğrulanıyor...</p>
       </div>
     );
   }

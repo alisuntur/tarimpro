@@ -1,4 +1,5 @@
 ﻿import json
+import re
 from datetime import date
 
 from psycopg.rows import dict_row
@@ -77,6 +78,66 @@ def _lookup_candidates(value: str | None) -> list[str]:
         if item and item not in candidates:
             candidates.append(item)
     return candidates
+
+
+def _product_lookup_candidates(value: str | None) -> list[str]:
+    if not value:
+        return []
+
+    raw = " ".join(str(value).strip().split())
+    candidates: list[str] = []
+
+    def add(item: str | None):
+        normalized = " ".join(str(item or '').strip().split())
+        if normalized and normalized not in candidates:
+            candidates.append(normalized)
+
+    def expand(seed: str | None):
+        if not seed:
+            return
+
+        variants = [seed]
+        stripped_parentheses = re.sub(r"\s*\(.*?\)", "", seed).strip()
+        if stripped_parentheses:
+            variants.append(stripped_parentheses)
+        comma_base = stripped_parentheses.split(',', 1)[0].strip() if stripped_parentheses else ''
+        if comma_base:
+            variants.append(comma_base)
+
+        for variant in variants:
+            add(variant)
+            no_seed_words = re.sub(r"\bTohumu\b", "", variant, flags=re.IGNORECASE).strip()
+            add(no_seed_words)
+            if no_seed_words.startswith("Di\u011fer "):
+                add(no_seed_words[len("Di\u011fer "):])
+            if no_seed_words.startswith("Diger "):
+                add(no_seed_words[len("Diger "):])
+
+    expand(raw)
+    return candidates
+
+
+def _resolve_consumption_product_name(product_name: str | None) -> str | None:
+    candidates = _product_lookup_candidates(product_name)
+    if not candidates:
+        return None
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT DISTINCT product_name
+                FROM analytics.consumption_history
+                WHERE product_name = ANY(%(candidates)s)
+                """,
+                {"candidates": candidates},
+            )
+            available = {row["product_name"] for row in cursor.fetchall()}
+
+    for candidate in candidates:
+        if candidate in available:
+            return candidate
+    return None
 
 
 def _forecast_years(limit: int = 3, reference_year: int | None = None) -> list[int]:
@@ -804,6 +865,230 @@ def get_crop_history_rows(city_name: str | None, product_name: str, years: int =
 
 
 
+def get_product_yield_context(city_name: str | None, product_name: str, years: int = 5):
+    if not product_name:
+        return {}
+
+    city_candidates = _lookup_candidates(city_name) if city_name else []
+    params: dict[str, object] = {
+        "product_name": product_name,
+        "years": years,
+        "city_candidates": city_candidates or [city_name or ''],
+    }
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH recent_years AS (
+                    SELECT DISTINCT year
+                    FROM analytics.production_history
+                    WHERE product_name = %(product_name)s
+                    ORDER BY year DESC
+                    LIMIT %(years)s
+                ), city_yields AS (
+                    SELECT city_name,
+                           AVG(NULLIF(yield_kg_decare, 0)) AS avg_yield
+                    FROM analytics.production_history
+                    WHERE product_name = %(product_name)s
+                      AND year IN (SELECT year FROM recent_years)
+                    GROUP BY city_name
+                    HAVING AVG(NULLIF(yield_kg_decare, 0)) IS NOT NULL
+                ), target AS (
+                    SELECT AVG(avg_yield) AS city_avg_yield
+                    FROM city_yields
+                    WHERE city_name = ANY(%(city_candidates)s)
+                )
+                SELECT (SELECT COUNT(*) FROM recent_years) AS years_considered,
+                       (SELECT city_avg_yield FROM target) AS city_avg_yield,
+                       AVG(avg_yield) AS national_avg_yield,
+                       MIN(avg_yield) AS min_yield,
+                       MAX(avg_yield) AS max_yield,
+                       COUNT(*) AS city_count,
+                       SUM(CASE WHEN avg_yield <= (SELECT city_avg_yield FROM target) THEN 1 ELSE 0 END) AS cities_at_or_below
+                FROM city_yields
+                """,
+                params,
+            )
+            row = cursor.fetchone() or {}
+
+    city_avg = row.get("city_avg_yield")
+    national_avg = row.get("national_avg_yield")
+    city_count = int(row.get("city_count") or 0)
+    cities_at_or_below = int(row.get("cities_at_or_below") or 0)
+
+    relative_index_pct = None
+    if city_avg is not None and national_avg not in (None, 0):
+        relative_index_pct = float(city_avg) / float(national_avg) * 100
+
+    percentile_score = None
+    if city_avg is not None and city_count > 0:
+        percentile_score = (cities_at_or_below / city_count) * 100
+
+    return {
+        "product_name": product_name,
+        "years_considered": int(row.get("years_considered") or 0),
+        "city_avg_yield": float(city_avg) if city_avg is not None else None,
+        "national_avg_yield": float(national_avg) if national_avg is not None else None,
+        "min_yield": float(row["min_yield"]) if row.get("min_yield") is not None else None,
+        "max_yield": float(row["max_yield"]) if row.get("max_yield") is not None else None,
+        "city_count": city_count,
+        "percentile_score": percentile_score,
+        "relative_index_pct": relative_index_pct,
+    }
+
+
+
+def get_product_supply_demand_projection(product_name: str, forecast_year: int | None = None):
+    effective_year = forecast_year or get_latest_forecast_year()
+    if not product_name or effective_year is None:
+        return {}
+
+    consumption_product_name = _resolve_consumption_product_name(product_name)
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT SUM(predicted_production_ton) AS predicted_supply_ton
+                FROM analytics.model_predictions
+                WHERE product_name = %(product_name)s
+                  AND year = %(forecast_year)s
+                """,
+                {"product_name": product_name, "forecast_year": effective_year},
+            )
+            supply_row = cursor.fetchone() or {}
+
+            demand_row = {}
+            if consumption_product_name:
+                cursor.execute(
+                    """
+                    SELECT AVG(CASE WHEN year = %(forecast_year)s AND metric_name ILIKE 'T%%ketim%%' THEN value END) AS predicted_demand_ton,
+                           AVG(CASE WHEN year BETWEEN %(trend_start_year)s AND %(trend_end_year)s AND metric_name ILIKE 'T%%ketim%%' THEN value END) AS recent_avg_demand_ton
+                    FROM analytics.consumption_history
+                    WHERE product_name = %(consumption_product_name)s
+                    """,
+                    {
+                        "forecast_year": effective_year,
+                        "trend_start_year": effective_year - 3,
+                        "trend_end_year": effective_year - 1,
+                        "consumption_product_name": consumption_product_name,
+                    },
+                )
+                demand_row = cursor.fetchone() or {}
+
+    predicted_supply_ton = supply_row.get("predicted_supply_ton")
+    predicted_demand_ton = demand_row.get("predicted_demand_ton")
+    recent_avg_demand_ton = demand_row.get("recent_avg_demand_ton")
+    demand_growth_pct = None
+    if predicted_demand_ton not in (None, 0) and recent_avg_demand_ton not in (None, 0):
+        demand_growth_pct = ((float(predicted_demand_ton) - float(recent_avg_demand_ton)) / float(recent_avg_demand_ton)) * 100
+
+    return {
+        "product_name": product_name,
+        "consumption_product_name": consumption_product_name,
+        "forecast_year": effective_year,
+        "predicted_supply_ton": float(predicted_supply_ton) if predicted_supply_ton is not None else None,
+        "predicted_demand_ton": float(predicted_demand_ton) if predicted_demand_ton is not None else None,
+        "recent_avg_demand_ton": float(recent_avg_demand_ton) if recent_avg_demand_ton is not None else None,
+        "demand_growth_pct": demand_growth_pct,
+    }
+
+
+
+def get_product_supply_demand_series(product_name: str, history_limit: int = 5, forecast_limit: int = 3):
+    if not product_name:
+        return []
+
+    consumption_product_name = _resolve_consumption_product_name(product_name)
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT year,
+                       SUM(production_ton) AS historical_production_ton
+                FROM analytics.production_history
+                WHERE product_name = %(product_name)s
+                GROUP BY year
+                ORDER BY year DESC
+                LIMIT %(history_limit)s
+                """,
+                {"product_name": product_name, "history_limit": history_limit},
+            )
+            history_rows = list(reversed(cursor.fetchall()))
+
+            reference_year = (history_rows[-1]["year"] + 1) if history_rows else date.today().year
+            forecast_years = _forecast_years(limit=forecast_limit, reference_year=reference_year)
+            forecast_rows = []
+            if forecast_years:
+                cursor.execute(
+                    """
+                    SELECT year,
+                           SUM(predicted_production_ton) AS predicted_supply_ton
+                    FROM analytics.model_predictions
+                    WHERE product_name = %(product_name)s
+                      AND year = ANY(%(forecast_years)s)
+                    GROUP BY year
+                    ORDER BY year ASC
+                    """,
+                    {"product_name": product_name, "forecast_years": forecast_years},
+                )
+                forecast_rows = cursor.fetchall()
+
+            all_years = sorted({row["year"] for row in history_rows} | {row["year"] for row in forecast_rows})
+            demand_rows = []
+            if consumption_product_name and all_years:
+                cursor.execute(
+                    """
+                    SELECT year,
+                           AVG(value) AS demand_ton
+                    FROM analytics.consumption_history
+                    WHERE product_name = %(consumption_product_name)s
+                      AND year = ANY(%(years)s)
+                      AND metric_name ILIKE 'T%%ketim%%'
+                    GROUP BY year
+                    ORDER BY year ASC
+                    """,
+                    {"consumption_product_name": consumption_product_name, "years": all_years},
+                )
+                demand_rows = cursor.fetchall()
+
+    combined: dict[int, dict[str, object]] = {}
+    for row in history_rows:
+        combined[row["year"]] = {
+            "year": row["year"],
+            "historical_production_ton": row.get("historical_production_ton"),
+            "predicted_supply_ton": None,
+            "predicted_demand_ton": None,
+        }
+    for row in forecast_rows:
+        entry = combined.setdefault(
+            row["year"],
+            {
+                "year": row["year"],
+                "historical_production_ton": None,
+                "predicted_supply_ton": None,
+                "predicted_demand_ton": None,
+            },
+        )
+        entry["predicted_supply_ton"] = row.get("predicted_supply_ton")
+    for row in demand_rows:
+        entry = combined.setdefault(
+            row["year"],
+            {
+                "year": row["year"],
+                "historical_production_ton": None,
+                "predicted_supply_ton": None,
+                "predicted_demand_ton": None,
+            },
+        )
+        entry["predicted_demand_ton"] = row.get("demand_ton")
+
+    return [combined[year] for year in sorted(combined)]
+
+
+
 def get_consumption_projection_map(product_names: list[str], forecast_year: int | None = None):
     cleaned = [item for item in dict.fromkeys(product_names) if item]
     if not cleaned:
@@ -866,6 +1151,55 @@ def get_walk_forward_summary(horizon: int | None = None):
                     return row
 
             cursor.execute(base_sql.format(where_clause=''))
+            return cursor.fetchone()
+
+
+
+def get_walk_forward_calibration(city_name: str | None = None, product_name: str | None = None, horizon: int | None = None):
+    where_clauses = [
+        "predicted_production IS NOT NULL",
+        "actual_production IS NOT NULL",
+        "predicted_production > 0",
+        "actual_production > 0",
+    ]
+    params: dict[str, object] = {}
+
+    city_candidates = _lookup_candidates(city_name) if city_name else []
+    if city_candidates:
+        where_clauses.append("city_name = ANY(%(city_candidates)s)")
+        params["city_candidates"] = city_candidates
+
+    product_candidates = _lookup_candidates(product_name) if product_name else []
+    if product_candidates:
+        where_clauses.append("product_name = ANY(%(product_candidates)s)")
+        params["product_candidates"] = product_candidates
+
+    if horizon is not None:
+        where_clauses.append("horizon = %(horizon)s")
+        params["horizon"] = horizon
+
+    success_case = """
+        CASE
+            WHEN actual_production BETWEEN predicted_production * EXP(COALESCE(delta_log_guard_lo, 0)::float8)
+                                     AND predicted_production * EXP(COALESCE(delta_log_guard_hi, 0)::float8)
+            THEN 1 ELSE 0
+        END
+    """
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT COUNT(*) AS sample_size,
+                       COALESCE(SUM({success_case}), 0) AS success_count,
+                       AVG(({success_case})::float8) AS success_rate,
+                       AVG(ABS(actual_production - predicted_production) / NULLIF(actual_production, 0) * 100) AS avg_abs_error_pct,
+                       AVG((EXP(COALESCE(delta_log_guard_hi, 0)::float8) - EXP(COALESCE(delta_log_guard_lo, 0)::float8)) * 100) AS avg_interval_width_pct
+                FROM analytics.walk_forward_predictions
+                WHERE {' AND '.join(where_clauses)}
+                """,
+                params,
+            )
             return cursor.fetchone()
 
 

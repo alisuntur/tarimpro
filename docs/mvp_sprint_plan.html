@@ -3,7 +3,7 @@
 <head>
   <meta charset='utf-8'>
   <meta name='viewport' content='width=device-width, initial-scale=1'>
-  <title>TarimZeka MVP - 3 Sprint Plan</title>
+  <title>TarimZeka MVP - 4 Sprint Plan</title>
   <style>
     body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; color: #1f2937; background: #f3f4f6; line-height: 1.45; }
     .page { width: 210mm; min-height: 297mm; margin: 0 auto 14px; padding: 18mm 16mm; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.08); page-break-after: always; }
@@ -45,8 +45,8 @@
     <div class='hero'>
       <div class='card hero-main'>
         <h1>TarimZeka MVP Yol Haritasi</h1>
-        <p><strong>3 sprintlik operasyonel gelisim plani</strong>. Amac, mevcut prototipi veritabani merkezli, kullaniciya ozel veri gosteren, gecmis planlari ve analizleri saklayan, AI onerilerini gercek veriden ureten bir MVP'ye donusturmektir.</p>
-        <p>Bu dokuman haftalik gorusmede proje kapsam?n?, teknik sirasini ve teslim mantigini net gostermek icin hazirlandi. 3 sprint sonunda sistemde yalnizca kucuk bug ve polish isleri kalmasi hedeflenmektedir.</p>
+        <p><strong>4 sprintlik operasyonel gelisim plani</strong>. Amac, mevcut prototipi veritabani merkezli, kullaniciya ozel veri gosteren, gecmis planlari ve analizleri saklayan, AI onerilerini gercek veriden ureten ve metodolojik olarak savunulabilir bir MVP'ye donusturmektir.</p>
+        <p>Bu dokuman haftalik gorusmede proje kapsamini, teknik sirasini ve teslim mantigini net gostermek icin guncellendi. 4 sprint sonunda sistemde yalnizca kucuk bug, UI polish ve performans iyilestirmeleri kalmasi hedeflenmektedir.</p>
         <div class='meta'>
           <div class='mini'><strong>Proje</strong><br>TarimZeka</div>
           <div class='mini'><strong>Tarih</strong><br>03.04.2026</div>
@@ -54,7 +54,7 @@
         </div>
       </div>
       <div class='card hero-side'>
-        <h3>3 sprint sonunda beklenen durum</h3>
+        <h3>4 sprint sonunda beklenen durum</h3>
         <ul>
           <li>Gercek auth ve kullanici baglami</li>
           <li>Kullaniciya ozel profil, tarla, plan ve raporlar</li>
@@ -62,6 +62,8 @@
           <li>Random veya sabit veri icermeyen bolgesel analiz</li>
           <li>Il + donum + urun secimine gore AI onerileri</li>
           <li>Kayitli analiz gecmisi ve aciklanabilir urun puani</li>
+          <li>AHP ile uretilmis agirlik profili ve backtest raporu</li>
+          <li>Walk-forward kalibrasyonlu model guveni ve arz-talep dengesi</li>
         </ul>
       </div>
     </div>
@@ -83,7 +85,8 @@
       <tbody>
         <tr><td>Sprint 1</td><td>Auth ve current-user</td><td>Kullaniciyi gercekten tanimak ve veri karismasini engellemek</td><td>Sistem gercek kullanici baglami ile calisir</td></tr>
         <tr><td>Sprint 2</td><td>Plan ve bolgesel akis</td><td>Plan olusturma ve bolgesel analizleri DB tabanli yapmak</td><td>Kullanici gercek is akisi tamamlar</td></tr>
-        <tr><td>Sprint 3</td><td>AI analiz ve rapor gecmisi</td><td>AI onerilerini, puani ve rapor saklamayi gercek hale getirmek</td><td>Mock'suz MVP tamamlanir</td></tr>
+        <tr><td>Sprint 3</td><td>AI analiz ve rapor gecmisi</td><td>AI onerilerini, puani ve rapor saklamayi gercek hale getirmek</td><td>Mock'suz AI akisi tamamlanir</td></tr>
+        <tr><td>Sprint 4</td><td>Bilimsel kalibrasyon ve piyasa dengesi</td><td>AHP, backtest, model dogrulugu ve arz-talep katmanini eklemek</td><td>Skor ve guven katmani metodolojik olarak savunulur hale gelir</td></tr>
       </tbody>
     </table>
   </section>
@@ -310,7 +313,155 @@
     </div>
 
     <div class='callout'><strong>Sprint 3 cikis kriteri:</strong> AI onerileri, secilen urun puani ve rapor gecmisi tamamen gercek veriye dayalidir.</div>
+  </section>
 
+  <section class='page'>
+    <div class='sprint'><div class='n'>4</div><div><h2>Sprint 4: AHP, Model Dogrulugu ve Arz-Talep Denge Katmani</h2><p>Hedef: AI skorunu metodolojik olarak savunulabilir hale getirmek</p></div></div>
+
+    <h3>Sprint hedefi</h3>
+    <p>Bu sprintte Sprint 3 ile canli hale gelen AI karar motoru bilimsel olarak guclendirildi. Sabit ve gerekcesiz katsayilar yerine AHP tabanli agirlik profili tanimlandi, walk-forward veri seti uzerinde backtest yapildi, model guveni ampirik olarak kalibre edildi ve tuketim verisi gercek anlamda arz-talep dengesi yorumuna baglandi.</p>
+
+    <h3>Sprint sonunda bitmis olmasi gerekenler</h3>
+    <ul>
+      <li>AHP ikili karsilastirma matrisi ile agirliklarin versionlanmasi</li>
+      <li>Agirlik profilinin koddaki sabit katsayilar yerine dis dosyadan okunmasi</li>
+      <li>Walk-forward backtest scripti ve rapor artefaktlarinin uretilmesi</li>
+      <li>Model guveninin heuristik hata puani yerine basari olasiligi olarak hesaplanmasi</li>
+      <li>Gecmis verim skorunun ayni urun baglaminda duzeltilmesi</li>
+      <li>Arz-talep dengesinin AI sonucuna kart ve grafik olarak eklenmesi</li>
+    </ul>
+
+    <h3>Dosya bazli degisiklik listesi</h3>
+    <table>
+      <thead><tr><th>Dosya</th><th>Islem</th><th>Not</th></tr></thead>
+      <tbody>
+        <tr><td>backend/scoring.py</td><td>Yeni</td><td>AHP agirlik okuma, agirlik normlama ve toplam skor hesap katmani.</td></tr>
+        <tr><td>backend/scoring_profile.json</td><td>Yeni</td><td>AHP ile uretilen aktif agirlik profili ve tutarlilik metrikleri.</td></tr>
+        <tr><td>backend/devtools/ahp_backtest.py</td><td>Yeni</td><td>Walk-forward veri seti uzerinde AHP tabanli skorun performansini olcen arac.</td></tr>
+        <tr><td>backend/main.py</td><td>Revize</td><td>Guven hesabi, yeni score breakdown, arz-talep karti ve AI cevap semasi.</td></tr>
+        <tr><td>backend/db/repositories.py</td><td>Revize</td><td>Urun verim baglami, arz-talep projeksiyonu, tuketim serisi ve walk-forward kalibrasyon sorgulari.</td></tr>
+        <tr><td>frontend/src/pages/AiRecommendations.jsx</td><td>Revize</td><td>Oneri guveni, arz-talep karti ve uretim-tuketim grafigi eklendi.</td></tr>
+        <tr><td>frontend/src/pages/AiRecommendations.css</td><td>Revize</td><td>Yeni guven ve piyasa denge bloklarinin sunum duzeni guncellendi.</td></tr>
+        <tr><td>docs/ahp_pairwise_matrix.csv</td><td>Yeni</td><td>AHP ikili karsilastirma matrisi.</td></tr>
+        <tr><td>docs/ahp_metodoloji.md</td><td>Yeni</td><td>Hocaya sunulabilir metodoloji ve akademik savunma metni.</td></tr>
+        <tr><td>docs/ahp_backtest_report.json</td><td>Yeni</td><td>Backtest sonucu uretilen resmi rapor.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Revize edilen endpoint ve cevap alanlari</h3>
+    <table>
+      <thead><tr><th>Method</th><th>Endpoint</th><th>Yeni katkisi</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td>/api/ai/analyze-plan</td><td>AHP agirlikli toplam skor, ayni-urun verim skoru, model guveni ve arz-talep dengesi doner.</td></tr>
+        <tr><td>GET</td><td>/api/analyses/:id</td><td>Kayitli analiz snapshot'i yeni guven ve piyasa baglami ile tekrar acilir.</td></tr>
+        <tr><td>GET</td><td>/api/analyses</td><td>Analiz gecmisi skor ve guven etiketiyle listelenir.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>AHP agirliklari ve tutarlilik</h3>
+    <table>
+      <thead><tr><th>Kriter</th><th>Agirlik</th><th>Yuzde</th><th>Yorum</th></tr></thead>
+      <tbody>
+        <tr><td>Gecmis verim</td><td>0.2270</td><td>%22.7</td><td>Ayni urunun sehir performansini ulusal ayni-urun ortalamasi ile karsilastirir.</td></tr>
+        <tr><td>Model projeksiyonu</td><td>0.4236</td><td>%42.4</td><td>Gelecek donem uretim potansiyeli en baskin kriter olarak ele alinir.</td></tr>
+        <tr><td>Tuketim / talep</td><td>0.1223</td><td>%12.2</td><td>Piyasa talep yonunu karar skoruna dahil eder.</td></tr>
+        <tr><td>Iklim dayanikliligi</td><td>0.2270</td><td>%22.7</td><td>Iklim riski ve tarihsel stabiliteyi birlikte temsil eder.</td></tr>
+      </tbody>
+    </table>
+
+    <div class='twocol'>
+      <div class='card'>
+        <h3>AHP kalite kontrolu</h3>
+        <ul>
+          <li>Lambda max: 4.0104</li>
+          <li>Consistency Index: 0.00345</li>
+          <li>Consistency Ratio: 0.00384</li>
+          <li>Karar: CR &lt; 0.10 oldugu icin matris tutarli kabul edildi.</li>
+        </ul>
+      </div>
+      <div class='card'>
+        <h3>Aktif profil</h3>
+        <ul>
+          <li>Profil adi: ahp_v1_expert_seed</li>
+          <li>Tarih: 03.04.2026</li>
+          <li>Kaynak: uzman yorumu + AHP ikili karsilastirma matrisi</li>
+          <li>Kod entegrasyonu: backend/scoring_profile.json dosyasindan okunur</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Model dogrulugu ve backtest sonuclari</h3>
+    <table>
+      <thead><tr><th>Metrik</th><th>Deger</th><th>Ne anlatir?</th></tr></thead>
+      <tbody>
+        <tr><td>Senaryo sayisi</td><td>405</td><td>Backtestte kullanilan sehir-yil senaryosu.</td></tr>
+        <tr><td>Aday sayisi</td><td>60,820</td><td>Siralamaya giren toplam urun kaydi.</td></tr>
+        <tr><td>Top-1 exact rate</td><td>%15.31</td><td>Sistemin ilk onerisi gercekte tam birinci cikti mi?</td></tr>
+        <tr><td>Top-3 hit rate</td><td>%74.57</td><td>Ilk onerinin gercek ilk 3 icine girme basarisi.</td></tr>
+        <tr><td>Mean Spearman</td><td>0.4142</td><td>Sistem siralamasi ile gercek siralama arasindaki genel korelasyon.</td></tr>
+        <tr><td>Mean nDCG@3</td><td>0.9175</td><td>Ilk 3 onerinin kalite ve uygunluk skoru.</td></tr>
+      </tbody>
+    </table>
+
+    <div class='callout'><strong>Backtest yorumu:</strong> Sistem her seferinde tam birinci urunu secmiyor; ancak ilk 3 oneride yuksek kapsama sagliyor. Bu nedenle arac, kesin tek urun karari veren bir sistem degil; veriye dayali karar destegi saglayan bir planlama motoru olarak konumlanmalidir.</div>
+
+    <h3>Model guveni nasil degisti?</h3>
+    <p>Bu sprintten once model guveni yalnizca SMAPE/WAPE benzeri metriklerden turetilen tek bir heuristik sayi idi. Sprint 4 ile birlikte guven skoru, walk-forward dogrulama sonuclarindan kalibre edilen <strong>oneri basari olasiligi</strong> olarak yeniden tasarlandi.</p>
+    <ul>
+      <li>Basarili senaryo tanimi: gercek uretimin modelin walk-forward kalibrasyon bandi icinde kalmasi</li>
+      <li>Yerel kaynak: sehir + urun + tahmin ufku kombinasyonu</li>
+      <li>Fallback: urun + tahmin ufku veya genel tahmin ufku</li>
+      <li>Kalibrasyon yontemi: ampirik Bayes shrinkage ile kucuk orneklem etkisini dengeleme</li>
+      <li>UI ciktilari: basari olasiligi, kalibrasyon duzeyi, yerel senaryo, referans seti, kapsama ve hata genisligi</li>
+    </ul>
+
+    <h3>Arz-talep dengesi katmani</h3>
+    <p>Tuketim verileri artik yalnizca genel bir talep skoru olarak kullanilmamaktadir. Bunun yerine urun bazli ulusal tahmini uretim ile tahmini tuketim karsilastirilarak AI ekranina gercek bir piyasa denge yorumu eklenmistir.</p>
+    <table>
+      <thead><tr><th>Gosterge</th><th>Formul / Mantik</th><th>UI cikisi</th></tr></thead>
+      <tbody>
+        <tr><td>Karsilama orani</td><td>Tahmini uretim / tahmini tuketim</td><td>% bazli piyasa kapsama seviyesi</td></tr>
+        <tr><td>Denge farki</td><td>Tahmini uretim - tahmini tuketim</td><td>Ton bazli arz acigi veya fazla uretim</td></tr>
+        <tr><td>Durum etiketi</td><td>&lt; %95 arz acigi, %95-%105 dengeli, &gt; %105 uretim fazlasi</td><td>Kartta metinsel durum etiketi</td></tr>
+        <tr><td>Piyasa notu</td><td>Fiyat baskisi, stok riski veya ithalat baskisi yorumu</td><td>AI sonucunda aciklayici not</td></tr>
+      </tbody>
+    </table>
+
+    <div class='callout'><strong>Yorum siniri:</strong> Mevcut tuketim verisi Türkiye geneli oldugu icin arz-talep analizi ulusal urun dengesi seviyesinde yapilir. Mevcut veri ile dogrudan "ithal ediliyor" veya "ihrac ediliyor" karari verilmez; bunun yerine ithalat baskisi ya da fazla arz riski yorumu uretilebilir.</div>
+
+    <div class='twocol'>
+      <div class='card'>
+        <h3>Tablo listesi</h3>
+        <ul>
+          <li>analytics.production_history</li>
+          <li>analytics.model_predictions</li>
+          <li>analytics.consumption_history</li>
+          <li>analytics.climate_history</li>
+          <li>analytics.walk_forward_predictions</li>
+          <li>analytics.walk_forward_metrics</li>
+          <li>app.ai_analyses</li>
+          <li>app.ai_recommendations</li>
+        </ul>
+      </div>
+      <div class='card'>
+        <h3>Test checklist'i</h3>
+        <ul>
+          <li>AHP agirlik toplami 1.0 mi?</li>
+          <li>Consistency ratio 0.10 altinda mi?</li>
+          <li>Backtest raporu dosyaya yaziliyor mu?</li>
+          <li>API yeni agirlik profilini dosyadan okuyor mu?</li>
+          <li>Model guveni local/ref set mantigi ile dolu geliyor mu?</li>
+          <li>Konya bugday senaryosunda verim skoru ayni-urun baglaminda makul mu?</li>
+          <li>Arz-talep karti karsilama orani ve denge farkini donuyor mu?</li>
+          <li>Grafikte gecmis uretim + tahmini uretim + tahmini tuketim birlikte gozukuyor mu?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class='callout'><strong>Sprint 4 cikis kriteri:</strong> AI skor sistemi artik yalnizca teknik olarak calisan degil; AHP, backtest, walk-forward kalibrasyonu ve ulusal arz-talep dengesi ile metodolojik olarak da savunulabilir durumdadir.</div>
+  </section>
+
+  <section class='page'>
     <h2>Genel Kabul Kriteri</h2>
     <ul>
       <li>Kullanici gercek auth ile giris yapar.</li>
@@ -318,10 +469,13 @@
       <li>Plan olusturur ve kalici olarak saklar.</li>
       <li>Bolgesel analiz random veri kullanmaz.</li>
       <li>AI onerileri gercek veriye dayanir, kaydedilir ve tekrar goruntulenebilir.</li>
-      <li>3 sprint sonunda geriye yalnizca ufak bug, polish ve performans ince ayarlari kalir.</li>
+      <li>Skor sistemi AHP agirliklari ile calisir ve backtest raporu ile dogrulanir.</li>
+      <li>Model guveni walk-forward kalibrasyonlu basari olasiligi olarak sunulur.</li>
+      <li>Arz-talep dengesi AI analiz sonucunun ayrilmaz bir parcasi olarak gosterilir.</li>
+      <li>4 sprint sonunda geriye yalnizca ufak bug, polish ve performans ince ayarlari kalir.</li>
     </ul>
 
-    <div class='callout'>Sunumda kullanilabilecek ozet: Proje once veri guvenilirligi ve kullanici baglami ile saglamlastirilacak, sonra gercek is akislarina tasinacak, son sprintte ise AI tarafindaki deger onerisi olan veri tabanli skor ve tavsiye motoru tamamlanacaktir.</div>
+    <div class='callout'>Sunumda kullanilabilecek ozet: Proje once veri guvenilirligi ve kullanici baglami ile saglamlastirildi, sonra gercek is akislarina tasindi, ucuncu sprintte canli AI tavsiye ve rapor akisi kuruldu, dorduncu sprintte ise bu skor motoru AHP, backtest, walk-forward kalibrasyonu ve arz-talep dengesi ile bilimsel olarak guclendirildi.</div>
 
     <p class='foot'>Kaynak dosya: docs/mvp_sprint_plan.html</p>
   </section>

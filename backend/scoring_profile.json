@@ -1,0 +1,51 @@
+{
+  "profileName": "ahp_v1_expert_seed",
+  "updatedAt": "2026-04-03",
+  "source": "AHP pairwise comparison matrix with agricultural domain judgment",
+  "criteriaOrder": [
+    "yield",
+    "forecast",
+    "demand",
+    "climate"
+  ],
+  "weights": {
+    "yield": 0.22704446506343962,
+    "forecast": 0.42358691334964627,
+    "demand": 0.1223241565234746,
+    "climate": 0.22704446506343962
+  },
+  "pairwiseMatrixPath": "C:\\Users\\Ali\\Documents\\GitHub\\tarimpro\\docs\\ahp_pairwise_matrix.csv",
+  "pairwiseMatrix": [
+    [
+      1.0,
+      0.5,
+      2.0,
+      1.0
+    ],
+    [
+      2.0,
+      1.0,
+      3.0,
+      2.0
+    ],
+    [
+      0.5,
+      0.3333333333333333,
+      1.0,
+      0.5
+    ],
+    [
+      1.0,
+      0.5,
+      2.0,
+      1.0
+    ]
+  ],
+  "consistency": {
+    "lambdaMax": 4.0103629022,
+    "consistencyIndex": 0.0034543007,
+    "consistencyRatio": 0.0038381119,
+    "threshold": 0.1,
+    "isAcceptable": true
+  }
+}

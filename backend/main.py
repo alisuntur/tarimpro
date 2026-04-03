@@ -1,6 +1,7 @@
 import json
 from contextlib import asynccontextmanager
 from datetime import date, datetime
+from math import sqrt
 from statistics import mean, pstdev
 
 from fastapi import Depends, FastAPI, HTTPException, status
@@ -27,6 +28,9 @@ from db.repositories import (
     get_crop_history_rows,
     get_crop_projection_series,
     get_dashboard_alerts,
+    get_product_supply_demand_projection,
+    get_product_supply_demand_series,
+    get_product_yield_context,
     get_field_for_user,
     get_fields_for_user,
     get_latest_ai_analysis_for_plan,
@@ -37,6 +41,7 @@ from db.repositories import (
     get_production_plan_for_user,
     get_production_plans_for_user,
     get_user_by_identifier,
+    get_walk_forward_calibration,
     get_walk_forward_summary,
     list_ai_analyses_for_user,
     revoke_user_session,
@@ -46,6 +51,7 @@ from db.repositories import (
     update_user_profile,
 )
 from dependencies import require_current_user, security
+from scoring import compute_weighted_score, get_scoring_profile
 from security import generate_session_token, hash_session_token, verify_password
 
 
@@ -310,6 +316,16 @@ def _safe_float(value, default: float | None = 0.0) -> float | None:
 
 
 
+def _safe_int(value, default: int | None = None) -> int | None:
+    try:
+        if value is None:
+            return default
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+
 def _normalize_range(value: float | None, minimum: float | None, maximum: float | None, default: float = 50.0) -> float:
     if value is None or minimum is None or maximum is None:
         return default
@@ -319,27 +335,68 @@ def _normalize_range(value: float | None, minimum: float | None, maximum: float 
 
 
 
+def _score_breakdown_label(key: str | None) -> str:
+    labels = {
+        "yield": "Geçmiş verim",
+        "forecast": "Model projeksiyonu",
+        "demand": "Arz-talep dengesi",
+        "climate": "İklim dayanıklılığı",
+    }
+    return labels.get(key or "", key or "Skor")
+
+
+
 def _parse_score_breakdown(value) -> list[dict[str, object]]:
     if not value:
         return []
+
     if isinstance(value, list):
-        return value
-    if isinstance(value, str):
+        parsed = value
+    elif isinstance(value, str):
         try:
-            parsed = json.loads(value)
+            loaded = json.loads(value)
         except json.JSONDecodeError:
             return []
-        return parsed if isinstance(parsed, list) else []
-    return []
+        parsed = loaded if isinstance(loaded, list) else []
+    else:
+        return []
+
+    normalized: list[dict[str, object]] = []
+    for item in parsed:
+        if not isinstance(item, dict):
+            continue
+        key = item.get("key")
+        normalized.append({**item, "label": _score_breakdown_label(key)})
+    return normalized
 
 
 
 def _confidence_label(score: float) -> str:
-    if score >= 82:
-        return "Yüksek"
-    if score >= 65:
+    if score >= 60:
+        return "Güçlü"
+    if score >= 45:
         return "Dengeli"
     return "Temkinli"
+
+
+
+def _format_horizon_label(horizon: int | None) -> str:
+    effective_horizon = max(1, int(horizon or 1))
+    return f"{effective_horizon} yıllık tahmin ufku"
+
+
+
+def _blend_metric(local_value: float | None, prior_value: float | None, local_weight: float, prior_weight: float) -> float | None:
+    if local_value is None and prior_value is None:
+        return None
+    if local_value is None:
+        return prior_value
+    if prior_value is None:
+        return local_value
+    total_weight = max(local_weight, 0) + max(prior_weight, 0)
+    if total_weight <= 0:
+        return prior_value
+    return ((local_value * max(local_weight, 0)) + (prior_value * max(prior_weight, 0))) / total_weight
 
 
 
@@ -371,36 +428,293 @@ def _history_summary(rows: list[dict]) -> dict[str, float | int | None]:
     }
 
 
-def _build_confidence_payload(metric_row: dict | None) -> dict[str, object]:
-    if not metric_row:
-        score = 64.0
+
+def _latest_history_year(city_name: str | None, product_name: str | None) -> int | None:
+    if not product_name:
+        return None
+
+    history_rows = get_crop_history_rows(city_name, product_name, years=1)
+    if not history_rows and city_name:
+        history_rows = get_crop_history_rows(None, product_name, years=1)
+    if not history_rows:
+        return None
+    return _safe_int(history_rows[-1].get("year"), None)
+
+
+
+def _yield_score_from_context(yield_context: dict | None, fallback_available: bool = False) -> float:
+    if not yield_context:
+        return 55.0 if fallback_available else 45.0
+
+    city_avg_yield = _safe_float(yield_context.get("city_avg_yield"), None)
+    national_avg_yield = _safe_float(yield_context.get("national_avg_yield"), None)
+    percentile_score = _safe_float(yield_context.get("percentile_score"), None)
+    relative_index_pct = _safe_float(yield_context.get("relative_index_pct"), None)
+
+    if city_avg_yield is None or national_avg_yield in (None, 0):
+        return 55.0 if fallback_available else 45.0
+
+    parity_score = _clamp(50 + (((relative_index_pct or 100) - 100) * 0.7), 15, 95)
+    percentile_component = percentile_score if percentile_score is not None else 50
+    return round(_clamp((percentile_component * 0.7) + (parity_score * 0.3), 15, 95), 1)
+
+
+
+def _build_supply_demand_payload(balance_row: dict | None) -> dict[str, object]:
+    if not balance_row:
         return {
-            "score": score,
-            "label": _confidence_label(score),
-            "summary": "Model güven skoru genel varsayım ile oluşturuldu; alan bazlı ek metrik bulunmadı.",
-            "modelName": None,
-            "modelVersion": None,
+            "score": 50.0,
+            "status": "Veri sınırlı",
+            "summary": "Arz-talep dengesi için yeterli üretim ve tüketim verisi bulunamadı.",
+            "note": "Tüketim veya üretim tahmini eksik olduğu için denge yorumu oluşturulamadı.",
+            "coverageRatioPct": None,
+            "balanceTon": None,
+            "balancePct": None,
+            "predictedSupplyTon": None,
+            "predictedDemandTon": None,
+            "demandGrowthPct": None,
+            "scope": "Türkiye ürün dengesi",
         }
 
-    smape = _safe_float(metric_row.get("avg_smape_pct"), 30.0) or 30.0
-    wape = _safe_float(metric_row.get("avg_wape_pct"), 25.0) or 25.0
-    confidence_score = round(_clamp(100 - (smape * 1.1) - (wape * 0.35), 38, 95), 1)
-    label = _confidence_label(confidence_score)
+    supply = _safe_float(balance_row.get("predicted_supply_ton"), None)
+    demand = _safe_float(balance_row.get("predicted_demand_ton"), None)
+    demand_growth_pct = _safe_float(balance_row.get("demand_growth_pct"), None)
+    forecast_year = _safe_int(balance_row.get("forecast_year"), None)
+
+    if supply is None or demand in (None, 0):
+        return {
+            "score": 50.0,
+            "status": "Veri sınırlı",
+            "summary": "Arz-talep dengesi için yeterli üretim ve tüketim verisi bulunamadı.",
+            "note": "Tüketim veya üretim tahmini eksik olduğu için denge yorumu oluşturulamadı.",
+            "coverageRatioPct": None,
+            "balanceTon": None,
+            "balancePct": None,
+            "predictedSupplyTon": supply,
+            "predictedDemandTon": demand,
+            "demandGrowthPct": demand_growth_pct,
+            "scope": "Türkiye ürün dengesi",
+        }
+
+    coverage_ratio = supply / demand
+    coverage_ratio_pct = coverage_ratio * 100
+    balance_ton = supply - demand
+    balance_pct = (balance_ton / demand) * 100 if demand else None
+
+    if coverage_ratio < 0.95:
+        status = "Arz açığı"
+        note = "Talep üretimi aşıyor; iç piyasada açık ve ithalat baskısı görülebilir."
+        tone = "warning"
+        base_score = 100 - ((1 - coverage_ratio) * 95)
+    elif coverage_ratio <= 1.05:
+        status = "Dengeli"
+        note = "Üretim ve tüketim birbirine yakın; aşırı arz kaynaklı fiyat baskısı daha sınırlı olabilir."
+        tone = "balanced"
+        base_score = 96 - (abs(coverage_ratio - 1) * 40)
+    else:
+        status = "Üretim fazlası"
+        note = "Üretim talebi aşıyor; fiyat baskısı, stok yükü ve fazla arz riski oluşabilir."
+        tone = "risk"
+        base_score = 100 - ((coverage_ratio - 1) * 150)
+
+    growth_bonus = _clamp((demand_growth_pct or 0) * 0.18, -6, 6) if demand_growth_pct is not None else 0
+    score = round(_clamp(base_score + growth_bonus, 5, 100), 1)
+
+    year_prefix = f"{forecast_year} Türkiye görünümünde" if forecast_year else "Türkiye görünümünde"
+    summary = (
+        f"{year_prefix} tahmini üretim {supply:,.0f} ton, tahmini tüketim {demand:,.0f} ton. "
+        f"Karşılama oranı %{coverage_ratio_pct:.1f}; ürün {status.lower()} görünümünde."
+    )
+
     return {
-        "score": confidence_score,
-        "label": label,
-        "summary": (
-            f"Walk-forward doğrulamasında ortalama SMAPE %{smape:.1f} ve WAPE %{wape:.1f} seviyesinde. "
-            f"Bu nedenle model güven seviyesi {label.lower()} olarak değerlendirildi."
-        ),
-        "modelName": metric_row.get("model_name"),
-        "modelVersion": metric_row.get("model_version"),
+        "score": score,
+        "status": status,
+        "summary": summary,
+        "note": note,
+        "coverageRatioPct": round(coverage_ratio_pct, 1),
+        "balanceTon": round(balance_ton, 1),
+        "balancePct": round(balance_pct, 1) if balance_pct is not None else None,
+        "predictedSupplyTon": round(supply, 1),
+        "predictedDemandTon": round(demand, 1),
+        "demandGrowthPct": round(demand_growth_pct, 1) if demand_growth_pct is not None else None,
+        "scope": "Türkiye ürün dengesi",
+        "tone": tone,
+        "consumptionProductName": balance_row.get("consumption_product_name"),
     }
 
 
+
+def _build_confidence_payload(city_name: str | None, product_name: str | None, horizon: int | None) -> dict[str, object]:
+    effective_horizon = int(_clamp(float(horizon or 1), 1, 3))
+    global_stats = get_walk_forward_calibration(horizon=effective_horizon) or {}
+    product_stats = get_walk_forward_calibration(product_name=product_name, horizon=effective_horizon) if product_name else {}
+    local_stats = get_walk_forward_calibration(city_name=city_name, product_name=product_name, horizon=effective_horizon) if city_name and product_name else {}
+    metric_row = get_walk_forward_summary(horizon=effective_horizon)
+
+    global_sample = _safe_int(global_stats.get("sample_size"), 0) or 0
+    global_rate = _safe_float(global_stats.get("success_rate"), None)
+    product_sample = _safe_int(product_stats.get("sample_size"), 0) or 0
+    product_rate = _safe_float(product_stats.get("success_rate"), None)
+    local_sample = _safe_int(local_stats.get("sample_size"), 0) or 0
+    local_success = _safe_int(local_stats.get("success_count"), 0) or 0
+
+    prior_stats = global_stats
+    prior_level = "Ürün + tahmin ufku"
+    prior_sample = global_sample
+    prior_rate = global_rate if global_rate is not None else 0.45
+
+    if product_sample >= 20 and product_rate is not None:
+        prior_stats = product_stats
+        prior_level = "Ürün + tahmin ufku"
+        prior_sample = product_sample
+        prior_rate = product_rate
+
+    prior_strength = _clamp(sqrt(prior_sample or 1), 8, 24) if prior_sample else 10.0
+    alpha_prior = max(prior_rate * prior_strength, 0.5)
+    beta_prior = max((1 - prior_rate) * prior_strength, 0.5)
+    posterior_rate = (local_success + alpha_prior) / (local_sample + alpha_prior + beta_prior)
+    score = round(_clamp(posterior_rate * 100, 5, 95), 1)
+    label = _confidence_label(score)
+
+    if local_sample >= 3:
+        calibration_level = "Şehir + ürün + tahmin ufku"
+    elif local_sample > 0 and prior_sample:
+        calibration_level = "Şehir örneklemi sınırlı, üst düzey seri ile kalibre edildi"
+    elif product_sample >= 20:
+        calibration_level = "Ürün + tahmin ufku"
+    else:
+        calibration_level = "Tahmin ufku geneli"
+
+    observed_source = local_stats if local_sample > 0 else (product_stats if product_sample > 0 else global_stats)
+    observed_coverage_pct = _safe_float(observed_source.get("success_rate"), posterior_rate)
+    observed_coverage_pct = round((observed_coverage_pct or 0) * 100, 1)
+
+    avg_abs_error_pct = _blend_metric(
+        _safe_float(local_stats.get("avg_abs_error_pct"), None) if local_sample > 0 else None,
+        _safe_float(prior_stats.get("avg_abs_error_pct"), None),
+        local_sample,
+        prior_strength,
+    )
+    avg_interval_width_pct = _blend_metric(
+        _safe_float(local_stats.get("avg_interval_width_pct"), None) if local_sample > 0 else None,
+        _safe_float(prior_stats.get("avg_interval_width_pct"), None),
+        local_sample,
+        prior_strength,
+    )
+
+    effective_sample = local_sample + alpha_prior + beta_prior
+    variance = (posterior_rate * (1 - posterior_rate)) / max(effective_sample + 1, 1)
+    error_margin = 1.28155 * sqrt(max(variance, 0)) * 100
+    probability_range = {
+        "lower": round(_clamp(score - error_margin, 0, 100), 1),
+        "upper": round(_clamp(score + error_margin, 0, 100), 1),
+    }
+
+    if local_sample > 0:
+        if local_sample < 6 and prior_sample:
+            summary = (
+                f"{_format_horizon_label(effective_horizon)} için şehir ve ürün kırılımında {local_sample} benzer senaryo bulundu. "
+                f"Örneklem sınırlı olduğu için sonuç, {prior_level.lower()} düzeyindeki {prior_sample} senaryonun walk-forward başarı oranı ile dengelenerek %{score:.1f} olarak kalibre edildi."
+            )
+        else:
+            summary = (
+                f"{_format_horizon_label(effective_horizon)} için şehir ve ürün kırılımındaki {local_sample} benzer walk-forward senaryosuna göre "
+                f"önerinin başarı olasılığı %{score:.1f} hesaplandı."
+            )
+    elif product_sample >= 20:
+        summary = (
+            f"Şehir kırılımında yeterli örnek bulunmadığı için {prior_level.lower()} düzeyindeki {product_sample} walk-forward senaryosu kullanılarak "
+            f"başarı olasılığı %{score:.1f} hesaplandı."
+        )
+    elif global_sample:
+        summary = (
+            f"Seçilen ürün için ayrıntılı kalibrasyon verisi sınırlı olduğu için {_format_horizon_label(effective_horizon)} genelindeki {global_sample} walk-forward senaryosu referans alındı. "
+            f"Öneri başarı olasılığı %{score:.1f} hesaplandı."
+        )
+    else:
+        summary = "Walk-forward kalibrasyon verisi bulunamadığı için genel model görünümü kullanıldı."
+
+    smape = _safe_float((metric_row or {}).get("avg_smape_pct"), None)
+    wape = _safe_float((metric_row or {}).get("avg_wape_pct"), None)
+
+    return {
+        "score": score,
+        "label": label,
+        "summary": summary,
+        "method": "Walk-forward doğrulama sonuçlarının ampirik Bayes kalibrasyonu",
+        "successDefinition": "Başarılı senaryo, gerçek üretimin modelin walk-forward kalibrasyon bandı içinde kalması olarak tanımlanır.",
+        "calibrationLevel": calibration_level,
+        "horizon": effective_horizon,
+        "horizonLabel": _format_horizon_label(effective_horizon),
+        "localSampleSize": local_sample or None,
+        "referenceSampleSize": prior_sample or None,
+        "referenceLevel": prior_level if prior_sample else None,
+        "observedCoveragePct": observed_coverage_pct,
+        "avgAbsErrorPct": round(avg_abs_error_pct, 1) if avg_abs_error_pct is not None else None,
+        "avgIntervalWidthPct": round(avg_interval_width_pct, 1) if avg_interval_width_pct is not None else None,
+        "probabilityRange": probability_range,
+        "modelName": (metric_row or {}).get("model_name"),
+        "modelVersion": (metric_row or {}).get("model_version"),
+        "avgSmapePct": round(smape, 1) if smape is not None else None,
+        "avgWapePct": round(wape, 1) if wape is not None else None,
+    }
+
+
+
+def _decorate_analysis_with_confidence(analysis: dict | None) -> dict | None:
+    if not analysis:
+        return analysis
+
+    decorated = dict(analysis)
+    focus_crop = decorated.get("focus_crop_name") or decorated.get("selected_crop_name")
+    forecast_year = _safe_int(decorated.get("forecast_year"), None)
+    city_name = decorated.get("city") or decorated.get("field_city")
+
+    if focus_crop and forecast_year:
+        latest_year = _latest_history_year(city_name, focus_crop)
+        horizon = int(_clamp(float((forecast_year - latest_year) if latest_year else 1), 1, 3))
+        confidence_payload = _build_confidence_payload(city_name, focus_crop, horizon)
+    else:
+        stored_score = round(_safe_float(decorated.get("confidence_score"), 0) or 0, 1)
+        confidence_payload = {
+            "score": stored_score,
+            "label": _confidence_label(stored_score),
+            "summary": None,
+        }
+
+    decorated["confidence_payload"] = confidence_payload
+    decorated["confidence_score"] = confidence_payload.get("score", decorated.get("confidence_score"))
+    return decorated
+
+
+
+def _decorate_analysis_with_market_context(analysis: dict | None) -> dict | None:
+    if not analysis:
+        return analysis
+
+    decorated = dict(analysis)
+    focus_crop = decorated.get("focus_crop_name") or decorated.get("selected_crop_name")
+    forecast_year = _safe_int(decorated.get("forecast_year"), None)
+    city_name = decorated.get("city") or decorated.get("field_city")
+
+    yield_context = get_product_yield_context(city_name, focus_crop, years=5) if focus_crop else {}
+    supply_demand = _build_supply_demand_payload(
+        get_product_supply_demand_projection(focus_crop, forecast_year)
+    ) if focus_crop and forecast_year else _build_supply_demand_payload(None)
+
+    decorated["yield_context"] = yield_context
+    decorated["supply_demand"] = supply_demand
+    if supply_demand.get("summary"):
+        decorated["market_comment"] = f"{supply_demand['summary']} {supply_demand.get('note', '')}".strip()
+    return decorated
+
+
+
 def _serialize_analysis_report(analysis: dict) -> dict[str, object]:
+    analysis = _decorate_analysis_with_confidence(analysis) or {}
     score = _safe_float(analysis.get("score"), 0) or 0
-    confidence_score = _safe_float(analysis.get("confidence_score"), 0) or 0
+    confidence_payload = analysis.get("confidence_payload") or {}
+    confidence_score = _safe_float(confidence_payload.get("score"), _safe_float(analysis.get("confidence_score"), 0)) or 0
     selected_crop = analysis.get("selected_crop_name") or analysis.get("focus_crop_name")
     return {
         "id": str(analysis["id"]),
@@ -412,7 +726,7 @@ def _serialize_analysis_report(analysis: dict) -> dict[str, object]:
         "status": f"Skor %{int(round(score))}",
         "score": round(score, 1),
         "confidenceScore": round(confidence_score, 1),
-        "confidenceLabel": _confidence_label(confidence_score) if confidence_score else None,
+        "confidenceLabel": confidence_payload.get("label") or _confidence_label(confidence_score),
         "city": analysis.get("city") or analysis.get("field_city"),
         "selectedCropName": selected_crop,
         "analyzedAt": analysis.get("analyzed_at").isoformat() if analysis.get("analyzed_at") else None,
@@ -429,7 +743,7 @@ def _serialize_saved_recommendation(item: dict) -> dict[str, object]:
         "crop": item.get("crop_name"),
         "score": round(recommendation_score, 1),
         "forecastYear": item.get("forecast_year"),
-        "expectedReturn": f"{expected_return:+.1f}%" if expected_return is not None else "—",
+        "expectedReturn": f"{expected_return:+.1f}%" if expected_return is not None else "-",
         "expectedYieldKgDecare": round(_safe_float(item.get("expected_yield_kg_decare"), 0) or 0, 1) if item.get("expected_yield_kg_decare") is not None else None,
         "estimatedProductionTon": round(_safe_float(item.get("expected_production_ton"), 0) or 0, 1) if item.get("expected_production_ton") is not None else None,
         "predictedProductionTon": round(_safe_float(item.get("predicted_production_ton"), 0) or 0, 1) if item.get("predicted_production_ton") is not None else None,
@@ -439,19 +753,25 @@ def _serialize_saved_recommendation(item: dict) -> dict[str, object]:
 
 
 def _serialize_analysis_response(analysis: dict, recommendations: list[dict], trend_rows: list[dict] | None = None) -> dict[str, object]:
+    analysis = _decorate_analysis_with_market_context(_decorate_analysis_with_confidence(analysis)) or {}
     selected_crop_name = analysis.get("selected_crop_name") or analysis.get("focus_crop_name")
-    confidence_score = _safe_float(analysis.get("confidence_score"), 0) or 0
+    confidence_payload = analysis.get("confidence_payload") or {}
+    supply_demand = analysis.get("supply_demand") or {}
+    yield_context = analysis.get("yield_context") or {}
     score = _safe_float(analysis.get("score"), 0) or 0
+
+    default_confidence = {
+        "score": round(_safe_float(analysis.get("confidence_score"), 0) or 0, 1),
+        "label": _confidence_label(_safe_float(analysis.get("confidence_score"), 0) or 0),
+    }
+    response_confidence = {**default_confidence, **confidence_payload}
 
     return {
         "success": True,
         "analysisId": str(analysis["id"]),
         "analyzedAt": analysis.get("analyzed_at").isoformat() if analysis.get("analyzed_at") else None,
         "score": round(score, 1),
-        "confidence": {
-            "score": round(confidence_score, 1),
-            "label": _confidence_label(confidence_score),
-        },
+        "confidence": response_confidence,
         "summary": analysis.get("summary"),
         "climateComment": analysis.get("climate_comment"),
         "marketComment": analysis.get("market_comment"),
@@ -462,7 +782,11 @@ def _serialize_analysis_response(analysis: dict, recommendations: list[dict], tr
             "forecastYear": analysis.get("forecast_year"),
             "expectedYieldKgDecare": round(_safe_float(analysis.get("expected_yield_kg_decare"), 0) or 0, 1) if analysis.get("expected_yield_kg_decare") is not None else None,
             "expectedProductionTon": round(_safe_float(analysis.get("expected_production_ton"), 0) or 0, 1) if analysis.get("expected_production_ton") is not None else None,
+            "yieldScore": _yield_score_from_context(yield_context, analysis.get("expected_yield_kg_decare") is not None),
+            "yieldIndexPct": round(_safe_float(yield_context.get("relative_index_pct"), 0) or 0, 1) if yield_context.get("relative_index_pct") is not None else None,
+            "yieldPercentile": round(_safe_float(yield_context.get("percentile_score"), 0) or 0, 1) if yield_context.get("percentile_score") is not None else None,
         },
+        "supplyDemand": supply_demand,
         "focusCrop": analysis.get("focus_crop_name") or selected_crop_name,
         "plan": {
             "id": str(analysis.get("plan_id")) if analysis.get("plan_id") else None,
@@ -483,7 +807,9 @@ def _serialize_analysis_response(analysis: dict, recommendations: list[dict], tr
             {
                 "year": str(row["year"]),
                 "historicalProduction": round(_safe_float(row.get("historical_production_ton"), 0) or 0, 1) if row.get("historical_production_ton") is not None else None,
-                "predictedProduction": round(_safe_float(row.get("predicted_production_ton"), 0) or 0, 1) if row.get("predicted_production_ton") is not None else None,
+                "predictedSupply": round(_safe_float(row.get("predicted_supply_ton"), 0) or 0, 1) if row.get("predicted_supply_ton") is not None else None,
+                "predictedProduction": round(_safe_float(row.get("predicted_supply_ton"), 0) or 0, 1) if row.get("predicted_supply_ton") is not None else None,
+                "predictedDemand": round(_safe_float(row.get("predicted_demand_ton"), 0) or 0, 1) if row.get("predicted_demand_ton") is not None else None,
             }
             for row in (trend_rows or [])
         ],
@@ -498,7 +824,14 @@ def _analysis_is_current(plan: dict, analysis: dict | None) -> bool:
     updated_at = plan.get("updated_at")
     if not analyzed_at or not updated_at:
         return False
+
+    breakdown = _parse_score_breakdown(analysis.get("score_breakdown"))
+    demand_item = next((item for item in breakdown if item.get("key") == "demand"), None)
+    if demand_item and demand_item.get("label") != _score_breakdown_label("demand"):
+        return False
+
     return analyzed_at >= updated_at
+
 
 
 def _normalize_profile_payload(payload: ProfileUpdateRequest) -> dict[str, object]:
@@ -761,9 +1094,7 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
         if _analysis_is_current(plan, cached_analysis):
             cached_recommendations = get_ai_recommendations_for_analysis(cached_analysis["id"])
             focus_crop = cached_analysis.get("focus_crop_name") or cached_analysis.get("selected_crop_name")
-            trend_rows = get_crop_projection_series(cached_analysis.get("city"), focus_crop, history_limit=5, forecast_limit=3)
-            if not trend_rows and focus_crop:
-                trend_rows = get_crop_projection_series(None, focus_crop, history_limit=5, forecast_limit=3)
+            trend_rows = get_product_supply_demand_series(focus_crop, history_limit=5, forecast_limit=3)
             return _serialize_analysis_response(cached_analysis, cached_recommendations, trend_rows)
 
         city_name = (plan.get("city") or plan.get("field_city") or user.get("city") or "Manisa").strip()
@@ -797,11 +1128,6 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
     latest_soil = mean([_safe_float(row.get("soil_moisture_pct"), 0) or 0 for row in climate_rows]) if climate_rows else 0
     risk = _risk_payload(latest_temp, latest_rainfall, latest_soil)
 
-    latest_actual_year = max((item.get("latest_year") or 0) for item in candidate_pool)
-    horizon = int(_clamp((forecast_year - latest_actual_year) if latest_actual_year else 1, 1, 3))
-    confidence = _build_confidence_payload(get_walk_forward_summary(horizon=horizon))
-    demand_map = get_consumption_projection_map([item["product_name"] for item in candidate_pool], forecast_year)
-
     raw_items = []
     for item in candidate_pool:
         history_rows = get_crop_history_rows(city_name, item["product_name"], years=5)
@@ -813,8 +1139,9 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
         latest_production = history.get("latest_production") or _safe_float(item.get("latest_production_ton"), None)
         predicted_production = _safe_float(item.get("predicted_production_ton"), 0) or 0
         estimated_production = ((expected_yield or 0) * planned_area / 1000) if planned_area and expected_yield else None
-        demand_value = _safe_float((demand_map.get(item["product_name"]) or {}).get("consumption_value"), None)
         projected_growth = ((predicted_production - latest_production) / latest_production) * 100 if latest_production else None
+        yield_context = get_product_yield_context(city_name, item["product_name"], years=5)
+        supply_demand = _build_supply_demand_payload(get_product_supply_demand_projection(item["product_name"], forecast_year))
 
         raw_items.append(
             {
@@ -826,40 +1153,52 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
                 "latest_production_ton": latest_production,
                 "history_years": history.get("history_years"),
                 "stability_score": history.get("stability_score") or 55,
-                "demand_value": demand_value,
                 "projected_growth_percent": projected_growth,
+                "latest_year": item.get("latest_year"),
+                "yield_context": yield_context,
+                "supply_demand": supply_demand,
             }
         )
 
-    yield_values = [item["expected_yield_kg_decare"] for item in raw_items if item["expected_yield_kg_decare"] is not None]
     forecast_values = [item["predicted_production_ton"] for item in raw_items if item["predicted_production_ton"] is not None]
-    demand_values = [item["demand_value"] for item in raw_items if item["demand_value"] is not None]
-    yield_min, yield_max = (min(yield_values), max(yield_values)) if yield_values else (None, None)
     forecast_min, forecast_max = (min(forecast_values), max(forecast_values)) if forecast_values else (None, None)
-    demand_min, demand_max = (min(demand_values), max(demand_values)) if demand_values else (None, None)
     climate_base = 100 - risk["score"]
+    score_profile = get_scoring_profile()
+    score_weights = score_profile["weights"]
+    score_weight_percents = score_profile["weightPercents"]
 
     scored_items = []
     for item in raw_items:
-        yield_score = round(_normalize_range(item["expected_yield_kg_decare"], yield_min, yield_max, default=55), 1)
+        yield_score = _yield_score_from_context(item.get("yield_context"), item.get("expected_yield_kg_decare") is not None)
         forecast_score = round(_normalize_range(item["predicted_production_ton"], forecast_min, forecast_max, default=55), 1)
-        demand_score = round(_normalize_range(item["demand_value"], demand_min, demand_max, default=50), 1)
+        demand_score = round(_safe_float((item.get("supply_demand") or {}).get("score"), 50) or 50, 1)
         climate_score = round(_clamp((climate_base * 0.6) + ((item["stability_score"] or 55) * 0.4), 20, 95), 1)
-        total_score = round((yield_score * 0.32) + (forecast_score * 0.33) + (demand_score * 0.17) + (climate_score * 0.18), 1)
+        total_score = compute_weighted_score({"yield": yield_score, "forecast": forecast_score, "demand": demand_score, "climate": climate_score}, score_weights)
+
+        yield_context = item.get("yield_context") or {}
+        supply_demand = item.get("supply_demand") or {}
+        reason_parts = []
+        if item.get("expected_yield_kg_decare") is not None:
+            if yield_context.get("relative_index_pct") is not None:
+                reason_parts.append(
+                    f"{city_name} verimi Türkiye ortalamasının %{yield_context['relative_index_pct']:.1f} seviyesinde"
+                )
+            else:
+                reason_parts.append(
+                    f"{city_name} için geçmiş ortalama verim {item['expected_yield_kg_decare']:.1f} kg/dekar"
+                )
+        reason_parts.append(f"{forecast_year} model projeksiyonu {item['predicted_production_ton']:,.0f} ton seviyesinde")
+        if supply_demand.get("status") and supply_demand.get("status") != "Veri sınırlı":
+            reason_parts.append(f"Türkiye arz-talep görünümü {supply_demand['status'].lower()} seviyesinde")
 
         item.update(
             {
-                "yield_score": yield_score,
+                "yield_score": round(yield_score, 1),
                 "forecast_score": forecast_score,
                 "demand_score": demand_score,
                 "climate_score": climate_score,
                 "total_score": total_score,
-                "reason": (
-                    f"{city_name} için geçmiş ortalama verim {item['expected_yield_kg_decare']:.1f} kg/dekar, "
-                    f"{forecast_year} model projeksiyonu {item['predicted_production_ton']:,.0f} ton seviyesinde."
-                    if item["expected_yield_kg_decare"] is not None
-                    else f"{city_name} için {forecast_year} model projeksiyonu {item['predicted_production_ton']:,.0f} ton seviyesinde."
-                ),
+                "reason": ". ".join(reason_parts) + ".",
             }
         )
         scored_items.append(item)
@@ -869,12 +1208,17 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
     focus_crop = selected_item["product_name"]
     selected_key = _comparison_key(focus_crop)
 
+    latest_actual_year = _safe_int(selected_item.get("latest_year"), None) or _latest_history_year(city_name, focus_crop) or _latest_history_year(None, focus_crop)
+    horizon = int(_clamp(float((forecast_year - latest_actual_year) if latest_actual_year else 1), 1, 3))
+    confidence = _build_confidence_payload(city_name, focus_crop, horizon)
+    selected_supply_demand = selected_item.get("supply_demand") or _build_supply_demand_payload(None)
+
     alternatives = [item for item in scored_items if _comparison_key(item["product_name"]) != selected_key][:3]
     score_breakdown = [
-        {"key": "yield", "label": "Geçmiş verim", "value": selected_item["yield_score"], "weight": 32},
-        {"key": "forecast", "label": "Model projeksiyonu", "value": selected_item["forecast_score"], "weight": 33},
-        {"key": "demand", "label": "Tüketim eğilimi", "value": selected_item["demand_score"], "weight": 17},
-        {"key": "climate", "label": "İklim dayanıklılığı", "value": selected_item["climate_score"], "weight": 18},
+        {"key": "yield", "label": _score_breakdown_label("yield"), "value": selected_item["yield_score"], "weight": score_weight_percents["yield"]},
+        {"key": "forecast", "label": _score_breakdown_label("forecast"), "value": selected_item["forecast_score"], "weight": score_weight_percents["forecast"]},
+        {"key": "demand", "label": _score_breakdown_label("demand"), "value": selected_item["demand_score"], "weight": score_weight_percents["demand"]},
+        {"key": "climate", "label": _score_breakdown_label("climate"), "value": selected_item["climate_score"], "weight": score_weight_percents["climate"]},
     ]
 
     summary = (
@@ -887,14 +1231,9 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
         f"Son 12 aylık iklim görünümünde ortalama sıcaklık {latest_temp:.1f}°C, yağış {latest_rainfall:.1f} mm ve toprak nemi %{latest_soil:.1f}. "
         f"Bu desen şehir için {risk['level'].lower()} risk profiline işaret ediyor."
     )
-    market_comment = (
-        f"Tüketim eğilimi ve model projeksiyonu birlikte değerlendirildiğinde {focus_crop} için güven skoru %{confidence['score']:.1f} seviyesinde. "
-        f"{confidence['summary']}"
-    )
+    market_comment = f"{selected_supply_demand.get('summary', '')} {selected_supply_demand.get('note', '')}".strip()
 
-    trend_rows = get_crop_projection_series(city_name, focus_crop, history_limit=5, forecast_limit=3)
-    if not trend_rows and focus_crop:
-        trend_rows = get_crop_projection_series(None, focus_crop, history_limit=5, forecast_limit=3)
+    trend_rows = get_product_supply_demand_series(focus_crop, history_limit=5, forecast_limit=3)
 
     analysis_payload = {
         "id": "preview",
@@ -998,9 +1337,7 @@ def get_saved_analysis(analysis_id: str, user=Depends(require_current_user)):
 
     recommendations = get_ai_recommendations_for_analysis(analysis_id)
     focus_crop = analysis.get("focus_crop_name") or analysis.get("selected_crop_name")
-    trend_rows = get_crop_projection_series(analysis.get("city"), focus_crop, history_limit=5, forecast_limit=3)
-    if not trend_rows and focus_crop:
-        trend_rows = get_crop_projection_series(None, focus_crop, history_limit=5, forecast_limit=3)
+    trend_rows = get_product_supply_demand_series(focus_crop, history_limit=5, forecast_limit=3)
     return _serialize_analysis_response(analysis, recommendations, trend_rows)
 
 

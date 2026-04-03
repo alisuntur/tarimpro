@@ -389,3 +389,31 @@
 .secondary-analysis-action:hover {
     transform: translateY(-1px);
 }
+
+
+.confidence-detail-list {
+    display: grid;
+    gap: 0.65rem;
+}
+
+.confidence-detail-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--color-text-main);
+    font-size: 0.95rem;
+}
+
+.confidence-detail-row strong {
+    text-align: right;
+}
+
+.confidence-note {
+    margin: 0;
+    line-height: 1.55;
+}
+
+
+.chart-note {
+    margin-top: 1rem;
+}

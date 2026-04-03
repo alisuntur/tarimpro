@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang='tr'>
+<head>
+  <meta charset='utf-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1'>
+  <title>TarimZeka MVP - 3 Sprint Plan</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; color: #1f2937; background: #f3f4f6; line-height: 1.45; }
+    .page { width: 210mm; min-height: 297mm; margin: 0 auto 14px; padding: 18mm 16mm; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.08); page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+    h1, h2, h3 { color: #163a2f; margin: 0 0 10px; }
+    h1 { font-size: 28px; }
+    h2 { font-size: 22px; border-bottom: 2px solid #d8efe3; padding-bottom: 8px; margin-top: 10px; }
+    h3 { font-size: 16px; margin-top: 18px; }
+    p { margin: 0 0 10px; }
+    ul { margin: 8px 0 12px 20px; }
+    li { margin: 4px 0; }
+    .hero { display: grid; grid-template-columns: 1.4fr .9fr; gap: 18px; }
+    .card { border: 1px solid #d1d5db; border-radius: 14px; padding: 16px; }
+    .hero-main { background: linear-gradient(135deg, #edf8f1, #fff); border-color: #d8efe3; }
+    .hero-side { background: linear-gradient(150deg, #163a2f, #2d6a4f); color: #fff; }
+    .hero-side h3, .hero-side p, .hero-side li { color: #fff; }
+    .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 16px; }
+    .mini { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 10px; }
+    .kpi { border: 1px solid #d8efe3; border-radius: 12px; padding: 12px; background: #edf8f1; }
+    .kpi strong { display: block; color: #1f5a45; font-size: 12px; text-transform: uppercase; margin-bottom: 4px; }
+    .kpi span { font-size: 18px; font-weight: 700; color: #163a2f; }
+    .callout { margin: 12px 0; padding: 12px 14px; border-left: 4px solid #c59c3d; background: #fff8e8; border-radius: 10px; }
+    .sprint { display: flex; align-items: center; gap: 12px; }
+    .n { width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; background: #2d6a4f; color: #fff; font-weight: 700; font-size: 18px; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 13px; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px 9px; text-align: left; vertical-align: top; }
+    th { background: #edf8f1; color: #163a2f; }
+    .twocol { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .foot { margin-top: 16px; font-size: 12px; color: #6b7280; }
+    @media print {
+      body { background: #fff; }
+      .page { margin: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <section class='page'>
+    <div class='hero'>
+      <div class='card hero-main'>
+        <h1>TarimZeka MVP Yol Haritasi</h1>
+        <p><strong>3 sprintlik operasyonel gelisim plani</strong>. Amac, mevcut prototipi veritabani merkezli, kullaniciya ozel veri gosteren, gecmis planlari ve analizleri saklayan, AI onerilerini gercek veriden ureten bir MVP'ye donusturmektir.</p>
+        <p>Bu dokuman haftalik gorusmede proje kapsam?n?, teknik sirasini ve teslim mantigini net gostermek icin hazirlandi. 3 sprint sonunda sistemde yalnizca kucuk bug ve polish isleri kalmasi hedeflenmektedir.</p>
+        <div class='meta'>
+          <div class='mini'><strong>Proje</strong><br>TarimZeka</div>
+          <div class='mini'><strong>Tarih</strong><br>03.04.2026</div>
+          <div class='mini'><strong>Dokuman tipi</strong><br>MVP Sprint Plani</div>
+        </div>
+      </div>
+      <div class='card hero-side'>
+        <h3>3 sprint sonunda beklenen durum</h3>
+        <ul>
+          <li>Gercek auth ve kullanici baglami</li>
+          <li>Kullaniciya ozel profil, tarla, plan ve raporlar</li>
+          <li>DB'ye kaydedilen uretim plani akisi</li>
+          <li>Random veya sabit veri icermeyen bolgesel analiz</li>
+          <li>Il + donum + urun secimine gore AI onerileri</li>
+          <li>Kayitli analiz gecmisi ve aciklanabilir urun puani</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>Mevcut Durum</h2>
+    <div class='grid3'>
+      <div class='kpi'><strong>Hazir</strong><span>DB semasi + import</span><p>Analytics ve temel app tablolari kurulmus durumda.</p></div>
+      <div class='kpi'><strong>Kismi</strong><span>Dashboard / Profil / AI</span><p>Bazi ekranlar DB'den okuyor ancak demo ve turetilmis akislar suruyor.</p></div>
+      <div class='kpi'><strong>Eksik</strong><span>Tam MVP</span><p>Gercek auth, plan kaydi, AI kaydi ve tam mock temizligi henuz yok.</p></div>
+    </div>
+
+    <div class='callout'>Temel problem: Sistem veritabanina bagli ama kullanici akislarinin tamami DB merkezli degil. Bu nedenle uygulama teknik olarak bagli gorunse de kullanicida canli sistem hissi olusmuyor.</div>
+
+    <h3>Genel sprint stratejisi</h3>
+    <table>
+      <thead>
+        <tr><th>Sprint</th><th>Odak</th><th>Temel hedef</th><th>Cikis sonucu</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Sprint 1</td><td>Auth ve current-user</td><td>Kullaniciyi gercekten tanimak ve veri karismasini engellemek</td><td>Sistem gercek kullanici baglami ile calisir</td></tr>
+        <tr><td>Sprint 2</td><td>Plan ve bolgesel akis</td><td>Plan olusturma ve bolgesel analizleri DB tabanli yapmak</td><td>Kullanici gercek is akisi tamamlar</td></tr>
+        <tr><td>Sprint 3</td><td>AI analiz ve rapor gecmisi</td><td>AI onerilerini, puani ve rapor saklamayi gercek hale getirmek</td><td>Mock'suz MVP tamamlanir</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class='page'>
+    <div class='sprint'><div class='n'>1</div><div><h2>Sprint 1: Temel Altyapi ve Gercek Kullanici</h2><p>Hedef: mock hissini kiran temel katmani kurmak</p></div></div>
+
+    <h3>Sprint hedefi</h3>
+    <p>Bu sprintte once oturum ve kullanici baglami duzeltilir. Gercek auth olmadan planlarin, tarlalarin ve raporlarin hangi kullaniciya ait oldugu saglikli yonetilemez. Bu nedenle ilk sprint, tum sonraki sprintlerin teknik zemini olarak ele alinacaktir.</p>
+
+    <h3>Sprint sonunda bitmis olmasi gerekenler</h3>
+    <ul>
+      <li>Sifre dogrulamasi ile login</li>
+      <li>Token veya session ile oturum takibi</li>
+      <li>Protected route yapisi</li>
+      <li>Kullaniciya ozel profil verisi</li>
+      <li>Tarla CRUD islemleri</li>
+      <li>Hardcoded kullanici bilgisi ve demo fallback'lerin temizlenmesi</li>
+    </ul>
+
+    <h3>Dosya bazli degisiklik listesi</h3>
+    <table>
+      <thead><tr><th>Dosya</th><th>Islem</th><th>Not</th></tr></thead>
+      <tbody>
+        <tr><td>backend/main.py</td><td>Revize</td><td>Auth route'lari ve korumali endpoint yapisi eklenecek.</td></tr>
+        <tr><td>backend/db/schema.sql</td><td>Revize</td><td>app.user_sessions ve auth destek alanlari eklenecek.</td></tr>
+        <tr><td>backend/db/repositories.py</td><td>Revize</td><td>Kullaniciya gore okuma/yazma yapan repository fonksiyonlari eklenecek.</td></tr>
+        <tr><td>backend/db/bootstrap.py</td><td>Revize</td><td>Demo fallback davranisi runtime'dan ayrilacak.</td></tr>
+        <tr><td>backend/auth.py</td><td>Yeni</td><td>Sifre dogrulama, token uretimi ve token cozumleme.</td></tr>
+        <tr><td>backend/dependencies.py</td><td>Yeni</td><td>Current-user dependency katmani.</td></tr>
+        <tr><td>frontend/src/App.jsx</td><td>Revize</td><td>Route guard ve auth routing.</td></tr>
+        <tr><td>frontend/src/lib/api.js</td><td>Revize</td><td>Authorization header ve merkezi hata yonetimi.</td></tr>
+        <tr><td>frontend/src/pages/Login.jsx</td><td>Revize</td><td>Gercek auth cevabina gore davranis.</td></tr>
+        <tr><td>frontend/src/pages/Profile.jsx</td><td>Revize</td><td>Profil guncelleme ve tarla CRUD.</td></tr>
+        <tr><td>frontend/src/components/Layout.jsx</td><td>Revize</td><td>Hardcoded isim, bildirim ve cikis davranisi kaldirilacak.</td></tr>
+        <tr><td>frontend/src/context/AuthContext.jsx</td><td>Yeni</td><td>Auth state yonetimi.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Endpoint listesi</h3>
+    <table>
+      <thead><tr><th>Method</th><th>Endpoint</th><th>Amac</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td>/api/auth/login</td><td>Gercek sifre dogrulamasi ve token/session uretimi</td></tr>
+        <tr><td>POST</td><td>/api/auth/logout</td><td>Oturum kapatma</td></tr>
+        <tr><td>GET</td><td>/api/auth/me</td><td>Oturumdaki kullaniciyi getirme</td></tr>
+        <tr><td>GET</td><td>/api/profile/me</td><td>Kullanici profilini getirme</td></tr>
+        <tr><td>PUT</td><td>/api/profile/me</td><td>Profil guncelleme</td></tr>
+        <tr><td>GET / POST / PUT / DELETE</td><td>/api/fields</td><td>Tarla listeleme, ekleme, guncelleme, silme</td></tr>
+      </tbody>
+    </table>
+
+    <div class='twocol'>
+      <div class='card'>
+        <h3>Tablo listesi</h3>
+        <ul>
+          <li>app.users</li>
+          <li>app.fields</li>
+          <li>app.alerts</li>
+          <li>app.user_sessions (yeni)</li>
+        </ul>
+      </div>
+      <div class='card'>
+        <h3>Test checklist'i</h3>
+        <ul>
+          <li>Dogru sifre ile login</li>
+          <li>Yanlis sifre ile 401</li>
+          <li>Token olmadan korumali route red</li>
+          <li>Tarla CRUD DB'ye kalici yazim</li>
+          <li>Header'da gercek kullanici bilgisi</li>
+          <li>Logout sonrasi session sonlanmasi</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class='callout'><strong>Sprint 1 cikis kriteri:</strong> Uygulama artik demo kullanici akisi ile degil, gercek kullanici baglami ile calisir.</div>
+  </section>
+
+  <section class='page'>
+    <div class='sprint'><div class='n'>2</div><div><h2>Sprint 2: Uretim Plani ve Bolgesel Analiz</h2><p>Hedef: kullanicinin sistemde gercek is yapabilmesi</p></div></div>
+
+    <h3>Sprint hedefi</h3>
+    <p>Bu sprintte PlanWizard local state olmaktan cikacak, once veritabanina plan kaydi olusacak, ardindan analiz akislari plan_id uzerinden ilerleyecek. Bolgesel analiz sayfasi da random veriden arindirilip DB tabanli hale getirilecek.</p>
+
+    <h3>Sprint sonunda bitmis olmasi gerekenler</h3>
+    <ul>
+      <li>Yeni plan DB'ye yazilir</li>
+      <li>Dashboard history gercek planlardan gelir</li>
+      <li>Bolgesel analiz random veri kullanmaz</li>
+      <li>Sehir secimine gore ozetler tutarli degisir</li>
+      <li>Sayfa yenilense de plan kayitlari korunur</li>
+    </ul>
+
+    <h3>Dosya bazli degisiklik listesi</h3>
+    <table>
+      <thead><tr><th>Dosya</th><th>Islem</th><th>Not</th></tr></thead>
+      <tbody>
+        <tr><td>backend/main.py</td><td>Revize</td><td>Plan ve bolgesel analiz endpointleri eklenecek.</td></tr>
+        <tr><td>backend/db/repositories.py</td><td>Revize</td><td>Plan insert/update/list ve bolgesel sorgular.</td></tr>
+        <tr><td>backend/services/plan_service.py</td><td>Yeni</td><td>Plan dogrulama ve kayit mantigi.</td></tr>
+        <tr><td>backend/services/regional_analysis_service.py</td><td>Yeni</td><td>Il bazli uretim, iklim ve risk ozetleri.</td></tr>
+        <tr><td>backend/db/schema.sql</td><td>Revize</td><td>app.production_plans indeks ve validasyon duzenlemeleri.</td></tr>
+        <tr><td>frontend/src/pages/PlanWizard.jsx</td><td>Revize</td><td>Plan once kaydedilecek, sonra plan_id ile analiz ekranina gidilecek.</td></tr>
+        <tr><td>frontend/src/pages/Dashboard.jsx</td><td>Revize</td><td>Gercek planlar ve sehir bazli ozetleri gosterecek.</td></tr>
+        <tr><td>frontend/src/pages/RegionalAnalysis.jsx</td><td>Revize</td><td>Random mock kaldirilip backend tabanli hale getirilecek.</td></tr>
+        <tr><td>frontend/src/pages/Profile.jsx</td><td>Revize</td><td>Plan gecmisi ve raporlar senkron calisacak.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Endpoint listesi</h3>
+    <table>
+      <thead><tr><th>Method</th><th>Endpoint</th><th>Amac</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td>/api/plans</td><td>Yeni uretim plani olusturma</td></tr>
+        <tr><td>GET</td><td>/api/plans</td><td>Kullanici planlarini listeleme</td></tr>
+        <tr><td>GET</td><td>/api/plans/:id</td><td>Plan detayini getirme</td></tr>
+        <tr><td>PUT</td><td>/api/plans/:id</td><td>Plan guncelleme</td></tr>
+        <tr><td>GET</td><td>/api/regional-analysis?city=...</td><td>Sehir bazli uretim, iklim ve risk analizi</td></tr>
+        <tr><td>GET</td><td>/api/dashboard/history</td><td>Gercek plan gecmisini donme</td></tr>
+        <tr><td>GET</td><td>/api/dashboard/summary</td><td>Sehir bazli makro ozetleri getirme</td></tr>
+      </tbody>
+    </table>
+
+    <div class='twocol'>
+      <div class='card'>
+        <h3>Tablo listesi</h3>
+        <ul>
+          <li>app.production_plans</li>
+          <li>app.fields</li>
+          <li>app.alerts</li>
+          <li>analytics.production_history</li>
+          <li>analytics.climate_history</li>
+          <li>analytics.model_predictions</li>
+        </ul>
+      </div>
+      <div class='card'>
+        <h3>Test checklist'i</h3>
+        <ul>
+          <li>Plan olusturma DB'ye kalici yaziliyor mu?</li>
+          <li>Plan history yeni kaydi aninda gosteriyor mu?</li>
+          <li>Sayfa yenilenince plan kayboluyor mu?</li>
+          <li>Bolgesel analiz ayni sehir icin tutarli veri veriyor mu?</li>
+          <li>Veri yoksa fallback veya net hata var mi?</li>
+          <li>Kullanici baska kullanicinin planini gorebiliyor mu?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class='callout'><strong>Sprint 2 cikis kriteri:</strong> Kullanici sistemde gercek uretim plani olusturabilir ve bolgesel verileri mock olmadan inceleyebilir.</div>
+  </section>
+
+  <section class='page'>
+    <div class='sprint'><div class='n'>3</div><div><h2>Sprint 3: Gercek AI Onerileri, Puanlama ve Rapor Gecmisi</h2><p>Hedef: AI ekranini tam anlamiyla mock'tan cikarmak</p></div></div>
+
+    <h3>Sprint hedefi</h3>
+    <p>Bu sprintte il + donum + secilen urun bilgisine gore gecmis uretim, iklim, model tahmini ve tuketim verileri birlikte kullanilarak gercek tavsiye ve puan uretilir. Sonuclar kaydedilir ve daha sonra tekrar goruntulenebilir.</p>
+
+    <h3>Sprint sonunda bitmis olmasi gerekenler</h3>
+    <ul>
+      <li>Secilen urun icin gercek skor</li>
+      <li>Alternatif urun onerileri DB kaynakli olarak uretilir</li>
+      <li>Sabit chart ve demo gerekceler temizlenir</li>
+      <li>AI sonucu veritabanina kaydedilir</li>
+      <li>Gecmis analizler tekrar acilir</li>
+      <li>Veri yetersizliginde sistem durumu acikca soyler</li>
+    </ul>
+
+    <h3>Dosya bazli degisiklik listesi</h3>
+    <table>
+      <thead><tr><th>Dosya</th><th>Islem</th><th>Not</th></tr></thead>
+      <tbody>
+        <tr><td>backend/main.py</td><td>Revize</td><td>Plan bazli analiz ve rapor endpointleri eklenecek.</td></tr>
+        <tr><td>backend/services/ai_analysis_service.py</td><td>Yeni</td><td>Skorlama, gerekce ve alternatif urun siralama motoru.</td></tr>
+        <tr><td>backend/db/repositories.py</td><td>Revize</td><td>Analiz insert/read ve skor kaynagi sorgulari.</td></tr>
+        <tr><td>backend/db/schema.sql</td><td>Revize</td><td>app.ai_analyses ve app.ai_recommendations aktif kullanim icin genisletilecek.</td></tr>
+        <tr><td>frontend/src/pages/AiRecommendations.jsx</td><td>Revize</td><td>Sabit chart ve sabit skor yerine kayitli analiz sonucu gosterilecek.</td></tr>
+        <tr><td>frontend/src/pages/Profile.jsx</td><td>Revize</td><td>Gecmis analiz raporlari detay ekranina baglanacak.</td></tr>
+        <tr><td>frontend/src/pages/AnalysisDetail.jsx</td><td>Yeni</td><td>Kayitli analiz detayini tekrar gostermek icin.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Endpoint listesi</h3>
+    <table>
+      <thead><tr><th>Method</th><th>Endpoint</th><th>Amac</th></tr></thead>
+      <tbody>
+        <tr><td>POST</td><td>/api/plans/:id/analyze</td><td>Plan bazli AI analizini calistirma ve kaydetme</td></tr>
+        <tr><td>GET</td><td>/api/analyses/:id</td><td>Kayitli analiz detayini getirme</td></tr>
+        <tr><td>GET</td><td>/api/analyses</td><td>Kullanici analiz gecmisini listeleme</td></tr>
+        <tr><td>GET</td><td>/api/plans/:id/recommendations</td><td>Plan icin mevcut analiz sonucunu getirme</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Tablo listesi ve skor mantigi</h3>
+    <table>
+      <thead><tr><th>Bilesen</th><th>Agirlik</th><th>Kaynak</th><th>Aciklama</th></tr></thead>
+      <tbody>
+        <tr><td>Gecmis verim uyumu</td><td>%35</td><td>analytics.production_history</td><td>Il + urun bazli verim/dekar performansi</td></tr>
+        <tr><td>Gelecek uretim potansiyeli</td><td>%30</td><td>analytics.model_predictions</td><td>Yaklasik yil tahminlerine gore beklenen cikti</td></tr>
+        <tr><td>Iklim uyumu ve risk</td><td>%20</td><td>analytics.climate_history</td><td>Yagis, sicaklik, toprak nemi ve kuraklik baskisi</td></tr>
+        <tr><td>Pazar / tuketim egilimi</td><td>%15</td><td>analytics.consumption_history</td><td>Tuketim veya dolayli talep egilimi</td></tr>
+      </tbody>
+    </table>
+
+    <div class='twocol'>
+      <div class='card'>
+        <h3>Kullanilacak operasyonel tablolar</h3>
+        <ul>
+          <li>app.production_plans</li>
+          <li>app.ai_analyses</li>
+          <li>app.ai_recommendations</li>
+        </ul>
+      </div>
+      <div class='card'>
+        <h3>Test checklist'i</h3>
+        <ul>
+          <li>Il + donum + urun degistiginde skor degisiyor mu?</li>
+          <li>Donum bilgisi hesaplamayi etkiliyor mu?</li>
+          <li>AI onerileri secime gore degisiyor mu?</li>
+          <li>Analiz sonucu DB'ye kaydediliyor mu?</li>
+          <li>Gecmis analiz daha sonra ayni sekilde acilabiliyor mu?</li>
+          <li>Veri eksikse sistem bunu acikca belirtiyor mu?</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class='callout'><strong>Sprint 3 cikis kriteri:</strong> AI onerileri, secilen urun puani ve rapor gecmisi tamamen gercek veriye dayalidir.</div>
+
+    <h2>Genel Kabul Kriteri</h2>
+    <ul>
+      <li>Kullanici gercek auth ile giris yapar.</li>
+      <li>Kendi profilini, tarlasini, planini ve raporunu gorur.</li>
+      <li>Plan olusturur ve kalici olarak saklar.</li>
+      <li>Bolgesel analiz random veri kullanmaz.</li>
+      <li>AI onerileri gercek veriye dayanir, kaydedilir ve tekrar goruntulenebilir.</li>
+      <li>3 sprint sonunda geriye yalnizca ufak bug, polish ve performans ince ayarlari kalir.</li>
+    </ul>
+
+    <div class='callout'>Sunumda kullanilabilecek ozet: Proje once veri guvenilirligi ve kullanici baglami ile saglamlastirilacak, sonra gercek is akislarina tasinacak, son sprintte ise AI tarafindaki deger onerisi olan veri tabanli skor ve tavsiye motoru tamamlanacaktir.</div>
+
+    <p class='foot'>Kaynak dosya: docs/mvp_sprint_plan.html</p>
+  </section>
+</body>
+</html>

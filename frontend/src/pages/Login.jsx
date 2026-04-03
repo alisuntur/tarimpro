@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Tractor, Sprout, Leaf } from 'lucide-react';
+import { Sprout } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import './Login.css';
 
 const Login = () => {
@@ -8,54 +9,64 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [rememberMe, setRememberMe] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
     const navigate = useNavigate();
+    const { login, isAuthenticated, loading } = useAuth();
 
-    const handleLogin = (e) => {
+    useEffect(() => {
+        if (!loading && isAuthenticated) {
+            navigate('/dashboard', { replace: true });
+        }
+    }, [isAuthenticated, loading, navigate]);
+
+    const handleLogin = async (e) => {
         e.preventDefault();
         setIsLoading(true);
+        setError('');
 
-        // Simulate API call
-        setTimeout(() => {
+        try {
+            await login({ identifier, password, rememberMe });
+            navigate('/dashboard', { replace: true });
+        } catch (err) {
+            setError(err.message || 'Giri? s?ras?nda bir hata olu?tu.');
+        } finally {
             setIsLoading(false);
-            navigate('/dashboard');
-        }, 1500);
+        }
     };
 
     return (
         <div className="login-container">
-            {/* Left Side - Illustration/Image */}
             <div className="login-image-section">
                 <div className="image-overlay">
                     <div className="brand-logo animate-fade-in">
                         <Sprout size={48} color="var(--color-accent)" />
-                        <h1>TarımZeka</h1>
+                        <h1>Tar?mZeka</h1>
                     </div>
                     <div className="quote-container animate-fade-in" style={{ animationDelay: '0.2s' }}>
-                        <h2>Verinizle toprağınıza bereket katın.</h2>
+                        <h2>Verinizle topra??n?za bereket kat?n.</h2>
                         <p>
-                            Tarımsal Karar Destek Sistemi sayesinde tarlanızı dijitalden yönetin,
-                            yapay zeka destekli önerilerle riskleri en aza indirin.
+                            Tar?msal Karar Destek Sistemi sayesinde tarlan?z? dijitalden y?netin,
+                            yapay zeka destekli ?nerilerle riskleri en aza indirin.
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* Right Side - Form */}
             <div className="login-form-section">
                 <div className="form-wrapper animate-fade-in" style={{ animationDelay: '0.1s' }}>
                     <div className="form-header">
-                        <h2>Hoş Geldiniz</h2>
-                        <p>Sisteme giriş yaparak tarlanızı yönetmeye devam edin.</p>
+                        <h2>Ho? Geldiniz</h2>
+                        <p>Sisteme giri? yaparak tarlan?z? y?netmeye devam edin.</p>
                     </div>
 
                     <form onSubmit={handleLogin} className="login-form">
                         <div className="input-group">
-                            <label htmlFor="identifier">T.C. Kimlik No veya Telefon Numarası</label>
+                            <label htmlFor="identifier">T.C. Kimlik No, Telefon veya E-posta</label>
                             <input
                                 id="identifier"
                                 type="text"
                                 className="input-field"
-                                placeholder="Örn: 12345678901 veya 05XXXXXXXXX"
+                                placeholder="?rn: 12345678901 / 05551234567 / ahmet.yilmaz@tarim.test"
                                 value={identifier}
                                 onChange={(e) => setIdentifier(e.target.value)}
                                 required
@@ -63,12 +74,12 @@ const Login = () => {
                         </div>
 
                         <div className="input-group">
-                            <label htmlFor="password">Şifre</label>
+                            <label htmlFor="password">?ifre</label>
                             <input
                                 id="password"
                                 type="password"
                                 className="input-field"
-                                placeholder="••••••••"
+                                placeholder="????????"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
@@ -83,9 +94,9 @@ const Login = () => {
                                     onChange={(e) => setRememberMe(e.target.checked)}
                                 />
                                 <span className="checkmark"></span>
-                                Beni Hatırla
+                                Beni Hat?rla
                             </label>
-                            <a href="#" className="forgot-password">Şifremi Unuttum</a>
+                            <span className="forgot-password">Demo ?ifre: demo123</span>
                         </div>
 
                         <button
@@ -93,13 +104,14 @@ const Login = () => {
                             className="btn-primary login-btn"
                             disabled={isLoading}
                         >
-                            {isLoading ? 'Giriş Yapılıyor...' : 'Sisteme Giriş Yap'}
+                            {isLoading ? 'Giri? Yap?l?yor...' : 'Sisteme Giri? Yap'}
                         </button>
+
+                        {error && <p style={{ color: '#b91c1c', marginTop: '0.75rem' }}>{error}</p>}
                     </form>
 
                     <div className="register-link">
-                        Henüz hesabınız yok mu?{' '}
-                        <a href="#">Çiftçi Kayıt Sistemi (ÇKS) ile üye olun</a>
+                        Sprint 1 kapsam?nda giri? sistemi ger?ek oturum mant??? ile ?al???r.
                     </div>
                 </div>
             </div>

@@ -1,3 +1,7 @@
 fastapi
 uvicorn
 pydantic
+psycopg[binary]
+numpy
+pandas
+openpyxl

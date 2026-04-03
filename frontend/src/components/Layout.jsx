@@ -1,47 +1,74 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
     Home,
     Map,
     BrainCircuit,
     CloudSun,
-    Settings,
     Menu,
     Bell,
     User,
     Sprout,
     LogOut,
-    Globe
+    Globe,
 } from 'lucide-react';
+import { apiFetch } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import './Layout.css';
 
 const Layout = () => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [alertCount, setAlertCount] = useState(0);
     const navigate = useNavigate();
+    const { user, logout } = useAuth();
+
+    useEffect(() => {
+        let active = true;
+
+        const loadAlerts = async () => {
+            try {
+                const alerts = await apiFetch('/api/dashboard/alerts');
+                if (active) setAlertCount(alerts.length);
+            } catch {
+                if (active) setAlertCount(0);
+            }
+        };
+
+        loadAlerts();
+        return () => {
+            active = false;
+        };
+    }, []);
 
     const toggleSidebar = () => {
         setSidebarOpen(!sidebarOpen);
     };
 
+    const handleLogout = async () => {
+        await logout();
+        navigate('/login', { replace: true });
+    };
+
+    const firstName = user?.name?.split(' ')[0] || '?ift?i';
+
     const menuItems = [
         { path: '/dashboard', label: 'Ana Sayfa', icon: <Home size={20} /> },
-        { path: '/plan-wizard', label: 'Yeni Üretim Planı', icon: <Map size={20} /> },
-        { path: '/regional-analysis', label: 'Bölgesel Analiz', icon: <Globe size={20} /> },
-        { path: '/ai-recommendations', label: 'Yapay Zeka Önerileri', icon: <BrainCircuit size={20} /> },
-        { path: '/climate-market', label: 'İklim ve Risk Raporları', icon: <CloudSun size={20} /> },
+        { path: '/plan-wizard', label: 'Yeni ?retim Plan?', icon: <Map size={20} /> },
+        { path: '/regional-analysis', label: 'B?lgesel Analiz', icon: <Globe size={20} /> },
+        { path: '/ai-recommendations', label: 'Yapay Zeka ?nerileri', icon: <BrainCircuit size={20} /> },
+        { path: '/climate-market', label: '?klim ve Risk Raporlar?', icon: <CloudSun size={20} /> },
         { path: '/profile', label: 'Profil', icon: <User size={20} /> },
     ];
 
     return (
         <div className="layout-container">
-            {/* Sidebar */}
             <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
                 <div className="sidebar-header">
                     <div className="logo">
                         {sidebarOpen ? (
                             <div className="logo-full">
                                 <Sprout color="var(--color-accent)" size={28} />
-                                <span>TarımZeka</span>
+                                <span>Tar?mZeka</span>
                             </div>
                         ) : (
                             <Sprout color="var(--color-accent)" size={28} />
@@ -63,30 +90,28 @@ const Layout = () => {
                 </nav>
 
                 <div className="sidebar-footer">
-                    <button className="nav-item logout-btn" onClick={() => navigate('/login')}>
+                    <button className="nav-item logout-btn" onClick={handleLogout}>
                         <div className="nav-icon"><LogOut size={20} color="var(--color-danger)" /></div>
-                        {sidebarOpen && <span className="nav-label text-danger">Çıkış Yap</span>}
+                        {sidebarOpen && <span className="nav-label text-danger">??k?? Yap</span>}
                     </button>
                 </div>
             </aside>
 
-            {/* Main Content Area */}
             <main className="main-content">
-                {/* Header */}
                 <header className="top-header">
                     <div className="header-left">
                         <button className="menu-toggle" onClick={toggleSidebar}>
                             <Menu size={24} color="var(--color-text-main)" />
                         </button>
-                        <h2 className="welcome-text">Hoş Geldiniz, Ahmet! 👋</h2>
+                        <h2 className="welcome-text">Ho? geldiniz, {firstName}!</h2>
                     </div>
 
                     <div className="header-right">
-                        <button className="notification-btn">
+                        <button className="notification-btn" onClick={() => navigate('/dashboard')}>
                             <Bell size={22} color="var(--color-text-muted)" />
-                            <span className="badge">2</span>
+                            <span className="badge">{alertCount}</span>
                         </button>
-                        <div className="user-profile" onClick={() => navigate('/profile')}>
+                        <div className="user-profile" onClick={() => navigate('/profile')} title={user?.name || 'Profil'}>
                             <div className="avatar">
                                 <User size={20} color="white" />
                             </div>
@@ -94,7 +119,6 @@ const Layout = () => {
                     </div>
                 </header>
 
-                {/* Page Content */}
                 <div className="page-container">
                     <Outlet />
                 </div>

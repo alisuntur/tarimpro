@@ -1,160 +1,93 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useEffect, useState } from 'react';
 import {
     CloudSun,
     Droplets,
     TrendingUp,
     AlertTriangle,
     AlertCircle,
-    Leaf
+    Leaf,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { apiFetch } from '../lib/api';
 import './Dashboard.css';
+
+const cities = [
+    'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara', 'Antalya', 'Artvin',
+    'Aydın', 'Balıkesir', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale',
+    'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum',
+    'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay', 'Isparta', 'Mersin',
+    'İstanbul', 'İzmir', 'Kars', 'Kastamonu', 'Kayseri', 'Kırklareli', 'Kırşehir', 'Kocaeli',
+    'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Kahramanmaraş', 'Mardin', 'Muğla', 'Muş',
+    'Nevşehir', 'Niğde', 'Ordu', 'Rize', 'Sakarya', 'Samsun', 'Siirt', 'Sinop', 'Sivas',
+    'Tekirdağ', 'Tokat', 'Trabzon', 'Tunceli', 'Şanlıurfa', 'Uşak', 'Van', 'Yozgat',
+    'Zonguldak',
+].sort((a, b) => a.localeCompare(b, 'tr'));
+
+const initialSummary = {
+    weather: { temp: '—', condition: 'Yükleniyor...', humidity: '—', city: 'Manisa' },
+    soilMoisture: { level: '—', status: 'Yükleniyor...' },
+    marketTrend: { status: 'Yükleniyor...', indicator: '0.0%' },
+};
 
 const Dashboard = () => {
     const navigate = useNavigate();
-    const [summary, setSummary] = useState({
-        weather: { temp: "—", condition: "Yükleniyor...", humidity: "—" },
-        soilMoisture: { level: "%42", status: "Optimum" },
-        marketTrend: { status: "Yükseliş", indicator: "+%5.2" }
-    });
+    const [summary, setSummary] = useState(initialSummary);
     const [alerts, setAlerts] = useState([]);
     const [history, setHistory] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
-    const [hasMoreHistory, setHasMoreHistory] = useState(true);
+    const [weatherCity, setWeatherCity] = useState('Manisa');
+    const [error, setError] = useState('');
 
-    // YENİ: Hava durumu için şehir seçimi
-    const [weatherCity, setWeatherCity] = useState('Adana');
-    const cities = [
-        'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara', 'Antalya', 'Artvin',
-        'Aydın', 'Balıkesir', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale',
-        'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum',
-        'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay', 'Isparta', 'Mersin',
-        'İstanbul', 'İzmir', 'Kars', 'Kastamonu', 'Kayseri', 'Kırklareli', 'Kırşehir', 'Kocaeli',
-        'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Kahramanmaraş', 'Mardin', 'Muğla', 'Muş',
-        'Nevşehir', 'Niğde', 'Ordu', 'Rize', 'Sakarya', 'Samsun', 'Siirt', 'Sinop', 'Sivas',
-        'Tekirdağ', 'Tokat', 'Trabzon', 'Tunceli', 'Şanlıurfa', 'Uşak', 'Van', 'Yozgat',
-        'Zonguldak', 'Aksaray', 'Bayburt', 'Karaman', 'Kırıkkale', 'Batman', 'Şırnak', 'Bartın',
-        'Ardahan', 'Iğdır', 'Yalova', 'Karabük', 'Kilis', 'Osmaniye', 'Düzce'
-    ].sort((a, b) => a.localeCompare(b, 'tr'));
-
-
-    // Simulate fetching data from the backend
     useEffect(() => {
-        setTimeout(() => {
-            setAlerts([
-                { id: 1, type: "warning", message: "Bölgenizde önümüzdeki hafta %20 kuraklık riski bekleniyor.", time: "2 saat önce" },
-                { id: 2, type: "danger", message: "Arz Uyardısı: Buğday ekiminde bölgesel doygunluğa ulaşıldı.", time: "5 saat önce" }
-            ]);
-            setHistory([
-                { id: 101, name: "2024 Buğday Ekimi", targetYield: "%95", status: "Hasat Bekliyor", date: "12 Ekim 2023" },
-                { id: 102, name: "2023 Ayçiçeği", targetYield: "%88", status: "Tamamlandı", date: "15 Nisan 2023" },
-                { id: 103, name: "2023 Mısır (2. Mahsul)", targetYield: "%92", status: "Tamamlandı", date: "20 Haziran 2023" }
-            ]);
-            setLoading(false);
-        }, 500);
-    }, []);
+        let active = true;
 
-    // Dinamik hava durumu verisi çekme işlemi - bağımsız olarak çalışır
-    useEffect(() => {
-
-        const fetchWeather = async () => {
+        const loadDashboardData = async () => {
             try {
-                // Şehir ismini lokasyona çevir (Geocoding API)
-                const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${weatherCity}&count=1&language=tr&format=json`);
-                const geoData = await geoRes.json();
+                const [alertsData, historyData] = await Promise.all([
+                    apiFetch('/api/dashboard/alerts'),
+                    apiFetch('/api/dashboard/history'),
+                ]);
 
-                if (!geoData.results || geoData.results.length === 0) {
-                    console.warn(`No geocoding results for ${weatherCity}`);
-                    setSummary(prev => {
-                        if (!prev) return prev;
-                        return {
-                            ...prev,
-                            weather: { temp: "N/A", condition: "Bulunamadı", humidity: "N/A" }
-                        };
-                    });
-                    return;
-                }
-                const { latitude, longitude } = geoData.results[0];
-
-                // Hava durumu API'si (Koordinatlar ile - Toprak Nemi de dahil edildi)
-                const response = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&current=temperature_2m,relative_humidity_2m,weather_code&hourly=soil_moisture_0_to_1cm&timezone=auto&forecast_days=1`);
-                const data = await response.json();
-
-                const wmoCodes = {
-                    0: "Açık", 1: "Çoğunlukla Açık", 2: "Parçalı Bulutlu", 3: "Kapalı",
-                    45: "Sisli", 48: "Puslu", 51: "Hafif Çisenti", 53: "Çisenti", 55: "Yoğun Çisenti",
-                    61: "Hafif Yağmurlu", 63: "Yağmurlu", 65: "Kuvvetli Yağmurlu",
-                    71: "Hafif Kar Yağışlı", 73: "Kar Yağışlı", 75: "Yoğun Kar Yağışlı",
-                    77: "Kar Taneleri", 80: "Hafif Sağanak", 81: "Sağanak Yağışlı", 82: "Kuvvetli Sağanak",
-                    95: "Gök Gürültülü Fırtına", 96: "Hafif Dolulu Fırtına", 99: "Dolulu Fırtına"
-                };
-
-                const current = data.current;
-                const condition = wmoCodes[current.weather_code] || "Bilinmiyor";
-
-                // Gerçek uydusal toprak nemini al (0-1cm derinlik, m³/m³ cinsinden)
-                // Hourly verisinin ilk saatini (şu an) alırız. 0.150 m³/m³ gibi bir değer döner
-                let moistureValue = 0.3; // fallback 
-                if (data.hourly && data.hourly.soil_moisture_0_to_1cm && data.hourly.soil_moisture_0_to_1cm.length > 0) {
-                    moistureValue = data.hourly.soil_moisture_0_to_1cm[0];
-                }
-
-                // m³/m³ değerini % oranına çevirme (Örn: 0.180 -> %18) ve tarımsal 0.5 max kapasiteye göre ölçekleme
-                // Genellikle %10 altı aşırı kurak, %15-30 optimum, %35 üstü suya doygun sayılır
-                const moisturePercentage = Math.round(moistureValue * 100);
-                let soilStatus = "Optimum";
-                if (moisturePercentage < 15) soilStatus = "Kuru";
-                if (moisturePercentage > 35) soilStatus = "Islak";
-
-                setSummary(prev => {
-                    if (!prev) return prev;
-                    return {
-                        ...prev,
-                        weather: {
-                            temp: `${Math.round(current.temperature_2m)}°C`,
-                            condition: condition,
-                            humidity: `%${Math.round(current.relative_humidity_2m)}`
-                        },
-                        // Artık gerçek değerle gösteriliyor (%)
-                        soilMoisture: { level: `%${moisturePercentage}`, status: soilStatus }
-                    };
-                });
-            } catch (error) {
-                console.error("Hava durumu çekilemedi:", error);
-                setSummary(prev => {
-                    if (!prev) return prev;
-                    return {
-                        ...prev,
-                        weather: { temp: "Hata", condition: "Yüklenemedi", humidity: "Hata" }
-                    };
-                });
+                if (!active) return;
+                setAlerts(alertsData);
+                setHistory(historyData);
+            } catch (err) {
+                if (!active) return;
+                setError(err.message || 'Gösterge paneli verileri yüklenemedi.');
+            } finally {
+                if (active) setLoading(false);
             }
         };
 
-        fetchWeather();
-    }, [weatherCity]);
+        loadDashboardData();
+        return () => {
+            active = false;
+        };
+    }, []);
 
-    const handleLoadMoreHistory = () => {
-        setIsLoadingMore(true);
-        // Simulate an API call to fetch older records
-        setTimeout(() => {
-            const moreHistory = [
-                { id: 104, name: "2022 Şeker Pancarı", targetYield: "%85", status: "Tamamlandı", date: "10 Mart 2022" },
-                { id: 105, name: "2022 Buğday Ekimi", targetYield: "%90", status: "Tamamlandı", date: "05 Ekim 2021" },
-                { id: 106, name: "2021 Pamuk", targetYield: "%82", status: "Tamamlandı", date: "20 Nisan 2021" }
-            ];
-            setHistory(prev => [...prev, ...moreHistory]);
-            setIsLoadingMore(false);
-            setHasMoreHistory(false); // Only mock one extra page
-        }, 600);
-    };
+    useEffect(() => {
+        let active = true;
+
+        const loadSummary = async () => {
+            try {
+                const summaryData = await apiFetch(`/api/dashboard/summary?city=${encodeURIComponent(weatherCity)}`);
+                if (active) setSummary(summaryData);
+            } catch (err) {
+                if (active) setError(err.message || 'Özet verileri yüklenemedi.');
+            }
+        };
+
+        loadSummary();
+        return () => {
+            active = false;
+        };
+    }, [weatherCity]);
 
     if (loading) {
         return (
             <div className="loading-state">
                 <div className="spinner"></div>
-                <p>Verileriniz Yapay Zeka ile Analiz Ediliyor...</p>
+                <p>Verileriniz veritabanından yükleniyor...</p>
             </div>
         );
     }
@@ -164,12 +97,11 @@ const Dashboard = () => {
             <div className="dashboard-header-text">
                 <h1>Genel Durum Özeti</h1>
                 <p className="text-muted">Tarlanızın ve piyasanın anlık durumu</p>
+                {error && <p style={{ color: '#b91c1c', marginTop: '0.5rem' }}>{error}</p>}
             </div>
 
             <div className="dashboard-grid">
-                {/* Left Column (Main Content) */}
                 <div className="dashboard-main">
-                    {/* Top Cards */}
                     <div className="summary-cards">
                         <div className="summary-card card">
                             <div className="card-icon-wrapper weather-icon">
@@ -184,7 +116,7 @@ const Dashboard = () => {
                                         className="city-select-small"
                                         style={{ alignSelf: 'flex-start', maxWidth: '100%' }}
                                     >
-                                        {cities.map(city => <option key={city} value={city}>{city}</option>)}
+                                        {cities.map((city) => <option key={city} value={city}>{city}</option>)}
                                     </select>
                                 </div>
                                 <h3 className="card-value">{summary.weather.temp}</h3>
@@ -210,24 +142,14 @@ const Dashboard = () => {
                             <div className="card-content">
                                 <p className="card-label">Genel Piyasa Trendi</p>
                                 <h3 className="card-value">{summary.marketTrend.status}</h3>
-                                <p className="card-meta text-primary">{summary.marketTrend.indicator} (Son 30 Gün)</p>
+                                <p className="card-meta text-primary">{summary.marketTrend.indicator} (Model Projeksiyonu)</p>
                             </div>
                         </div>
                     </div>
 
-                    {/* Past Plans Table */}
                     <div className="history-section card">
                         <div className="section-header">
                             <h2>Geçmiş Üretim Planlarım</h2>
-                            {hasMoreHistory && (
-                                <button
-                                    className="btn-link"
-                                    onClick={handleLoadMoreHistory}
-                                    disabled={isLoadingMore}
-                                >
-                                    {isLoadingMore ? "Yükleniyor..." : "Tümünü Gör"}
-                                </button>
-                            )}
                         </div>
                         <div className="table-responsive">
                             <table className="history-table">
@@ -265,7 +187,6 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* Right Column (Alerts) */}
                 <div className="dashboard-sidebar">
                     <div className="alerts-section card">
                         <div className="section-header">
@@ -277,11 +198,7 @@ const Dashboard = () => {
                             {alerts.map((alert) => (
                                 <div key={alert.id} className={`alert-item alert-${alert.type}`}>
                                     <div className="alert-icon">
-                                        {alert.type === 'danger' ? (
-                                            <AlertCircle size={20} />
-                                        ) : (
-                                            <AlertTriangle size={20} />
-                                        )}
+                                        {alert.type === 'danger' ? <AlertCircle size={20} /> : <AlertTriangle size={20} />}
                                     </div>
                                     <div className="alert-content">
                                         <p className="alert-message">{alert.message}</p>
@@ -294,9 +211,11 @@ const Dashboard = () => {
                         <div className="ai-insight-box">
                             <p className="insight-title">Yapay Zeka Yorumu</p>
                             <p className="insight-text">
-                                Mevcut piyasa verilerine ve bölgesel analizlere göre riskleri minimize etmek için yeni bir üretim planı oluşturmanız önerilmektedir.
+                                Veritabanındaki iklim ve üretim planı verilerine göre yeni bir üretim planı oluşturarak riskleri daha iyi yönetebilirsiniz.
                             </p>
-                            <button className="btn-primary w-full mt-3">Yeni Plan Analizi Başlat</button>
+                            <button className="btn-primary w-full mt-3" onClick={() => navigate('/plan-wizard')}>
+                                Yeni Plan Analizi Başlat
+                            </button>
                         </div>
                     </div>
                 </div>

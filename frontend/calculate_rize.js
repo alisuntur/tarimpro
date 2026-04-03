@@ -1,4 +1,5 @@
-const fs = require('fs');
+import fs from 'node:fs';
+
 const data = JSON.parse(fs.readFileSync('rize_2026.json', 'utf8'));
 
 let janSum = 0;

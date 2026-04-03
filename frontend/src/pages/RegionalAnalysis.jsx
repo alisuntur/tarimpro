@@ -181,7 +181,7 @@ const RegionalAnalysis = () => {
                     <div className="map-wrapper">
                         <TurkeyMap
                             hoverable={true}
-                            onClick={({ plateNumber, name }) => setSelectedCity(name)}
+                            onClick={({ name }) => setSelectedCity(name)}
                             cityWrapper={(cityComponent, cityData) => (
                                 <g key={cityData.name} className="city-tooltip-wrapper">
                                     <title>{cityData.name}</title>

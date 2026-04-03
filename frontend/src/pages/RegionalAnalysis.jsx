@@ -28,16 +28,18 @@ const CustomTooltip = ({ active, payload, label }) => {
 
     return (
         <div style={{
-            background: 'rgba(20, 30, 24, 0.95)',
-            border: '1px solid var(--color-primary)',
+            background: 'rgba(248, 250, 252, 0.96)',
+            border: '1px solid rgba(22, 101, 52, 0.18)',
             borderRadius: '10px',
             padding: '10px 16px',
             fontSize: '0.82rem',
-            color: '#e2e8f0',
+            color: '#0f172a',
+            boxShadow: '0 18px 36px rgba(15, 23, 42, 0.12)',
+            backdropFilter: 'blur(10px)',
         }}>
-            <p style={{ fontWeight: 700, marginBottom: 6, color: 'var(--color-primary-light)' }}>{label}</p>
+            <p style={{ fontWeight: 700, marginBottom: 6, color: '#166534' }}>{label}</p>
             {payload.map((item) => (
-                <p key={item.dataKey} style={{ color: item.color || '#e2e8f0', margin: '2px 0' }}>
+                <p key={item.dataKey} style={{ color: item.color || '#334155', margin: '2px 0' }}>
                     {item.name}: <strong>{item.value}</strong>
                 </p>
             ))}
@@ -124,8 +126,8 @@ const RegionalAnalysis = () => {
                         <>
                             <div className="city-header border-b">
                                 <div className="city-title-group">
-                                    <div className="icon-wrapper bg-primary-light">
-                                        <MapPin color="var(--color-primary-dark)" size={24} />
+                                    <div className="icon-wrapper">
+                                        <MapPin color="var(--regional-primary-dark)" size={24} />
                                     </div>
                                     <div>
                                         <h2>{analysis.city} Analizi</h2>
@@ -246,7 +248,7 @@ const RegionalAnalysis = () => {
                     <div className="card forecast-chart-card">
                         <div className="chart-title-row chart-title-row-spread">
                             <div className="chart-title-inline">
-                                <TrendingUp size={22} color="var(--color-primary)" />
+                                <TrendingUp size={22} color="var(--regional-primary-dark)" />
                                 <div>
                                     <h2>{'Üretim Trendi'}</h2>
                                     <p className="chart-subtitle">
@@ -269,7 +271,7 @@ const RegionalAnalysis = () => {
                                 <YAxis tick={{ fontSize: 11, fill: '#334155', fontWeight: 600 }} />
                                 <Tooltip content={<CustomTooltip />} />
                                 <Legend />
-                                <Bar dataKey="totalProductionTon" name="Toplam Üretim (Ton)" fill="var(--color-primary)" radius={[6, 6, 0, 0]} />
+                                <Bar dataKey="totalProductionTon" name="Toplam Üretim (Ton)" fill="var(--regional-primary-dark)" radius={[6, 6, 0, 0]} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>

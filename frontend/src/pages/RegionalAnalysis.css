@@ -1,8 +1,11 @@
-﻿.regional-analysis-container {
+.regional-analysis-container {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
     padding-bottom: 2rem;
+    --regional-primary-dark: #166534;
+    --regional-primary-soft: #dcfce7;
+    --regional-primary-border: rgba(22, 101, 52, 0.16);
 }
 
 .analysis-grid {
@@ -31,12 +34,12 @@
 .map-header h2 {
     font-size: 1.25rem;
     font-weight: 600;
-    color: var(--color-primary-dark);
+    color: var(--regional-primary-dark);
 }
 
 .tooltip-info {
     font-size: 0.85rem;
-    color: var(--text-muted);
+    color: var(--color-text-muted);
     background-color: var(--color-bg-main);
     padding: 0.25rem 0.75rem;
     border-radius: var(--radius-full);
@@ -67,7 +70,7 @@
     height: 100% !important;
     max-height: 60vh;
     /* Responsive max height */
-    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.1));
+    filter: drop-shadow(0 10px 15px rgba(5, 206, 139, 0.747));
     display: block;
     /* Removed transform scale completely to rely on the responsive SVG viewBox */
 }
@@ -112,6 +115,9 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 1px solid var(--regional-primary-border);
+    box-shadow: 0 10px 24px rgba(22, 101, 52, 0.08);
 }
 
 .city-title-group h2 {
@@ -187,7 +193,7 @@
 .recommended-crops h3 {
     font-size: 1.1rem;
     margin-bottom: 0.75rem;
-    color: var(--color-primary-dark);
+    color: var(--regional-primary-dark);
 }
 
 .crop-tags {
@@ -200,8 +206,8 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    background-color: var(--color-primary-light);
-    color: var(--color-primary-dark);
+    background-color: var(--regional-primary-soft);
+    color: var(--regional-primary-dark);
     padding: 0.5rem 0.75rem;
     border-radius: var(--radius-full);
     font-size: 0.9rem;
@@ -289,7 +295,7 @@
 .chart-title-row h2 {
     margin: 0;
     font-size: 1.2rem;
-    color: var(--color-primary-dark);
+    color: var(--regional-primary-dark);
 }
 
 .chart-subtitle {
@@ -345,8 +351,8 @@
 }
 
 .crop-tag {
-    border: 1px solid rgba(22, 101, 52, 0.18);
-    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+    border: 1px solid var(--regional-primary-border);
+    box-shadow: 0 6px 16px rgba(22, 101, 52, 0.08);
 }
 
 .crop-tag.secondary {

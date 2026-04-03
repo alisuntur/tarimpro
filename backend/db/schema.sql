@@ -59,6 +59,8 @@ CREATE TABLE IF NOT EXISTS app.production_plans (
     planned_area_decare numeric(12, 2),
     planned_sowing_date date,
     planned_harvest_date date,
+    city varchar(100),
+    district varchar(100),
     created_at timestamptz NOT NULL DEFAULT now(),
     updated_at timestamptz NOT NULL DEFAULT now()
 );
@@ -95,10 +97,15 @@ CREATE TABLE IF NOT EXISTS app.alerts (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
+
+ALTER TABLE app.production_plans ADD COLUMN IF NOT EXISTS city varchar(100);
+ALTER TABLE app.production_plans ADD COLUMN IF NOT EXISTS district varchar(100);
+
 CREATE INDEX IF NOT EXISTS idx_users_phone ON app.users (phone);
 CREATE INDEX IF NOT EXISTS idx_users_email ON app.users (email);
 CREATE INDEX IF NOT EXISTS idx_fields_user_id ON app.fields (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_plans_user_id ON app.production_plans (user_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_plans_city_year ON app.production_plans (city, season_year DESC);
 CREATE INDEX IF NOT EXISTS idx_alerts_user_id ON app.alerts (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON app.user_sessions (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_token_hash ON app.user_sessions (token_hash);

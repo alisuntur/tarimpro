@@ -362,3 +362,50 @@
     color: var(--color-text-muted);
     line-height: 1.5;
 }
+.wizard-helper-text {
+    margin-top: 0.75rem;
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+.crop-helper {
+    margin-bottom: 1rem;
+    margin-top: 0;
+}
+
+.selected-field-summary {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    padding: 0.85rem 1rem;
+    border-radius: var(--radius-md);
+    background-color: rgba(116, 198, 157, 0.12);
+    border: 1px solid rgba(45, 106, 79, 0.12);
+    color: var(--color-primary-dark);
+}
+
+.selected-field-summary span {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+.crop-meta {
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    text-align: center;
+    line-height: 1.4;
+}
+
+.loading-inline,
+.empty-inline-state {
+    padding: 1rem 1.25rem;
+    border-radius: var(--radius-md);
+    background-color: var(--color-bg-main);
+    color: var(--color-text-muted);
+    border: 1px dashed rgba(45, 106, 79, 0.18);
+}
+
+.validation-error {
+    color: #b91c1c;
+}

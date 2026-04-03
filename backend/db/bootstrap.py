@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 
 from psycopg.rows import dict_row
 
@@ -14,7 +14,7 @@ DEMO_USER = {
     "phone": "05551234567",
     "email": "ahmet.yilmaz@tarim.test",
     "password_hash": hash_password("demo123"),
-    "full_name": "Ahmet Yilmaz",
+    "full_name": "Ahmet Yılmaz",
     "city": "Manisa",
     "district": "Akhisar",
 }
@@ -27,18 +27,18 @@ DEMO_FIELDS = [
         "district": "Akhisar",
         "region_code": "ege",
         "area_decare": 150,
-        "soil_type": "Tinli",
-        "notes": "Hububat ekimi icin kullanilan ana parsel.",
+        "soil_type": "Tınlı",
+        "notes": "Hububat ekimi için kullanılan ana parsel.",
     },
     {
         "id": "22222222-2222-2222-2222-222222222222",
-        "name": "Guney Mevkii",
+        "name": "Güney Mevkii",
         "city": "Manisa",
         "district": "Akhisar",
         "region_code": "ege",
         "area_decare": 85,
-        "soil_type": "Killi-Tinli",
-        "notes": "Rotasyon icin ayrilan yardimci tarla.",
+        "soil_type": "Killi-Tınlı",
+        "notes": "Rotasyon için ayrılan yardımcı tarla.",
     },
 ]
 
@@ -46,22 +46,26 @@ DEMO_PLANS = [
     {
         "id": "33333333-3333-3333-3333-333333333331",
         "field_id": DEMO_FIELDS[0]["id"],
-        "selected_crop_name": "Bugday",
+        "selected_crop_name": "Buğday, Durum Buğdayı Hariç",
         "region_code": "ege",
         "season_year": 2024,
         "status": "Hasat Bekliyor",
         "target_yield_percent": 95,
         "planned_area_decare": 150,
+        "city": "Manisa",
+        "district": "Akhisar",
     },
     {
         "id": "33333333-3333-3333-3333-333333333332",
         "field_id": DEMO_FIELDS[1]["id"],
-        "selected_crop_name": "Aycicegi",
+        "selected_crop_name": "Ayçiçeği Tohumu (Yağlık)",
         "region_code": "ege",
         "season_year": 2023,
-        "status": "Tamamlandi",
+        "status": "Tamamlandı",
         "target_yield_percent": 88,
         "planned_area_decare": 85,
+        "city": "Manisa",
+        "district": "Akhisar",
     },
 ]
 
@@ -71,16 +75,16 @@ DEMO_ALERTS = [
         "field_id": DEMO_FIELDS[0]["id"],
         "plan_id": DEMO_PLANS[0]["id"],
         "alert_type": "warning",
-        "title": "Kuraklik Riski",
-        "message": "Bolgenizde onumuzdeki hafta %20 kuraklik riski bekleniyor.",
+        "title": "Kuraklık Riski",
+        "message": "Bölgenizde önümüzdeki hafta %20 kuraklık riski bekleniyor.",
     },
     {
         "id": "44444444-4444-4444-4444-444444444442",
         "field_id": DEMO_FIELDS[0]["id"],
         "plan_id": DEMO_PLANS[0]["id"],
         "alert_type": "danger",
-        "title": "Arz Uyarisi",
-        "message": "Bugday ekiminde bolgesel doygunluga ulasildi.",
+        "title": "Arz Uyarısı",
+        "message": "Buğday ekiminde bölgesel doygunluğa ulaşıldı.",
     },
 ]
 
@@ -146,20 +150,25 @@ def _seed_user_data() -> None:
                     """
                     INSERT INTO app.production_plans (
                         id, user_id, field_id, selected_crop_name, region_code,
-                        season_year, status, target_yield_percent, planned_area_decare
+                        season_year, status, target_yield_percent, planned_area_decare,
+                        city, district
                     )
                     VALUES (
                         %(id)s, %(user_id)s, %(field_id)s, %(selected_crop_name)s,
                         %(region_code)s, %(season_year)s, %(status)s,
-                        %(target_yield_percent)s, %(planned_area_decare)s
+                        %(target_yield_percent)s, %(planned_area_decare)s,
+                        %(city)s, %(district)s
                     )
                     ON CONFLICT (id) DO UPDATE SET
+                        field_id = EXCLUDED.field_id,
                         selected_crop_name = EXCLUDED.selected_crop_name,
                         region_code = EXCLUDED.region_code,
                         season_year = EXCLUDED.season_year,
                         status = EXCLUDED.status,
                         target_yield_percent = EXCLUDED.target_yield_percent,
                         planned_area_decare = EXCLUDED.planned_area_decare,
+                        city = EXCLUDED.city,
+                        district = EXCLUDED.district,
                         updated_at = now();
                     """,
                     {**plan, "user_id": DEMO_USER["id"]},
@@ -196,4 +205,4 @@ def bootstrap_database() -> None:
     _run_schema(SCHEMA_FILE)
     _seed_user_data()
     if not _analytics_loaded():
-        print("Uyari: analytics tablolari bos. Gerekirse tools/import_veri.py calistirin.")
+        print("Uyarı: analytics tabloları boş. Gerekirse tools/import_veri.py çalıştırın.")

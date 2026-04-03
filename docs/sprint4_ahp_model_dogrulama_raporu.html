@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sprint 4 - AHP, Model Do&#287;rulama ve Arz-Talep Raporu</title>
+  <style>
+    body { font-family: 'Segoe UI', Arial, sans-serif; margin: 0; background: #f3f4f6; color: #1f2937; line-height: 1.55; }
+    .page { width: 210mm; min-height: 297mm; margin: 0 auto 14px; padding: 18mm 16mm; background: #fff; box-shadow: 0 10px 30px rgba(0,0,0,.08); page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+    h1, h2, h3 { color: #163a2f; margin: 0 0 10px; }
+    h1 { font-size: 30px; }
+    h2 { font-size: 22px; border-bottom: 2px solid #d8efe3; padding-bottom: 8px; margin-top: 16px; }
+    h3 { font-size: 16px; margin-top: 18px; }
+    p { margin: 0 0 10px; }
+    ul { margin: 8px 0 12px 20px; }
+    li { margin: 4px 0; }
+    .hero { display: grid; grid-template-columns: 1.35fr .95fr; gap: 18px; }
+    .card { border: 1px solid #d1d5db; border-radius: 14px; padding: 16px; }
+    .hero-main { background: linear-gradient(135deg, #edf8f1, #fff); border-color: #d8efe3; }
+    .hero-side { background: linear-gradient(150deg, #163a2f, #2d6a4f); color: #fff; }
+    .hero-side h3, .hero-side p, .hero-side li { color: #fff; }
+    .meta { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+    .mini { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 12px; }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .kpi { border: 1px solid #d8efe3; border-radius: 12px; padding: 12px; background: #edf8f1; }
+    .kpi strong { display: block; font-size: 12px; text-transform: uppercase; color: #1f5a45; margin-bottom: 4px; }
+    .kpi span { display: block; font-size: 22px; font-weight: 700; color: #163a2f; margin-bottom: 4px; }
+    .callout { margin: 12px 0; padding: 12px 14px; border-left: 4px solid #c59c3d; background: #fff8e8; border-radius: 10px; }
+    .ok { border-left-color: #2d6a4f; background: #edf8f1; }
+    table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 13px; }
+    th, td { border: 1px solid #e5e7eb; padding: 8px 9px; text-align: left; vertical-align: top; }
+    th { background: #edf8f1; color: #163a2f; }
+    .formula { font-family: Consolas, monospace; background: #0f172a; color: #e2e8f0; padding: 12px 14px; border-radius: 12px; margin: 10px 0 14px; font-size: 13px; white-space: pre-wrap; }
+    .foot { margin-top: 18px; font-size: 12px; color: #6b7280; }
+    @media print {
+      body { background: #fff; }
+      .page { margin: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <section class="page">
+    <div class="hero">
+      <div class="card hero-main">
+        <h1>Sprint 4 Teknik Raporu</h1>
+        <p><strong>AHP tabanl&#305; skorlama, walk-forward model do&#287;rulama ve arz-talep dengesi entegrasyonu</strong></p>
+        <p>Bu rapor, Tar&#305;mPro i&ccedil;inde Sprint 4 kapsam&#305;nda ger&ccedil;ekle&#351;tirilen metodolojik geli&#351;tirmeleri akademik sunuma uygun bi&ccedil;imde &ouml;zetlemek amac&#305;yla haz&#305;rlanm&#305;&#351;t&#305;r. Rapor; AHP ile a&#287;&#305;rl&#305;k &uuml;retimi, tutarl&#305;l&#305;k kontrol&uuml;, backtest kurgusu, model g&uuml;veninin yeniden tasar&#305;m&#305; ve arz-talep dengesi katman&#305;n&#305; birlikte ele al&#305;r.</p>
+        <div class="meta">
+          <div class="mini"><strong>Proje</strong><br>TarimPro / TarimZeka</div>
+          <div class="mini"><strong>Sprint</strong><br>Sprint 4</div>
+          <div class="mini"><strong>Tarih</strong><br>03.04.2026</div>
+        </div>
+      </div>
+      <div class="card hero-side">
+        <h3>Raporun odak alanlar&#305;</h3>
+        <ul>
+          <li>AHP ile kriter a&#287;&#305;rl&#305;klar&#305;n&#305;n sistematik olarak &uuml;retilmesi</li>
+          <li>Consistency Ratio ile uzman karar&#305; tutarl&#305;l&#305;&#287;&#305;n&#305;n kontrol&uuml;</li>
+          <li>Walk-forward veri seti &uuml;zerinde &ccedil;ok senaryolu backtest</li>
+          <li>Model g&uuml;veninin ba&#351;ar&#305; olas&#305;l&#305;&#287;&#305; olarak kalibre edilmesi</li>
+          <li>Arz-talep dengesi ile piyasa etkisinin AI ekran&#305;na ta&#351;&#305;nmas&#305;</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>Ama&ccedil; ve Problem Tan&#305;m&#305;</h2>
+    <p>Projede ilk MVP a&#351;amas&#305;nda &uuml;r&uuml;n uygunluk skoru d&ouml;rt bile&#351;eni bir araya getiren sabit katsay&#305;l&#305; bir form&uuml;lle hesaplan&#305;yordu. Bu yap&#305; teknik olarak &ccedil;al&#305;&#351;sa da iki temel akademik zafiyet ta&#351;&#305;yordu:</p>
+    <ul>
+      <li>Kriter a&#287;&#305;rl&#305;klar&#305;n&#305;n neden o de&#287;erleri ald&#305;&#287;&#305; sistematik olarak a&ccedil;&#305;klanam&#305;yordu.</li>
+      <li>Model g&uuml;veni, ger&ccedil;ek ba&#351;ar&#305; olas&#305;l&#305;&#287;&#305; yerine yaln&#305;zca hata metriklerinden t&uuml;retilen heuristik bir say&#305; olarak sunuluyordu.</li>
+    </ul>
+    <p>Sprint 4&rsquo;&uuml;n hedefi, bu iki zafiyeti kapatmak ve AI karar deste&#287;i katman&#305;n&#305; sadece &ccedil;al&#305;&#351;an de&#287;il, ayn&#305; zamanda savunulabilir bir yap&#305;ya ta&#351;&#305;makt&#305;r.</p>
+
+    <div class="grid3">
+      <div class="kpi"><strong>AHP sonucu</strong><span>%42.4</span><p>En bask&#305;n kriter model projeksiyonu olarak hesapland&#305;.</p></div>
+      <div class="kpi"><strong>Tutarl&#305;l&#305;k</strong><span>CR 0.00384</span><p>AHP matrisi kabul edilebilir tutarl&#305;l&#305;k s&#305;n&#305;r&#305;n&#305;n &ccedil;ok alt&#305;nda kald&#305;.</p></div>
+      <div class="kpi"><strong>Backtest</strong><span>%74.57</span><p>Top-3 hit rate, sistemin ilk 3 &ouml;neride g&uuml;&ccedil;l&uuml; oldu&#287;unu g&ouml;sterdi.</p></div>
+    </div>
+  </section>
+
+  <section class="page">
+    <h2>1. AHP Yakla&#351;&#305;m&#305;</h2>
+
+    <h3>1.1 Neden AHP kullan&#305;ld&#305;?</h3>
+    <p>Tar&#305;msal &uuml;retim planlamas&#305; tek bir metri&#287;e indirgenemeyen &ccedil;ok kriterli bir karar problemidir. Ge&ccedil;mi&#351; verim, gelecek projeksiyonu, t&uuml;ketim y&ouml;n&uuml; ve iklim dayan&#305;kl&#305;l&#305;&#287;&#305; farkl&#305; anlamlar ta&#351;&#305;r. AHP, bu kriterlerin g&ouml;reli &ouml;nemini uzman yarg&#305;s&#305; ile say&#305;salla&#351;t&#305;rmak i&ccedil;in tercih edilmi&#351;tir.</p>
+
+    <h3>1.2 Kullan&#305;lan kriterler</h3>
+    <table>
+      <thead><tr><th>Kriter</th><th>Temsil etti&#287;i boyut</th><th>Temel veri kayna&#287;&#305;</th></tr></thead>
+      <tbody>
+        <tr><td>Ge&ccedil;mi&#351; verim</td><td>&#350;ehrin ayn&#305; &uuml;r&uuml;ndeki tarihsel performans&#305;</td><td><code>analytics.production_history</code></td></tr>
+        <tr><td>Model projeksiyonu</td><td>Gelecek d&ouml;nemde beklenen &uuml;retim potansiyeli</td><td><code>analytics.model_predictions</code></td></tr>
+        <tr><td>T&uuml;ketim e&#287;ilimi</td><td>Pazar y&ouml;n&uuml; ve talep taraf&#305;</td><td><code>analytics.consumption_history</code></td></tr>
+        <tr><td>&#304;klim dayan&#305;kl&#305;l&#305;&#287;&#305;</td><td>&#304;klim riski ve tarihsel stabilite</td><td><code>analytics.climate_history</code></td></tr>
+      </tbody>
+    </table>
+
+    <h3>1.3 AHP ikili kar&#351;&#305;la&#351;t&#305;rma matrisi</h3>
+    <p>Aktif matris <code>docs/ahp_pairwise_matrix.csv</code> dosyas&#305;nda tutulmaktad&#305;r. Uzman yorumu ile olu&#351;turulan matris a&#351;a&#287;&#305;daki gibidir:</p>
+    <table>
+      <thead><tr><th>Kriter</th><th>Ge&ccedil;mi&#351; verim</th><th>Projeksiyon</th><th>T&uuml;ketim</th><th>&#304;klim</th></tr></thead>
+      <tbody>
+        <tr><td>Ge&ccedil;mi&#351; verim</td><td>1</td><td>1/2</td><td>2</td><td>1</td></tr>
+        <tr><td>Projeksiyon</td><td>2</td><td>1</td><td>3</td><td>2</td></tr>
+        <tr><td>T&uuml;ketim</td><td>1/2</td><td>1/3</td><td>1</td><td>1/2</td></tr>
+        <tr><td>&#304;klim</td><td>1</td><td>1/2</td><td>2</td><td>1</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout ok"><strong>Yorum:</strong> Bu matris, ileriye d&ouml;n&uuml;k karar deste&#287;i oldu&#287;u i&ccedil;in projeksiyon kriterini bask&#305;n; ge&ccedil;mi&#351; verim ile iklimi ise birbirine yak&#305;n &ouml;nemde kabul eder.</div>
+
+    <h3>1.4 Elde edilen a&#287;&#305;rl&#305;klar</h3>
+    <table>
+      <thead><tr><th>Kriter</th><th>A&#287;&#305;rl&#305;k</th><th>Y&uuml;zde</th><th>Yorum</th></tr></thead>
+      <tbody>
+        <tr><td>Ge&ccedil;mi&#351; verim</td><td>0.2270</td><td>%22.7</td><td>Yerel agronomik ba&#351;ar&#305;y&#305; temsil eder.</td></tr>
+        <tr><td>Model projeksiyonu</td><td>0.4236</td><td>%42.4</td><td>Gelecek beklentisi en bask&#305;n karar girdisidir.</td></tr>
+        <tr><td>T&uuml;ketim e&#287;ilimi</td><td>0.1223</td><td>%12.2</td><td>Pazar y&ouml;n&uuml;ne katk&#305; verir; ancak tek ba&#351;&#305;na belirleyici de&#287;ildir.</td></tr>
+        <tr><td>&#304;klim dayan&#305;kl&#305;l&#305;&#287;&#305;</td><td>0.2270</td><td>%22.7</td><td>Risk ve istikrar dengesini temsil eder.</td></tr>
+      </tbody>
+    </table>
+
+    <div class="formula">Toplam Skor =
+(Ge&#231;mi&#351; Verim x 0.2270) +
+(Model Projeksiyonu x 0.4236) +
+(T&uuml;ketim x 0.1223) +
+(&#304;klim x 0.2270)</div>
+
+    <h3>1.5 Tutarl&#305;l&#305;k kontrol&uuml;</h3>
+    <p>AHP sadece a&#287;&#305;rl&#305;k &uuml;retmekle kalmaz; ayn&#305; zamanda bu a&#287;&#305;rl&#305;klar&#305;n arkas&#305;ndaki uzman karar&#305;n&#305;n tutarl&#305; olup olmad&#305;&#287;&#305;n&#305; da test eder.</p>
+    <div class="formula">CI = (Lambda_max - n) / (n - 1)
+CR = CI / RI</div>
+    <table>
+      <thead><tr><th>Metrik</th><th>De&#287;er</th><th>Yorum</th></tr></thead>
+      <tbody>
+        <tr><td>Lambda max</td><td>4.0103629022</td><td>&Ouml;zde&#287;er tabanl&#305; AHP sonucu</td></tr>
+        <tr><td>Consistency Index</td><td>0.0034543007</td><td>&Ccedil;ok d&uuml;&#351;&uuml;k sapma</td></tr>
+        <tr><td>Consistency Ratio</td><td>0.0038381119</td><td>0.10 e&#351;i&#287;inin olduk&ccedil;a alt&#305;nda</td></tr>
+        <tr><td>Karar</td><td>Kabul edilebilir</td><td>Matris tutarl&#305; kabul edilmi&#351;tir</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="page">
+    <h2>2. Walk-Forward Backtest Tasar&#305;m&#305;</h2>
+
+    <h3>2.1 Ama&ccedil;</h3>
+    <p>AHP ile elde edilen a&#287;&#305;rl&#305;klar uzman g&ouml;r&uuml;&#351;&uuml;ne dayansa da, sistemin tarihsel senaryolarda ne kadar iyi s&#305;ralama yapt&#305;&#287;&#305;n&#305; g&ouml;rmeden bu yap&#305; akademik olarak eksik kalacakt&#305;r. Bu nedenle <code>backend/devtools/ahp_backtest.py</code> scripti ile walk-forward backtest ger&ccedil;ekle&#351;tirilmi&#351;tir.</p>
+
+    <h3>2.2 Veri kaynaklar&#305;</h3>
+    <ul>
+      <li><code>analytics.walk_forward_predictions</code>: ge&ccedil;mi&#351; tahmin / ger&ccedil;ekle&#351;en &uuml;retim kar&#351;&#305;la&#351;t&#305;rmas&#305;</li>
+      <li><code>analytics.production_history</code>: ge&ccedil;mi&#351; verim ve &uuml;retim ge&ccedil;mi&#351;i</li>
+      <li><code>analytics.consumption_history</code>: t&uuml;ketim y&ouml;n&uuml;</li>
+      <li><code>analytics.climate_history</code>: iklim risk bile&#351;enleri</li>
+    </ul>
+
+    <h3>2.3 Senaryo tan&#305;m&#305;</h3>
+    <p>Her senaryo, bir <strong>&#351;ehir + tahmin y&#305;l&#305;</strong> kombinasyonu olarak kurgulanm&#305;&#351;t&#305;r. Script 2020-2024 aral&#305;&#287;&#305;ndaki walk-forward tahminlerini gruplayarak her senaryoda sistemin aday &uuml;r&uuml;nleri nas&#305;l s&#305;ralad&#305;&#287;&#305;n&#305; yeniden &uuml;retir.</p>
+
+    <table>
+      <thead><tr><th>Backtest parametresi</th><th>De&#287;er</th></tr></thead>
+      <tbody>
+        <tr><td>D&ouml;nem</td><td>2020 - 2024</td></tr>
+        <tr><td>Minimum &uuml;r&uuml;n say&#305;s&#305;</td><td>4</td></tr>
+        <tr><td>Senaryo tan&#305;m&#305;</td><td>&#350;ehir + tahmin y&#305;l&#305;</td></tr>
+        <tr><td>Toplam senaryo</td><td>405</td></tr>
+        <tr><td>Toplam aday kay&#305;t</td><td>60,820</td></tr>
+      </tbody>
+    </table>
+
+    <h3>2.4 Scriptin i&#351; ak&#305;&#351;&#305;</h3>
+    <ol>
+      <li>AHP matrisi okunur ve a&#287;&#305;rl&#305;klar hesaplan&#305;r.</li>
+      <li>Walk-forward tahmin seti &uuml;zerinden &#351;ehir-y&#305;l senaryolar&#305; &ccedil;ekilir.</li>
+      <li>Her aday &uuml;r&uuml;n i&ccedil;in ge&ccedil;mi&#351; verim, tahmin, t&uuml;ketim ve iklim alt skorlar&#305; yeniden hesaplan&#305;r.</li>
+      <li>AHP a&#287;&#305;rl&#305;klar&#305; ile toplam skor bulunur.</li>
+      <li>Olu&#351;an s&#305;ralama, ger&ccedil;ek &uuml;retim s&#305;ralamas&#305; ile kar&#351;&#305;la&#351;t&#305;r&#305;l&#305;r.</li>
+    </ol>
+
+    <h3>2.5 Kullan&#305;lan performans metrikleri</h3>
+    <table>
+      <thead><tr><th>Metrik</th><th>Tan&#305;m</th><th>Bu projedeki anlam&#305;</th></tr></thead>
+      <tbody>
+        <tr><td>Top-1 exact rate</td><td>Sistemin ilk &ouml;nerisi ger&ccedil;ekte de birinci oldu mu?</td><td>Kesin birinciyi bulma ba&#351;ar&#305;s&#305;</td></tr>
+        <tr><td>Top-3 hit rate</td><td>&#304;lk &ouml;neri ger&ccedil;ek ilk 3 i&ccedil;ine girdi mi?</td><td>Karar deste&#287;i sistemlerinde daha anlaml&#305; kapsama metri&#287;i</td></tr>
+        <tr><td>Mean Spearman</td><td>Ger&ccedil;ek ve tahmini s&#305;ralama korelasyonu</td><td>Genel s&#305;ralama kalitesi</td></tr>
+        <tr><td>Mean nDCG@3</td><td>&#304;lk 3 &ouml;nerinin kalite skoru</td><td>&Uuml;st s&#305;ralardaki &ouml;nerilerin kullan&#305;&#351;l&#305;l&#305;&#287;i</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="page">
+    <h2>3. Backtest Sonu&ccedil;lar&#305; ve Yorumu</h2>
+
+    <table>
+      <thead><tr><th>Metrik</th><th>Sonu&ccedil;</th><th>Yorum</th></tr></thead>
+      <tbody>
+        <tr><td>Senaryo say&#305;s&#305;</td><td>405</td><td>Farkl&#305; &#351;ehir-y&#305;l kombinasyonlar&#305; &uuml;zerinde test yap&#305;ld&#305;</td></tr>
+        <tr><td>Aday say&#305;s&#305;</td><td>60,820</td><td>Olduk&ccedil;a geni&#351; bir s&#305;ralama uzay&#305;</td></tr>
+        <tr><td>Top-1 exact rate</td><td>%15.31</td><td>Sistem tek birinciyi her zaman tutturmamaktad&#305;r</td></tr>
+        <tr><td>Top-3 hit rate</td><td>%74.57</td><td>Ancak ilk 3 i&ccedil;inde kuvvetli kapsama sa&#287;lamaktad&#305;r</td></tr>
+        <tr><td>Mean Spearman</td><td>0.4142</td><td>Orta d&uuml;zey s&#305;ralama korelasyonu vard&#305;r</td></tr>
+        <tr><td>Mean nDCG@3</td><td>0.9175</td><td>&Uuml;st s&#305;ralardaki &ouml;neriler kalite a&ccedil;&#305;s&#305;ndan olduk&ccedil;a g&uuml;&ccedil;l&uuml;d&uuml;r</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout"><strong>Temel yorum:</strong> Sistem, &ldquo;her zaman tek en do&#287;ru &uuml;r&uuml;n&uuml; s&ouml;yler&rdquo; iddias&#305; ta&#351;&#305;mamaktad&#305;r. Bunun yerine, kullan&#305;c&#305;ya g&uuml;&ccedil;l&uuml; bir ilk 3 aday havuzu sunan veri temelli bir karar destek sistemi olarak ba&#351;ar&#305;l&#305;d&#305;r.</div>
+
+    <h3>3.1 &Ouml;rnek senaryolar</h3>
+    <table>
+      <thead><tr><th>&#350;ehir</th><th>Y&#305;l</th><th>Sistemin ilk &ouml;nerisi</th><th>Ger&ccedil;ek s&#305;ra</th><th>Yorum</th></tr></thead>
+      <tbody>
+        <tr><td>Ad&#305;yaman</td><td>2020</td><td>Bu&#287;day, Durum Bu&#287;day&#305; Hari&ccedil;</td><td>1</td><td>Sistem ilk tercihte tam isabet sa&#287;lam&#305;&#351;t&#305;r.</td></tr>
+        <tr><td>Ad&#305;yaman</td><td>2024</td><td>Bu&#287;day, Durum Bu&#287;day&#305; Hari&ccedil;</td><td>3</td><td>&#304;lk 3 kapsamas&#305; korunmu&#351;tur.</td></tr>
+        <tr><td>Afyonkarahisar</td><td>2020</td><td>Patates (Tatl&#305; Patates Hari&ccedil;)</td><td>1</td><td>Sistem dominant &uuml;r&uuml;n&uuml; do&#287;ru tan&#305;m&#305;&#351;t&#305;r.</td></tr>
+        <tr><td>Adana</td><td>2023</td><td>M&#305;s&#305;r</td><td>6</td><td>Birinci tahmin tam de&#287;il; ancak s&#305;ralama kalitesi yine de anlaml&#305;d&#305;r.</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.2 Akademik yorum</h3>
+    <p>Bu sonu&ccedil;lar, sistemin <strong>ranking support system</strong> olarak ele al&#305;nmas&#305; gerekti&#287;ini g&ouml;sterir. Yani sistemin ana g&uuml;c&uuml;, &ccedil;ift&ccedil;iyi tek bir &uuml;r&uuml;ne zorlamas&#305; de&#287;il; daralt&#305;lm&#305;&#351;, rasyonel ve veriyle desteklenen bir aday listesi sunmas&#305;d&#305;r.</p>
+
+    <div class="callout ok"><strong>Sunumda kullan&#305;labilecek c&uuml;mle:</strong> Backtest sonu&ccedil;lar&#305;, sistemin tek birinci &uuml;r&uuml;n tahmininde s&#305;n&#305;rl&#305; ama ilk 3 karar setinde g&uuml;&ccedil;l&uuml; oldu&#287;unu g&ouml;stermektedir; dolay&#305;s&#305;yla sistem kesin karar verici de&#287;il, karar deste&#287;i sa&#287;layan bir planlama motorudur.</div>
+  </section>
+
+  <section class="page">
+    <h2>4. Model G&uuml;veninin Yeniden Tasar&#305;m&#305;</h2>
+
+    <h3>4.1 Eski yap&#305;n&#305;n sorunu</h3>
+    <p>&Ouml;nceki yap&#305;da model g&uuml;veni, ortalama hata metriklerinden t&uuml;retilen tek bir heuristik y&uuml;zdeydi. Bu say&#305;n&#305;n temel sorunu, kullan&#305;c&#305;ya &ldquo;bu &ouml;nerinin benzer ge&ccedil;mi&#351; senaryolarda ne kadar ba&#351;ar&#305;l&#305; oldu&#287;u&rdquo; sorusunun cevab&#305;n&#305; vermemesiydi.</p>
+
+    <h3>4.2 Yeni yakla&#351;&#305;m</h3>
+    <p>Yeni yap&#305;da model g&uuml;veni, walk-forward do&#287;rulama sonu&ccedil;lar&#305;ndan kalibre edilen bir <strong>ba&#351;ar&#305; olas&#305;l&#305;&#287;&#305;</strong> olarak tan&#305;mlanm&#305;&#351;t&#305;r. Ba&#351;ar&#305;l&#305; senaryo tan&#305;m&#305; a&#351;a&#287;&#305;daki gibidir:</p>
+    <div class="formula">Ba&#351;ar&#305;l&#305; Senaryo =
+Ger&ccedil;ek &uuml;retim de&#287;erinin,
+modelin walk-forward kalibrasyon band&#305; i&ccedil;inde kalmas&#305;</div>
+
+    <h3>4.3 Kalibrasyon mant&#305;&#287;&#305;</h3>
+    <ul>
+      <li>&#304;lk olarak <strong>&#351;ehir + &uuml;r&uuml;n + tahmin ufku</strong> kombinasyonundaki benzer ge&ccedil;mi&#351; senaryolar toplan&#305;r.</li>
+      <li>Yerel senaryo say&#305;s&#305; az ise <strong>&uuml;r&uuml;n + tahmin ufku</strong> veya <strong>genel tahmin ufku</strong> seviyesindeki daha geni&#351; referans setine ge&ccedil;ilir.</li>
+      <li>K&uuml;&ccedil;&uuml;k &ouml;rneklem kaynakl&#305; a&#351;&#305;r&#305; oynakl&#305;&#287;&#305; azaltmak i&ccedil;in <strong>ampirik Bayes shrinkage</strong> kullan&#305;l&#305;r.</li>
+    </ul>
+
+    <div class="formula">Posterior Ba&#351;ar&#305; Oran&#305; =
+(local_success + alpha_prior) /
+(local_sample + alpha_prior + beta_prior)</div>
+
+    <h3>4.4 Kullan&#305;c&#305; aray&uuml;z&uuml;ne ta&#351;&#305;nan alanlar</h3>
+    <table>
+      <thead><tr><th>Alan</th><th>Ama&ccedil;</th></tr></thead>
+      <tbody>
+        <tr><td>Ba&#351;ar&#305; olas&#305;l&#305;&#287;&#305;</td><td>Kullan&#305;c&#305;ya tek bir y&uuml;zde olarak temel g&uuml;veni vermek</td></tr>
+        <tr><td>Kalibrasyon d&uuml;zeyi</td><td>Bu skorun hangi veri seviyesinden geldi&#287;ini g&ouml;stermek</td></tr>
+        <tr><td>Yerel senaryo say&#305;s&#305;</td><td>Ka&ccedil; benzer &ouml;rnek &uuml;zerinden hesap yap&#305;ld&#305;&#287;&#305;n&#305; a&ccedil;&#305;klamak</td></tr>
+        <tr><td>Referans seti</td><td>Fallback kullan&#305;ld&#305;ysa &uuml;st seviye seriyi belirtmek</td></tr>
+        <tr><td>G&ouml;zlenen band kapsamas&#305;</td><td>Ge&ccedil;mi&#351;te modelin kalibrasyon band&#305; ne kadar tutmu&#351;?</td></tr>
+        <tr><td>Ortalama mutlak hata / band geni&#351;li&#287;i</td><td>Belirsizlik ve hata yay&#305;l&#305;m&#305;n&#305; kullan&#305;c&#305;ya g&ouml;stermek</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout"><strong>Akademik katk&#305;:</strong> Bu de&#287;i&#351;iklikle model g&uuml;veni, &ldquo;ortalama hata d&uuml;&#351;&uuml;k g&ouml;r&uuml;n&uuml;yor&rdquo; seviyesinden &ccedil;&#305;k&#305;p, &ldquo;benzer ge&ccedil;mi&#351; senaryolarda bu &ouml;nerinin ba&#351;ar&#305;l&#305; olma olas&#305;l&#305;&#287;&#305; nedir?&rdquo; sorusuna cevap veren bir yap&#305;ya ge&ccedil;mi&#351;tir.</div>
+  </section>
+
+  <section class="page">
+    <h2>5. Arz-Talep Dengesi ile Ba&#287;lant&#305;</h2>
+
+    <p>Sprint 4&rsquo;&uuml;n son aya&#287;&#305;, t&uuml;ketim verisinin yaln&#305;zca soyut bir &ldquo;talep skoru&rdquo; olarak de&#287;il, ger&ccedil;ek piyasa denge yorumu olarak kullan&#305;lmas&#305;d&#305;r. Bu ama&ccedil;la AI analiz ekran&#305;na ulusal d&uuml;zeyde arz-talep dengesi kart&#305; eklenmi&#351;tir.</p>
+
+    <table>
+      <thead><tr><th>G&ouml;sterge</th><th>Hesap</th><th>Yorum</th></tr></thead>
+      <tbody>
+        <tr><td>Kar&#351;&#305;lama oran&#305;</td><td>Tahmini &uuml;retim / tahmini t&uuml;ketim</td><td>&Uuml;retim talebi kar&#351;&#305;l&#305;yor mu?</td></tr>
+        <tr><td>Denge fark&#305;</td><td>Tahmini &uuml;retim - tahmini t&uuml;ketim</td><td>Ton baz&#305;nda a&ccedil;&#305;k veya fazla</td></tr>
+        <tr><td>Durum etiketi</td><td>&lt;%95 arz a&ccedil;&#305;&#287;&#305;, %95-%105 dengeli, &gt;%105 &uuml;retim fazlas&#305;</td><td>Piyasa bask&#305;s&#305; ve stok/ithalat riski yorumu</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout"><strong>Veri s&#305;n&#305;r&#305;:</strong> Elimizdeki t&uuml;ketim verisi T&uuml;rkiye geneli oldu&#287;u i&ccedil;in arz-talep dengesi ulusal &uuml;r&uuml;n seviyesi i&ccedil;in yorumlanmaktad&#305;r. Bu veriyle do&#287;rudan &ldquo;ihrac ediliyor&rdquo; veya &ldquo;ithal ediliyor&rdquo; kesinli&#287;i kurulmaz; ancak ithalat bask&#305;s&#305; veya fazla arz riski yorumu &uuml;retilebilir.</div>
+
+    <h3>5.1 Somut sistem etkisi</h3>
+    <p>Bu katman sayesinde kullan&#305;c&#305; art&#305;k sadece &ldquo;bu &uuml;r&uuml;n burada yeti&#351;ir mi?&rdquo; sorusunun de&#287;il, ayn&#305; zamanda &ldquo;bu &uuml;r&uuml;nde piyasa bask&#305;s&#305; var m&#305;?&rdquo; sorusunun da cevab&#305;n&#305; g&ouml;rebilmektedir.</p>
+
+    <h3>5.2 Konya / Bu&#287;day &ouml;rnek senaryosu</h3>
+    <table>
+      <thead><tr><th>G&ouml;sterge</th><th>Sonu&ccedil;</th></tr></thead>
+      <tbody>
+        <tr><td>Se&ccedil;ilen &uuml;r&uuml;n</td><td>Bu&#287;day, Durum Bu&#287;day&#305; Hari&ccedil;</td></tr>
+        <tr><td>Plan uygunluk skoru</td><td>%66</td></tr>
+        <tr><td>Ge&ccedil;mi&#351; verim skoru</td><td>%72.2</td></tr>
+        <tr><td>Ulusal verim endeksi</td><td>%119.1</td></tr>
+        <tr><td>&#350;ehir persentili</td><td>%75.9</td></tr>
+        <tr><td>Arz-talep durumu</td><td>&Uuml;retim fazlas&#305;</td></tr>
+        <tr><td>Kar&#351;&#305;lama oran&#305;</td><td>%108.2</td></tr>
+        <tr><td>Denge fark&#305;</td><td>+1,122,673.6 ton</td></tr>
+      </tbody>
+    </table>
+
+    <div class="callout ok"><strong>Yorum:</strong> Bu senaryo, Sprint 4 &ouml;ncesindeki yan&#305;lt&#305;c&#305; &ldquo;%1 ge&ccedil;mi&#351; verim&rdquo; g&ouml;r&uuml;n&uuml;m&uuml;n&uuml;n ortadan kalkt&#305;&#287;&#305;n&#305; ve ayn&#305; &uuml;r&uuml;n i&ccedil;inde yap&#305;lan k&#305;yas&#305;n daha anlaml&#305; bir sonu&ccedil; &uuml;retti&#287;ini g&ouml;stermektedir.</div>
+  </section>
+
+  <section class="page">
+    <h2>6. Sonu&ccedil;, S&#305;n&#305;rl&#305;l&#305;klar ve Sunum Notlar&#305;</h2>
+
+    <h3>6.1 Sonu&ccedil;</h3>
+    <p>Sprint 4 ile birlikte proje yaln&#305;zca veri g&ouml;steren bir MVP olmaktan &ccedil;&#305;k&#305;p, metodolojik gerek&ccedil;esi olan bir karar destek sistemine yakla&#351;m&#305;&#351;t&#305;r. Bu sprintin en kritik kazan&#305;mlar&#305; &#351;unlard&#305;r:</p>
+    <ul>
+      <li>Skor bile&#351;enleri AHP ile sistematik olarak a&#287;&#305;rl&#305;kland&#305;r&#305;ld&#305;.</li>
+      <li>A&#287;&#305;rl&#305;klar i&ccedil;in tutarl&#305;l&#305;k kontrol&uuml; yap&#305;ld&#305;.</li>
+      <li>Sistem, walk-forward tahmin seti &uuml;zerinde tarihsel olarak test edildi.</li>
+      <li>Model g&uuml;veni, heuristik bir say?dan olas&#305;l&#305;k temelli bir g&ouml;stergeye d&ouml;n&uuml;&#351;t&uuml;r&uuml;ld&uuml;.</li>
+      <li>T&uuml;ketim verisi, arz-talep dengesi olarak AI sonucuna anlaml&#305; bi&ccedil;imde eklendi.</li>
+    </ul>
+
+    <h3>6.2 S&#305;n&#305;rl&#305;l&#305;klar</h3>
+    <ul>
+      <li>AHP matrisi uzman tohumu niteli&#287;indedir; daha geni&#351; uzman paneli ile g&uuml;&ccedil;lendirilebilir.</li>
+      <li>Backtestte Top-1 exact rate d&uuml;&#351;&uuml;kt&uuml;r; sistem kesin karar verici de&#287;il, karar destek arac&#305; olarak yorumlanmal&#305;d&#305;r.</li>
+      <li>T&uuml;ketim verisi ulusal seviyededir; bu nedenle arz-talep analizi il baz&#305;nda de&#287;il, T&uuml;rkiye geneli &uuml;r&uuml;n seviyesinde yorumlanmaktad&#305;r.</li>
+      <li>Model g&uuml;veni halen baz&#305; durumlarda genel veya &uuml;st d&uuml;zey seri ile kalibre edilmektedir; her &uuml;r&uuml;n ve her il i&ccedil;in ayn&#305; zenginlikte yerel veri bulunmayabilir.</li>
+    </ul>
+
+    <h3>6.3 Hocaya s&ouml;ylenebilecek k&#305;sa savunma metni</h3>
+    <div class="callout">Bu sprintte &uuml;r&uuml;n uygunluk skoru, sabit katsay&#305;l&#305; bir heuristikten &ccedil;&#305;kar&#305;l&#305;p AHP ile a&#287;&#305;rl&#305;kland&#305;r&#305;lan ve walk-forward backtest ile test edilen hibrit bir karar destek yap&#305;s&#305;na ta&#351;&#305;nm&#305;&#351;t&#305;r. Model g&uuml;veni de ortalama hata puan&#305; yerine, benzer ge&ccedil;mi&#351; senaryolarda ba&#351;ar&#305; olas&#305;l&#305;&#287;&#305; olarak yeniden tan&#305;mlanm&#305;&#351;t&#305;r. Buna ek olarak t&uuml;ketim verisi arz-talep dengesi yorumuna d&ouml;n&uuml;&#351;t&uuml;r&uuml;lerek &uuml;retim kararlar&#305;n&#305;n piyasa boyutu da sisteme dahil edilmi&#351;tir.</div>
+
+    <h3>6.4 Sonraki akademik geli&#351;tirme &ouml;nerileri</h3>
+    <ul>
+      <li>AHP matrisini ziraat m&uuml;hendisi, iklim uzman&#305; ve piyasa uzman&#305;yla yeniden doldurmak</li>
+      <li>&#350;ehir + &uuml;r&uuml;n bazl&#305; ayr&#305; kalibrasyon profilleri olu&#351;turmak</li>
+      <li>Backtest sonucuna g&ouml;re profil s&uuml;r&uuml;mleme yapmak</li>
+      <li>G&uuml;ven skoruna tahmin aral&#305;&#287;&#305; kapsamas&#305; ve belirsizlik band&#305;n&#305; daha g&uuml;&ccedil;l&uuml; entegre etmek</li>
+      <li>D&#305;&#351; ticaret verisi eklenirse arz a&ccedil;&#305;&#287;&#305; / ihrac potansiyeli yorumunu daha kesin hale getirmek</li>
+    </ul>
+
+    <p class="foot">Haz&#305;rlanan belge: docs/sprint4_ahp_model_dogrulama_raporu.html</p>
+  </section>
+</body>
+</html>

@@ -1,0 +1,254 @@
+.regional-analysis-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding-bottom: 2rem;
+}
+
+.analysis-grid {
+    display: grid;
+    grid-template-columns: 2.5fr 1fr;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+/* Map Card Layout */
+.map-card {
+    display: flex;
+    flex-direction: column;
+    /* removed overflow: hidden to allow map scaling strictly inside padding borders */
+}
+
+.map-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+.map-header h2 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-primary-dark);
+}
+
+.tooltip-info {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    background-color: var(--color-bg-main);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+}
+
+.map-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    width: 100%;
+    height: 420px;
+    padding: 1rem;
+    overflow: hidden;
+}
+
+/* turkey-map-react outputs a wrapper div before the SVG sometimes, or just the SVG. */
+.map-wrapper>div {
+    width: 100% !important;
+    height: 100% !important;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.map-wrapper svg {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: 60vh;
+    /* Responsive max height */
+    filter: drop-shadow(0 10px 15px rgba(0, 0, 0, 0.1));
+    display: block;
+    /* Removed transform scale completely to rely on the responsive SVG viewBox */
+}
+
+.map-wrapper path {
+    stroke: white;
+    stroke-width: 1.5px;
+    /* Slightly thicker borders */
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+}
+
+.map-wrapper path:hover {
+    fill: var(--color-primary-light) !important;
+    transform: translateY(-4px) scale(1.01);
+    /* Add a slight pop effect */
+    filter: drop-shadow(0 4px 6px rgba(16, 185, 129, 0.3));
+    /* Glow effect */
+}
+
+/* City Details layout */
+.city-details-card {
+    display: flex;
+    flex-direction: column;
+}
+
+.city-header {
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.25rem;
+}
+
+.city-title-group {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.city-title-group h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    color: var(--color-text-main);
+}
+
+.risk-badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: var(--radius-sm);
+    margin-top: 0.25rem;
+}
+
+.risk-dusuk {
+    background-color: rgba(116, 198, 157, 0.15);
+    color: var(--color-primary);
+}
+
+.risk-orta {
+    background-color: rgba(255, 193, 7, 0.15);
+    color: #b08d00;
+}
+
+.risk-yuksek {
+    background-color: rgba(220, 53, 69, 0.15);
+    color: var(--color-danger);
+}
+
+.city-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.stat-box {
+    background-color: var(--color-bg-main);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.02);
+}
+
+.stat-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background-color: var(--color-bg-card);
+    border-radius: var(--radius-sm);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+}
+
+.stat-details h4 {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+}
+
+.stat-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--color-text-main);
+}
+
+.recommended-crops h3 {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    color: var(--color-primary-dark);
+}
+
+.crop-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.crop-tag {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    background-color: var(--color-primary-light);
+    color: var(--color-primary-dark);
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* Empty State */
+.empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 100%;
+}
+
+.empty-icon {
+    width: 80px;
+    height: 80px;
+    background-color: var(--color-bg-main);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+}
+
+.empty-state h3 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+    color: var(--color-text-main);
+}
+
+/* Responsiveness */
+@media (max-width: 1024px) {
+    .analysis-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .map-card {
+        min-height: 400px;
+    }
+}
+
+@media (max-width: 640px) {
+    .city-stats-grid {
+        grid-template-columns: 1fr;
+    }
+}

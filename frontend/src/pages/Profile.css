@@ -1,0 +1,328 @@
+.profile-container {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+/* Header */
+.profile-header {
+    padding: 0;
+    overflow: hidden;
+    position: relative;
+}
+
+.profile-cover {
+    height: 120px;
+    background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-primary-dark) 100%);
+    background-image: url('https://images.unsplash.com/photo-1595841696650-a4f5b5b47a9e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80');
+    background-size: cover;
+    background-position: center;
+    position: relative;
+}
+
+.profile-cover::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(27, 67, 50, 0.4);
+}
+
+.profile-info-wrapper {
+    padding: 1.5rem 2rem 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    align-items: center;
+    text-align: center;
+    margin-top: -60px;
+    position: relative;
+    z-index: 2;
+}
+
+@media (min-width: 768px) {
+    .profile-info-wrapper {
+        flex-direction: row;
+        align-items: flex-end;
+        text-align: left;
+        margin-top: -50px;
+    }
+}
+
+.profile-avatar {
+    width: 100px;
+    height: 100px;
+    background-color: white;
+    border-radius: 50%;
+    border: 4px solid white;
+    box-shadow: var(--shadow-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.profile-details {
+    flex: 1;
+}
+
+.name-badge-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+@media (min-width: 768px) {
+    .name-badge-wrapper {
+        flex-direction: row;
+    }
+}
+
+.name-badge-wrapper h1 {
+    font-size: 1.75rem;
+    margin: 0;
+}
+
+.farmer-badge {
+    background-color: rgba(42, 157, 143, 0.15);
+    color: var(--color-success);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-full);
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.profile-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.btn-danger-outline {
+    background-color: transparent;
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger);
+    padding: 0.75rem 1.25rem;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.btn-danger-outline:hover {
+    background-color: var(--color-danger-bg);
+}
+
+/* Content Layout */
+.profile-content {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 900px) {
+    .profile-content {
+        grid-template-columns: 280px 1fr;
+    }
+}
+
+.profile-sidebar {
+    padding: 1rem;
+}
+
+.profile-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.profile-nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    background: transparent;
+    width: 100%;
+    text-align: left;
+    border-radius: var(--radius-md);
+    color: var(--color-text-main);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+.profile-nav-btn:hover {
+    background-color: var(--color-bg-main);
+    color: var(--color-primary);
+}
+
+.profile-nav-btn.active {
+    background-color: rgba(45, 106, 79, 0.05);
+    color: var(--color-primary-dark);
+}
+
+.profile-nav-btn.active svg {
+    color: var(--color-primary);
+}
+
+.profile-main {
+    padding: 2rem;
+    min-height: 400px;
+}
+
+.tab-title {
+    font-size: 1.25rem;
+    color: var(--color-primary-dark);
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+/* Personal Info Grid */
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+    .info-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+.info-group label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.info-group p {
+    font-size: 1.05rem;
+    font-weight: 500;
+    color: var(--color-text-main);
+    margin: 0;
+}
+
+/* Fields List */
+.field-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.field-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+}
+
+.field-item:hover {
+    border-color: var(--color-primary-light);
+    background-color: rgba(116, 198, 157, 0.05);
+}
+
+.field-info h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1rem;
+}
+
+.field-info p {
+    margin: 0;
+    font-size: 0.85rem;
+}
+
+/* Modal Overlay */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.logout-modal {
+    width: 100%;
+    max-width: 400px;
+    padding: 2.5rem;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.modal-icon-wrapper {
+    background-color: rgba(116, 198, 157, 0.15);
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 1.5rem;
+    animation: bounce 2s infinite ease-in-out;
+}
+
+.logout-modal h2 {
+    font-size: 1.5rem;
+    color: var(--color-primary-dark);
+    margin-bottom: 0.5rem;
+}
+
+.modal-message {
+    color: var(--color-text-muted);
+    line-height: 1.6;
+    margin-bottom: 2rem;
+}
+
+.modal-message strong {
+    display: block;
+    margin-top: 0.5rem;
+    color: var(--color-text-main);
+}
+
+.modal-actions {
+    display: flex;
+    width: 100%;
+    gap: 1rem;
+}
+
+.logout-confirm-btn {
+    background-color: var(--color-danger);
+}
+
+.logout-confirm-btn:hover {
+    background-color: #c92a37;
+    /* Darker red */
+}
+
+@keyframes bounce {
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
+}

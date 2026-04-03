@@ -509,34 +509,42 @@ def get_market_projection(city_name: str | None = None):
             return cursor.fetchall()
 
 
-def get_city_crop_options(city_name: str, limit: int = 8):
+def get_city_crop_options(city_name: str, limit: int | None = None):
     city_candidates = _lookup_candidates(city_name)
     if not city_candidates:
         return []
 
+    sql = """
+        WITH crop_latest_year AS (
+            SELECT product_name,
+                   MAX(year) AS latest_year
+            FROM analytics.production_history
+            WHERE city_name = ANY(%(city_candidates)s)
+            GROUP BY product_name
+        )
+        SELECT latest.product_name,
+               latest.latest_year,
+               SUM(p.production_ton) AS production_ton,
+               AVG(NULLIF(p.yield_kg_decare, 0)) AS yield_kg_decare
+        FROM crop_latest_year AS latest
+        JOIN analytics.production_history AS p
+          ON p.product_name = latest.product_name
+         AND p.year = latest.latest_year
+         AND p.city_name = ANY(%(city_candidates)s)
+        GROUP BY latest.product_name, latest.latest_year
+        ORDER BY latest.latest_year DESC,
+                 production_ton DESC NULLS LAST,
+                 yield_kg_decare DESC NULLS LAST,
+                 latest.product_name ASC
+    """
+    params: dict[str, object] = {"city_candidates": city_candidates}
+    if limit is not None:
+        sql += " LIMIT %(limit)s"
+        params["limit"] = limit
+
     with get_connection(row_factory=dict_row) as connection:
         with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                WITH latest_year AS (
-                    SELECT MAX(year) AS year
-                    FROM analytics.production_history
-                    WHERE city_name = ANY(%(city_candidates)s)
-                )
-                SELECT p.product_name,
-                       latest_year.year AS latest_year,
-                       SUM(p.production_ton) AS production_ton,
-                       AVG(NULLIF(p.yield_kg_decare, 0)) AS yield_kg_decare
-                FROM analytics.production_history AS p
-                CROSS JOIN latest_year
-                WHERE p.city_name = ANY(%(city_candidates)s)
-                  AND p.year = latest_year.year
-                GROUP BY p.product_name, latest_year.year
-                ORDER BY production_ton DESC NULLS LAST, yield_kg_decare DESC NULLS LAST, p.product_name ASC
-                LIMIT %(limit)s
-                """,
-                {"city_candidates": city_candidates, "limit": limit},
-            )
+            cursor.execute(sql, params)
             return cursor.fetchall()
 
 
@@ -569,26 +577,28 @@ def get_city_production_overview(city_name: str):
             return cursor.fetchone()
 
 
-def get_city_production_trend(city_name: str, limit: int = 6):
+def get_city_production_trend(city_name: str, limit: int | None = 6):
     city_candidates = _lookup_candidates(city_name)
     if not city_candidates:
         return []
 
+    sql = """
+        SELECT year,
+               SUM(production_ton) AS total_production_ton,
+               AVG(NULLIF(yield_kg_decare, 0)) AS average_yield_kg_decare
+        FROM analytics.production_history
+        WHERE city_name = ANY(%(city_candidates)s)
+        GROUP BY year
+        ORDER BY year DESC
+    """
+    params: dict[str, object] = {"city_candidates": city_candidates}
+    if limit is not None:
+        sql += " LIMIT %(limit)s"
+        params["limit"] = limit
+
     with get_connection(row_factory=dict_row) as connection:
         with connection.cursor() as cursor:
-            cursor.execute(
-                """
-                SELECT year,
-                       SUM(production_ton) AS total_production_ton,
-                       AVG(NULLIF(yield_kg_decare, 0)) AS average_yield_kg_decare
-                FROM analytics.production_history
-                WHERE city_name = ANY(%(city_candidates)s)
-                GROUP BY year
-                ORDER BY year DESC
-                LIMIT %(limit)s
-                """,
-                {"city_candidates": city_candidates, "limit": limit},
-            )
+            cursor.execute(sql, params)
             rows = cursor.fetchall()
     return list(reversed(rows))
 
@@ -654,7 +664,8 @@ def get_crop_projection_series(
             )
             history_rows = list(reversed(cursor.fetchall()))
 
-            forecast_years = _forecast_years(limit=forecast_limit)
+            reference_year = (history_rows[-1]["year"] + 1) if history_rows else date.today().year
+            forecast_years = _forecast_years(limit=forecast_limit, reference_year=reference_year)
             if not forecast_years:
                 forecast_rows = []
             else:

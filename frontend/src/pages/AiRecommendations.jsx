@@ -44,6 +44,7 @@ const AiRecommendations = () => {
     const [analysis, setAnalysis] = useState(emptyAnalysis);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [emptyState, setEmptyState] = useState(false);
 
     useEffect(() => {
         let active = true;
@@ -51,16 +52,14 @@ const AiRecommendations = () => {
         const loadAnalysis = async () => {
             setLoading(true);
             setError('');
+            setEmptyState(false);
 
             try {
                 let payload;
+
                 if (analysisId) {
                     payload = await apiFetch(`/api/analyses/${analysisId}`);
-                } else {
-                    if (!planId && !legacyPlan) {
-                        throw new Error('Önce analiz edilecek bir plan oluşturmanız gerekiyor.');
-                    }
-
+                } else if (planId || legacyPlan) {
                     payload = await apiFetch('/api/ai/analyze-plan', {
                         method: 'POST',
                         body: planId
@@ -71,6 +70,19 @@ const AiRecommendations = () => {
                                 crop: legacyPlan?.crop || '',
                             },
                     });
+                } else {
+                    const reportsPayload = await apiFetch('/api/analyses');
+                    const latestReport = reportsPayload.reports?.[0];
+
+                    if (!latestReport?.id) {
+                        if (active) {
+                            setAnalysis(emptyAnalysis);
+                            setEmptyState(true);
+                        }
+                        return;
+                    }
+
+                    payload = await apiFetch(`/api/analyses/${latestReport.id}`);
                 }
 
                 if (active) {
@@ -78,10 +90,16 @@ const AiRecommendations = () => {
                 }
             } catch (err) {
                 if (active) {
-                    setError(err.message || 'AI analizi alınamadı.');
+                    setAnalysis(emptyAnalysis);
+                    setError(err.message || 'AI analizi al\u0131namad\u0131.');
+                    if (!analysisId && !planId && !legacyPlan) {
+                        setEmptyState(true);
+                    }
                 }
             } finally {
-                if (active) setLoading(false);
+                if (active) {
+                    setLoading(false);
+                }
             }
         };
 
@@ -95,13 +113,14 @@ const AiRecommendations = () => {
     const confidence = analysis.confidence || { score: 0, label: '' };
     const chartData = analysis.trendSeries || [];
     const plan = analysis.plan || {};
-    const focusCrop = analysis.focusCrop || plan.selectedCropName || 'Öne çıkan ürün';
+    const focusCrop = analysis.focusCrop || plan.selectedCropName || '\u00d6ne \u00e7\u0131kan \u00fcr\u00fcn';
     const selectedCrop = analysis.selectedCrop || {};
     const scoreBreakdown = analysis.scoreBreakdown || [];
     const colors = ['var(--color-accent)', '#e0e0e0'];
+    const shouldShowEmptyState = emptyState && !loading;
     const gaugeData = [
-        { name: 'Score', value: score },
-        { name: 'Rest', value: Math.max(0, 100 - score) },
+        { name: 'Score', value: shouldShowEmptyState ? 0 : score },
+        { name: 'Rest', value: shouldShowEmptyState ? 100 : Math.max(0, 100 - score) },
     ];
 
     return (
@@ -110,39 +129,41 @@ const AiRecommendations = () => {
                 <div className="header-text-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: 1 }}>
                     <button className="back-btn" onClick={() => navigate(-1)}>
                         <ChevronLeft size={20} />
-                        {'Geri Dön'}
+                        {'Geri D\u00f6n'}
                     </button>
                     <div className="header-text">
-                        <h1>{'Yapay Zeka Analiz Sonuçları'}</h1>
-                        <p className="text-muted">{'Kayıtlı plan ve geçmiş veri üzerinden oluşturulan öneriler'}</p>
+                        <h1>{'Yapay Zeka Analiz Sonu\u00e7lar\u0131'}</h1>
+                        <p className="text-muted">{'Kay\u0131tl\u0131 plan ve ge\u00e7mi\u015f veri \u00fczerinden olu\u015fturulan \u00f6neriler'}</p>
                     </div>
                 </div>
             </div>
 
-            <div className="plan-context-chips">
-                <div className="context-chip">
-                    <MapPin size={16} />
-                    <span>{plan.city || legacyPlan?.city || 'Şehir bilgisi yok'}</span>
-                </div>
-                <div className="context-chip">
-                    <Scaling size={16} />
-                    <span>{numberFormatter.format(Number(plan.plannedAreaDecare || legacyPlan?.size || 0))} {'dönüm'}</span>
-                </div>
-                <div className="context-chip">
-                    <Leaf size={16} />
-                    <span>{plan.selectedCropName || focusCrop}</span>
-                </div>
-                {plan.fieldName && (
+            {!shouldShowEmptyState && (
+                <div className="plan-context-chips">
                     <div className="context-chip">
-                        <span>{plan.fieldName}</span>
+                        <MapPin size={16} />
+                        <span>{plan.city || legacyPlan?.city || '\u015eehir bilgisi yok'}</span>
                     </div>
-                )}
-                {analysis.analyzedAt && (
                     <div className="context-chip">
-                        <span>{new Date(analysis.analyzedAt).toLocaleString('tr-TR')}</span>
+                        <Scaling size={16} />
+                        <span>{numberFormatter.format(Number(plan.plannedAreaDecare || legacyPlan?.size || 0))} {'d\u00f6n\u00fcm'}</span>
                     </div>
-                )}
-            </div>
+                    <div className="context-chip">
+                        <Leaf size={16} />
+                        <span>{plan.selectedCropName || focusCrop}</span>
+                    </div>
+                    {plan.fieldName && (
+                        <div className="context-chip">
+                            <span>{plan.fieldName}</span>
+                        </div>
+                    )}
+                    {analysis.analyzedAt && (
+                        <div className="context-chip">
+                            <span>{new Date(analysis.analyzedAt).toLocaleString('tr-TR')}</span>
+                        </div>
+                    )}
+                </div>
+            )}
 
             <div className="gauge-section card">
                 <div className="gauge-chart-container">
@@ -166,131 +187,161 @@ const AiRecommendations = () => {
                         </PieChart>
                     </ResponsiveContainer>
                     <div className="gauge-overlay-text">
-                        <h2>%{score}</h2>
-                        <p>{'Plan Uygunluk Skoru'}</p>
+                        {shouldShowEmptyState ? (
+                            <>
+                                <h2>{'Hen\u00fcz'}</h2>
+                                <p>{'Analiz kayd\u0131 yok'}</p>
+                            </>
+                        ) : (
+                            <>
+                                <h2>%{score}</h2>
+                                <p>{'Plan Uygunluk Skoru'}</p>
+                            </>
+                        )}
                     </div>
                 </div>
                 <div className="gauge-info">
                     <div className="analysis-summary-header">
-                        <h3>{'Seçilen Ürün Değerlendirmesi'}</h3>
+                        <h3>{'Se\u00e7ilen \u00dcr\u00fcn De\u011ferlendirmesi'}</h3>
                         <div className="confidence-pill">
                             <ShieldCheck size={16} />
-                            <span>{confidence.label || 'Model Güveni'}</span>
-                            <strong>%{confidence.score || 0}</strong>
+                            <span>{shouldShowEmptyState ? 'Analiz Durumu' : (confidence.label || 'Model G\u00fcveni')}</span>
+                            <strong>{shouldShowEmptyState ? 'Bekleniyor' : `%${confidence.score || 0}`}</strong>
                         </div>
                     </div>
-                    <p>{analysis.summary || `${focusCrop} için özet analiz hazırlanıyor.`}</p>
-                    <p className="text-muted">{analysis.climateComment}</p>
-                    <p className="text-muted">{analysis.marketComment}</p>
+                    {shouldShowEmptyState ? (
+                        <>
+                            <p>{'Bu sayfa art\u0131k son kay\u0131tl\u0131 analiz raporunu otomatik a\u00e7\u0131yor. Hen\u00fcz kay\u0131tl\u0131 bir rapor olmad\u0131\u011f\u0131 i\u00e7in \u00f6nce yeni bir \u00fcretim plan\u0131 olu\u015fturup analizi ba\u015flatman\u0131z gerekiyor.'}</p>
+                            <p className="text-muted">{'Plan olu\u015fturduktan sonra se\u00e7ti\u011finiz il, d\u00f6n\u00fcm ve \u00fcr\u00fcn i\u00e7in ge\u00e7mi\u015f \u00fcretim ile model projeksiyonlar\u0131na dayal\u0131 de\u011ferlendirmeyi burada g\u00f6rebileceksiniz.'}</p>
+                            <div className="empty-analysis-actions">
+                                <button type="button" className="primary-analysis-action" onClick={() => navigate('/plan-wizard')}>
+                                    {'Yeni Plan Olu\u015ftur'}
+                                </button>
+                                <button type="button" className="secondary-analysis-action" onClick={() => navigate('/profile')}>
+                                    {'Ge\u00e7mi\u015f Raporlara Git'}
+                                </button>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            <p>{analysis.summary || `${focusCrop} i\u00e7in \u00f6zet analiz haz\u0131rlan\u0131yor.`}</p>
+                            <p className="text-muted">{analysis.climateComment}</p>
+                            <p className="text-muted">{analysis.marketComment}</p>
+                        </>
+                    )}
                     {error && <p style={{ color: '#b91c1c', marginTop: '0.75rem' }}>{error}</p>}
                 </div>
             </div>
 
-            <div className="analysis-insight-grid">
-                <div className="analysis-insight-card card">
-                    <div className="insight-title-row">
-                        <Leaf size={18} />
-                        <h3>{selectedCrop.name || focusCrop}</h3>
-                    </div>
-                    <p className="insight-metric">{'Beklenen Verim'}: <strong>{selectedCrop.expectedYieldKgDecare != null ? `${numberFormatter.format(selectedCrop.expectedYieldKgDecare)} kg/dekar` : 'Veri yok'}</strong></p>
-                    <p className="insight-metric">{'Beklenen Üretim'}: <strong>{selectedCrop.expectedProductionTon != null ? `${numberFormatter.format(selectedCrop.expectedProductionTon)} ton` : 'Veri yok'}</strong></p>
-                    <p className="insight-metric">{'Tahmin Yılı'}: <strong>{selectedCrop.forecastYear || '-'}</strong></p>
-                </div>
-
-                <div className="analysis-insight-card card">
-                    <div className="insight-title-row">
-                        <ShieldCheck size={18} />
-                        <h3>{'Model Güveni'}</h3>
-                    </div>
-                    <p className="insight-metric">{'Güven Skoru'}: <strong>%{confidence.score || 0}</strong></p>
-                    <p className="insight-metric">{'Seviye'}: <strong>{confidence.label || '-'}</strong></p>
-                    <p className="text-muted">{'Walk-forward doğrulama metrikleri üzerinden hesaplanır.'}</p>
-                </div>
-
-                <div className="analysis-insight-card card">
-                    <div className="insight-title-row">
-                        <BarChart3 size={18} />
-                        <h3>{'Puan Kırılımı'}</h3>
-                    </div>
-                    <div className="breakdown-list">
-                        {scoreBreakdown.map((item) => (
-                            <div key={item.key} className="breakdown-row">
-                                <span>{item.label}</span>
-                                <strong>%{Math.round(item.value || 0)}</strong>
+            {!shouldShowEmptyState && (
+                <>
+                    <div className="analysis-insight-grid">
+                        <div className="analysis-insight-card card">
+                            <div className="insight-title-row">
+                                <Leaf size={18} />
+                                <h3>{selectedCrop.name || focusCrop}</h3>
                             </div>
-                        ))}
-                        {scoreBreakdown.length === 0 && <p className="text-muted">{'Puan kırılımı bulunamadı.'}</p>}
-                    </div>
-                </div>
-            </div>
+                            <p className="insight-metric">{'Beklenen Verim'}: <strong>{selectedCrop.expectedYieldKgDecare != null ? `${numberFormatter.format(selectedCrop.expectedYieldKgDecare)} kg/dekar` : 'Veri yok'}</strong></p>
+                            <p className="insight-metric">{'Beklenen \u00dcretim'}: <strong>{selectedCrop.expectedProductionTon != null ? `${numberFormatter.format(selectedCrop.expectedProductionTon)} ton` : 'Veri yok'}</strong></p>
+                            <p className="insight-metric">{'Tahmin Y\u0131l\u0131'}: <strong>{selectedCrop.forecastYear || '-'}</strong></p>
+                        </div>
 
-            <div className="recommendations-content">
-                <div className="recommendations-left">
-                    <h2 className="section-title">{'Alternatif Ürün Önerileri'}</h2>
-                    <div className="recommendation-cards">
-                        {loading ? (
-                            <div className="suggestion-card card"><p>{'Analiz yükleniyor...'}</p></div>
-                        ) : analysis.recommendations.length > 0 ? (
-                            analysis.recommendations.map((item) => (
-                                <div key={item.id} className="suggestion-card card">
-                                    <div className="suggestion-header">
-                                        <div className="suggestion-title">
-                                            <div className="title-row">
-                                                <h3>{item.crop}</h3>
-                                                <span className="expected-return">{item.expectedReturn}</span>
+                        <div className="analysis-insight-card card">
+                            <div className="insight-title-row">
+                                <ShieldCheck size={18} />
+                                <h3>{'Model G\u00fcveni'}</h3>
+                            </div>
+                            <p className="insight-metric">{'G\u00fcven Skoru'}: <strong>%{confidence.score || 0}</strong></p>
+                            <p className="insight-metric">{'Seviye'}: <strong>{confidence.label || '-'}</strong></p>
+                            <p className="text-muted">{'Walk-forward do\u011frulama metrikleri \u00fczerinden hesaplan\u0131r.'}</p>
+                        </div>
+
+                        <div className="analysis-insight-card card">
+                            <div className="insight-title-row">
+                                <BarChart3 size={18} />
+                                <h3>{'Puan K\u0131r\u0131l\u0131m\u0131'}</h3>
+                            </div>
+                            <div className="breakdown-list">
+                                {scoreBreakdown.map((item) => (
+                                    <div key={item.key} className="breakdown-row">
+                                        <span>{item.label}</span>
+                                        <strong>%{Math.round(item.value || 0)}</strong>
+                                    </div>
+                                ))}
+                                {scoreBreakdown.length === 0 && <p className="text-muted">{'Puan k\u0131r\u0131l\u0131m\u0131 bulunamad\u0131.'}</p>}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="recommendations-content">
+                        <div className="recommendations-left">
+                            <h2 className="section-title">{'Alternatif \u00dcr\u00fcn \u00d6nerileri'}</h2>
+                            <div className="recommendation-cards">
+                                {loading ? (
+                                    <div className="suggestion-card card"><p>{'Analiz y\u00fckleniyor...'}</p></div>
+                                ) : analysis.recommendations.length > 0 ? (
+                                    analysis.recommendations.map((item) => (
+                                        <div key={item.id} className="suggestion-card card">
+                                            <div className="suggestion-header">
+                                                <div className="suggestion-title">
+                                                    <div className="title-row">
+                                                        <h3>{item.crop}</h3>
+                                                        <span className="expected-return">{item.expectedReturn}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="suggestion-meta-grid">
+                                                <span>{'Skor'}: <strong>%{Math.round(item.score || 0)}</strong></span>
+                                                <span>{'Beklenen verim'}: <strong>{item.expectedYieldKgDecare != null ? `${numberFormatter.format(item.expectedYieldKgDecare)} kg/dekar` : 'Veri yok'}</strong></span>
+                                                <span>{'Beklenen \u00fcretim'}: <strong>{item.estimatedProductionTon != null ? `${numberFormatter.format(item.estimatedProductionTon)} ton` : 'Veri yok'}</strong></span>
+                                            </div>
+                                            <div className="suggestion-body">
+                                                <p className="reason-label">{'Neden bu \u00fcr\u00fcn?'}</p>
+                                                <p>{item.reason}</p>
                                             </div>
                                         </div>
-                                    </div>
-                                    <div className="suggestion-meta-grid">
-                                        <span>{'Skor'}: <strong>%{Math.round(item.score || 0)}</strong></span>
-                                        <span>{'Beklenen verim'}: <strong>{item.expectedYieldKgDecare != null ? `${numberFormatter.format(item.expectedYieldKgDecare)} kg/dekar` : 'Veri yok'}</strong></span>
-                                        <span>{'Beklenen üretim'}: <strong>{item.estimatedProductionTon != null ? `${numberFormatter.format(item.estimatedProductionTon)} ton` : 'Veri yok'}</strong></span>
-                                    </div>
-                                    <div className="suggestion-body">
-                                        <p className="reason-label">{'Neden bu ürün?'}</p>
-                                        <p>{item.reason}</p>
-                                    </div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="suggestion-card card"><p>{'Gösterilecek öneri bulunamadı.'}</p></div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="recommendations-right">
-                    <h2 className="section-title">{'Geçmiş Üretim ve Gelecek Projeksiyonu'}</h2>
-                    <div className="chart-card card">
-                        {chartData.length > 0 ? (
-                            <ResponsiveContainer width="100%" height={400}>
-                                <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(203, 213, 225, 0.4)" />
-                                    <XAxis dataKey="year" axisLine tickLine={false} tick={{ fontSize: 13, fill: '#64748b', fontWeight: 600 }} dy={10} />
-                                    <YAxis axisLine tickLine={false} tick={{ fontSize: 13, fill: '#64748b', fontWeight: 600 }} dx={-10} tickCount={5} />
-                                    <RechartsTooltip
-                                        cursor={{ fill: 'rgba(16, 185, 129, 0.05)' }}
-                                        contentStyle={{
-                                            borderRadius: '16px',
-                                            border: '1px solid rgba(226, 232, 240, 0.8)',
-                                            boxShadow: 'var(--shadow-xl)',
-                                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                                            backdropFilter: 'blur(8px)',
-                                            padding: '16px',
-                                        }}
-                                    />
-                                    <Legend wrapperStyle={{ paddingTop: '20px', fontWeight: '600', fontSize: '14px' }} iconType="circle" />
-                                    <Bar name={'Geçmiş Üretim (Ton)'} dataKey="historicalProduction" fill="var(--color-primary)" radius={[4, 4, 0, 0]} barSize={32} />
-                                    <Line type="monotone" name={'Model Projeksiyonu (Ton)'} dataKey="predictedProduction" stroke="#f59e0b" strokeWidth={4} dot={{ r: 5, fill: 'white', stroke: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 8, fill: '#f59e0b', stroke: 'white', strokeWidth: 2 }} />
-                                </ComposedChart>
-                            </ResponsiveContainer>
-                        ) : (
-                            <div className="empty-chart-state">
-                                {'Bu plan için yeterli üretim trendi bulunamadı.'}
+                                    ))
+                                ) : (
+                                    <div className="suggestion-card card"><p>{'G\u00f6sterilecek \u00f6neri bulunamad\u0131.'}</p></div>
+                                )}
                             </div>
-                        )}
+                        </div>
+
+                        <div className="recommendations-right">
+                            <h2 className="section-title">{'Ge\u00e7mi\u015f \u00dcretim ve Gelecek Projeksiyonu'}</h2>
+                            <div className="chart-card card">
+                                {chartData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height={400}>
+                                        <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(203, 213, 225, 0.4)" />
+                                            <XAxis dataKey="year" axisLine tickLine={false} tick={{ fontSize: 13, fill: '#64748b', fontWeight: 600 }} dy={10} />
+                                            <YAxis axisLine tickLine={false} tick={{ fontSize: 13, fill: '#64748b', fontWeight: 600 }} dx={-10} tickCount={5} />
+                                            <RechartsTooltip
+                                                cursor={{ fill: 'rgba(16, 185, 129, 0.05)' }}
+                                                contentStyle={{
+                                                    borderRadius: '16px',
+                                                    border: '1px solid rgba(226, 232, 240, 0.8)',
+                                                    boxShadow: 'var(--shadow-xl)',
+                                                    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                                                    backdropFilter: 'blur(8px)',
+                                                    padding: '16px',
+                                                }}
+                                            />
+                                            <Legend wrapperStyle={{ paddingTop: '20px', fontWeight: '600', fontSize: '14px' }} iconType="circle" />
+                                            <Bar name={'Ge\u00e7mi\u015f \u00dcretim (Ton)'} dataKey="historicalProduction" fill="var(--color-primary)" radius={[4, 4, 0, 0]} barSize={32} />
+                                            <Line type="monotone" name={'Model Projeksiyonu (Ton)'} dataKey="predictedProduction" stroke="#f59e0b" strokeWidth={4} dot={{ r: 5, fill: 'white', stroke: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 8, fill: '#f59e0b', stroke: 'white', strokeWidth: 2 }} />
+                                        </ComposedChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="empty-chart-state">
+                                        {'Bu plan i\u00e7in yeterli \u00fcretim trendi bulunamad\u0131.'}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </div>
+                </>
+            )}
         </div>
     );
 };

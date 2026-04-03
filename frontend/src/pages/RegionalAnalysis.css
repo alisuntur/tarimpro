@@ -1,4 +1,4 @@
-.regional-analysis-container {
+﻿.regional-analysis-container {
     display: flex;
     flex-direction: column;
     gap: 1.5rem;
@@ -292,6 +292,13 @@
     color: var(--color-primary-dark);
 }
 
+.chart-subtitle {
+    margin: 0.25rem 0 0;
+    font-size: 0.92rem;
+    color: #475569;
+    font-weight: 600;
+}
+
 .forecast-chart-card {
     padding: 1.5rem;
 }
@@ -300,4 +307,55 @@
     .regional-charts-grid {
         grid-template-columns: 1fr;
     }
+}
+.chart-title-row-spread {
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.chart-title-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.range-switch {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.range-switch-btn {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: #f8fafc;
+    color: #1e293b;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.range-switch-btn.active {
+    background: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
+.crop-tag {
+    border: 1px solid rgba(22, 101, 52, 0.18);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+}
+
+.crop-tag.secondary {
+    background-color: #e2e8f0;
+    color: #0f172a;
+    border-color: rgba(15, 23, 42, 0.12);
+    font-weight: 700;
+}
+
+.recharts-legend-item-text {
+    color: #0f172a !important;
 }

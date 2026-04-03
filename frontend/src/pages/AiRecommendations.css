@@ -1,4 +1,4 @@
-.recommendations-container {
+﻿.recommendations-container {
     display: flex;
     flex-direction: column;
     gap: 2rem;
@@ -354,4 +354,38 @@
         flex-direction: column;
         align-items: stretch;
     }
+}
+
+
+.empty-analysis-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+.primary-analysis-action,
+.secondary-analysis-action {
+    border-radius: 999px;
+    padding: 0.7rem 1.1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s ease;
+}
+
+.primary-analysis-action {
+    border: 1px solid var(--color-primary);
+    background: var(--color-primary);
+    color: #fff;
+}
+
+.secondary-analysis-action {
+    border: 1px solid rgba(15, 23, 42, 0.14);
+    background: #fff;
+    color: var(--color-text-main);
+}
+
+.primary-analysis-action:hover,
+.secondary-analysis-action:hover {
+    transform: translateY(-1px);
 }

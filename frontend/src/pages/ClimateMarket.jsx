@@ -11,6 +11,8 @@ const cities = [
     'Konya', 'Mardin', 'Manisa', 'Samsun', 'Şanlıurfa', 'Tekirdağ', 'Trabzon'
 ];
 
+const periodLabels = { '6M': '6 Ay', '1Y': '1 Yıl', '5Y': '5 Yıl' };
+
 const ClimateMarket = () => {
     const [period, setPeriod] = useState('1Y');
     const [selectedCity, setSelectedCity] = useState('Manisa');
@@ -49,8 +51,8 @@ const ClimateMarket = () => {
         <div className="climate-container animate-fade-in">
             <div className="climate-header">
                 <div className="header-text">
-                    <h1>İklim ve Pazar Verileri</h1>
-                    <p className="text-muted">Veritabanındaki bölgesel makro veriler ve yapay zeka analizleri</p>
+                    <h1>{'İklim ve Risk Raporları'}</h1>
+                    <p className="text-muted">{'Veritabanındaki yağış, sıcaklık ve kuraklık risk serileri bu ekranda özetlenir.'}</p>
                 </div>
 
                 <div className="header-actions">
@@ -81,10 +83,10 @@ const ClimateMarket = () => {
                         <ResponsiveContainer width="100%" height={240}>
                             <BarChart data={climateData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                                <RechartsTooltip cursor={{ fill: 'transparent' }} />
-                                <Bar dataKey="rainfall" fill="var(--color-primary-light)" radius={[4, 4, 0, 0]} barSize={30} />
+                                <RechartsTooltip cursor={{ fill: 'transparent' }} formatter={(value, name) => [value, name]} labelFormatter={(label) => `Dönem: ${label}`} />
+                                <Bar dataKey="rainfall" name="Yağış (mm)" fill="var(--color-primary-light)" radius={[4, 4, 0, 0]} barSize={30} />
                             </BarChart>
                         </ResponsiveContainer>
                     </div>
@@ -99,9 +101,9 @@ const ClimateMarket = () => {
                         <ResponsiveContainer width="100%" height={240}>
                             <BarChart data={climateData} margin={{ top: 20, right: 0, left: -20, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                                <XAxis dataKey="label" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                                 <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                                <RechartsTooltip cursor={{ fill: 'transparent' }} />
+                                <RechartsTooltip cursor={{ fill: 'transparent' }} formatter={(value, name) => [value, name]} labelFormatter={(label) => `Dönem: ${label}`} />
                                 <Bar dataKey="temperature" name="Ort. Sıcaklık (°C)" radius={[4, 4, 0, 0]} barSize={40}>
                                     {climateData.map((entry, index) => <Cell key={`cell-${index}`} fill={getRiskColor(entry.droughtRisk)} />)}
                                 </Bar>
@@ -130,7 +132,7 @@ const ClimateMarket = () => {
                                     <p className="insight-lead">{selectedCity} için iklim geçmişi ve model verileri analiz edilmiştir.</p>
                                     <ul className="insight-points">
                                         <li><strong>Şehir:</strong> {selectedCity}</li>
-                                        <li><strong>Dönem:</strong> {period}</li>
+                                        <li><strong>{'Dönem:'}</strong> {periodLabels[period] || period}</li>
                                         <li><strong>Yorum:</strong> {comment}</li>
                                     </ul>
                                 </>
@@ -138,7 +140,7 @@ const ClimateMarket = () => {
                         </div>
 
                         <div className="panel-footer">
-                            <p className="footer-note">Kaynak: PostgreSQL içindeki analytics iklim verileri</p>
+                            <p className="footer-note">{'Kaynak: PostgreSQL içindeki analytics.climate_history kayıtları'}</p>
                         </div>
                     </div>
                 </div>

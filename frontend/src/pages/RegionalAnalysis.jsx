@@ -55,6 +55,7 @@ const RegionalAnalysis = () => {
     const [analysis, setAnalysis] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [historyRange, setHistoryRange] = useState('5Y');
 
     useEffect(() => {
         if (!selectedCity) return;
@@ -65,7 +66,7 @@ const RegionalAnalysis = () => {
             setLoading(true);
             setError('');
             try {
-                const payload = await apiFetch(`/api/regional-analysis?city=${encodeURIComponent(selectedCity)}`);
+                const payload = await apiFetch(`/api/regional-analysis?city=${encodeURIComponent(selectedCity)}&historyRange=${encodeURIComponent(historyRange)}`);
                 if (active) setAnalysis(payload);
             } catch (err) {
                 if (active) {
@@ -81,7 +82,7 @@ const RegionalAnalysis = () => {
         return () => {
             active = false;
         };
-    }, [selectedCity]);
+    }, [selectedCity, historyRange]);
 
     return (
         <div className="regional-analysis-container animate-fade-in">
@@ -231,9 +232,9 @@ const RegionalAnalysis = () => {
                         <ResponsiveContainer width="100%" height={300}>
                             <ComposedChart data={analysis.climateSeries} margin={{ top: 20, right: 20, left: -10, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(203, 213, 225, 0.35)" />
-                                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#64748b' }} />
-                                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#64748b' }} />
-                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#64748b' }} />
+                                <XAxis dataKey="label" tick={{ fontSize: 11, fill: '#334155', fontWeight: 600 }} />
+                                <YAxis yAxisId="left" tick={{ fontSize: 11, fill: '#334155', fontWeight: 600 }} />
+                                <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11, fill: '#334155', fontWeight: 600 }} />
                                 <Tooltip content={<CustomTooltip />} />
                                 <Legend />
                                 <Bar yAxisId="left" dataKey="rainfall" name="Yağış (mm)" fill="rgba(56, 189, 248, 0.75)" radius={[4, 4, 0, 0]} />
@@ -243,15 +244,29 @@ const RegionalAnalysis = () => {
                     </div>
 
                     <div className="card forecast-chart-card">
-                        <div className="chart-title-row">
-                            <TrendingUp size={22} color="var(--color-primary)" />
-                            <h2>Son Yıllardaki Üretim Trendi</h2>
+                        <div className="chart-title-row chart-title-row-spread">
+                            <div className="chart-title-inline">
+                                <TrendingUp size={22} color="var(--color-primary)" />
+                                <div>
+                                    <h2>{'Üretim Trendi'}</h2>
+                                    <p className="chart-subtitle">
+                                        {analysis.productionSeries?.length > 0
+                                            ? `${analysis.productionSeries[0].year} - ${analysis.productionSeries[analysis.productionSeries.length - 1].year} arası veri gösteriliyor`
+                                            : 'Üretim geçmişi gösteriliyor'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="range-switch" role="group" aria-label="Üretim trendi zaman aralığı">
+                                <button type="button" className={`range-switch-btn ${historyRange === '5Y' ? 'active' : ''}`} onClick={() => setHistoryRange('5Y')}>{'5 Yıl'}</button>
+                                <button type="button" className={`range-switch-btn ${historyRange === '10Y' ? 'active' : ''}`} onClick={() => setHistoryRange('10Y')}>{'10 Yıl'}</button>
+                                <button type="button" className={`range-switch-btn ${historyRange === 'ALL' ? 'active' : ''}`} onClick={() => setHistoryRange('ALL')}>{'Tüm Veri'}</button>
+                            </div>
                         </div>
                         <ResponsiveContainer width="100%" height={300}>
                             <BarChart data={analysis.productionSeries} margin={{ top: 20, right: 20, left: -10, bottom: 0 }}>
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(203, 213, 225, 0.35)" />
-                                <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#64748b' }} />
-                                <YAxis tick={{ fontSize: 11, fill: '#64748b' }} />
+                                <XAxis dataKey="year" tick={{ fontSize: 11, fill: '#334155', fontWeight: 600 }} />
+                                <YAxis tick={{ fontSize: 11, fill: '#334155', fontWeight: 600 }} />
                                 <Tooltip content={<CustomTooltip />} />
                                 <Legend />
                                 <Bar dataKey="totalProductionTon" name="Toplam Üretim (Ton)" fill="var(--color-primary)" radius={[6, 6, 0, 0]} />

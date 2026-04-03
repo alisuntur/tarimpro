@@ -700,7 +700,7 @@ def get_dashboard_history(user=Depends(require_current_user)):
 def get_plan_options(city: str | None = None, user=Depends(require_current_user)):
     city_name = city or user.get("city") or "Manisa"
     fields = get_fields_for_user(user["id"])
-    crop_options = get_city_crop_options(city_name, limit=8)
+    crop_options = get_city_crop_options(city_name, limit=None)
     return {
         "seasonYear": date.today().year,
         "defaultCity": city_name,
@@ -1005,12 +1005,14 @@ def get_saved_analysis(analysis_id: str, user=Depends(require_current_user)):
 
 
 @app.get("/api/regional-analysis")
-def get_regional_analysis(city: str | None = None, user=Depends(require_current_user)):
+def get_regional_analysis(city: str | None = None, historyRange: str = "5Y", user=Depends(require_current_user)):
     city_name = _dashboard_city(user, city)
     climate = get_latest_climate(city_name)
     climate_rows = list(reversed(get_climate_series(city_name, limit=12)))
     production_overview = get_city_production_overview(city_name)
-    production_trend = get_city_production_trend(city_name, limit=6)
+    history_range = (historyRange or "5Y").upper()
+    trend_limit = {"5Y": 5, "10Y": 10, "ALL": None}.get(history_range, 5)
+    production_trend = get_city_production_trend(city_name, limit=trend_limit)
     top_crops = get_city_crop_options(city_name, limit=4)
     recommended_crops = get_ai_recommendations(city_name, limit=3) or get_ai_recommendations(None, limit=3)
 

@@ -69,10 +69,20 @@ CREATE TABLE IF NOT EXISTS app.ai_analyses (
     id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
     plan_id uuid REFERENCES app.production_plans(id) ON DELETE CASCADE,
     score numeric(5, 2),
+    confidence_score numeric(5, 2),
     summary text,
     climate_comment text,
     market_comment text,
     model_name varchar(100),
+    selected_crop_name varchar(150),
+    focus_crop_name varchar(150),
+    city varchar(100),
+    district varchar(100),
+    forecast_year integer,
+    planned_area_decare numeric(12, 2),
+    expected_yield_kg_decare numeric(14, 2),
+    expected_production_ton numeric(18, 2),
+    score_breakdown jsonb,
     analyzed_at timestamptz NOT NULL DEFAULT now()
 );
 
@@ -82,6 +92,11 @@ CREATE TABLE IF NOT EXISTS app.ai_recommendations (
     rank_order integer NOT NULL,
     crop_name varchar(150) NOT NULL,
     expected_return_percent numeric(6, 2),
+    recommendation_score numeric(5, 2),
+    forecast_year integer,
+    predicted_production_ton numeric(18, 2),
+    expected_yield_kg_decare numeric(14, 2),
+    expected_production_ton numeric(18, 2),
     reason text NOT NULL
 );
 
@@ -100,6 +115,21 @@ CREATE TABLE IF NOT EXISTS app.alerts (
 
 ALTER TABLE app.production_plans ADD COLUMN IF NOT EXISTS city varchar(100);
 ALTER TABLE app.production_plans ADD COLUMN IF NOT EXISTS district varchar(100);
+ALTER TABLE app.ai_analyses ADD COLUMN IF NOT EXISTS confidence_score numeric(5, 2);
+ALTER TABLE app.ai_analyses ADD COLUMN IF NOT EXISTS selected_crop_name varchar(150);
+ALTER TABLE app.ai_analyses ADD COLUMN IF NOT EXISTS focus_crop_name varchar(150);
+ALTER TABLE app.ai_analyses ADD COLUMN IF NOT EXISTS city varchar(100);
+ALTER TABLE app.ai_analyses ADD COLUMN IF NOT EXISTS district varchar(100);
+ALTER TABLE app.ai_analyses ADD COLUMN IF NOT EXISTS forecast_year integer;
+ALTER TABLE app.ai_analyses ADD COLUMN IF NOT EXISTS planned_area_decare numeric(12, 2);
+ALTER TABLE app.ai_analyses ADD COLUMN IF NOT EXISTS expected_yield_kg_decare numeric(14, 2);
+ALTER TABLE app.ai_analyses ADD COLUMN IF NOT EXISTS expected_production_ton numeric(18, 2);
+ALTER TABLE app.ai_analyses ADD COLUMN IF NOT EXISTS score_breakdown jsonb;
+ALTER TABLE app.ai_recommendations ADD COLUMN IF NOT EXISTS recommendation_score numeric(5, 2);
+ALTER TABLE app.ai_recommendations ADD COLUMN IF NOT EXISTS forecast_year integer;
+ALTER TABLE app.ai_recommendations ADD COLUMN IF NOT EXISTS predicted_production_ton numeric(18, 2);
+ALTER TABLE app.ai_recommendations ADD COLUMN IF NOT EXISTS expected_yield_kg_decare numeric(14, 2);
+ALTER TABLE app.ai_recommendations ADD COLUMN IF NOT EXISTS expected_production_ton numeric(18, 2);
 
 CREATE INDEX IF NOT EXISTS idx_users_phone ON app.users (phone);
 CREATE INDEX IF NOT EXISTS idx_users_email ON app.users (email);
@@ -109,6 +139,8 @@ CREATE INDEX IF NOT EXISTS idx_plans_city_year ON app.production_plans (city, se
 CREATE INDEX IF NOT EXISTS idx_alerts_user_id ON app.alerts (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON app.user_sessions (user_id, created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_user_sessions_token_hash ON app.user_sessions (token_hash);
+CREATE INDEX IF NOT EXISTS idx_ai_analyses_plan_id ON app.ai_analyses (plan_id, analyzed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_ai_recommendations_analysis_id ON app.ai_recommendations (analysis_id, rank_order ASC);
 
 CREATE TABLE IF NOT EXISTS analytics.dataset_imports (
     id bigserial PRIMARY KEY,

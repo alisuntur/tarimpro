@@ -1,5 +1,7 @@
+import json
 from contextlib import asynccontextmanager
 from datetime import date, datetime
+from statistics import mean, pstdev
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,27 +10,38 @@ from pydantic import BaseModel, ConfigDict
 
 from db import bootstrap_database
 from db.repositories import (
+    create_ai_analysis,
     create_field,
     create_production_plan,
     create_user_session,
     delete_field,
+    get_ai_analysis_for_user,
     get_ai_recommendations,
+    get_ai_recommendations_for_analysis,
+    get_candidate_forecasts,
     get_city_crop_options,
     get_city_production_overview,
     get_city_production_trend,
     get_climate_series,
+    get_consumption_projection_map,
+    get_crop_history_rows,
     get_crop_projection_series,
     get_dashboard_alerts,
     get_field_for_user,
     get_fields_for_user,
+    get_latest_ai_analysis_for_plan,
     get_latest_climate,
+    get_latest_forecast_year,
     get_market_projection,
     get_plan_history,
     get_production_plan_for_user,
     get_production_plans_for_user,
     get_user_by_identifier,
+    get_walk_forward_summary,
+    list_ai_analyses_for_user,
     revoke_user_session,
     update_field,
+    update_plan_analysis_result,
     update_production_plan,
     update_user_profile,
 )
@@ -36,25 +49,33 @@ from dependencies import require_current_user, security
 from security import generate_session_token, hash_session_token, verify_password
 
 
-TURKISH_ASCII_TRANSLATION = str.maketrans({"ç": "c", "Ç": "C", "ğ": "g", "Ğ": "G", "ı": "i", "İ": "I", "ö": "o", "Ö": "O", "ş": "s", "Ş": "S", "ü": "u", "Ü": "U"})
+TURKISH_ASCII_TRANSLATION = str.maketrans({"\u00e7": "c", "\u00c7": "C", "\u011f": "g", "\u011e": "G", "\u0131": "i", "\u0130": "I", "\u00f6": "o", "\u00d6": "O", "\u015f": "s", "\u015e": "S", "\u00fc": "u", "\u00dc": "U"})
 
-STATUS_LABELS = {"Taslak": "Taslak", "draft": "Taslak", "Analiz Hazır": "Analiz Hazır", "Analiz Hazir": "Analiz Hazır", "Hasat Bekliyor": "Hasat Bekliyor", "Tamamlandı": "Tamamlandı", "Tamamlandi": "Tamamlandı"}
+STATUS_LABELS = {
+    "Taslak": "Taslak",
+    "draft": "Taslak",
+    "Analiz Haz\u0131r": "Analiz Haz\u0131r",
+    "Analiz Hazir": "Analiz Haz\u0131r",
+    "Hasat Bekliyor": "Hasat Bekliyor",
+    "Tamamland\u0131": "Tamamland\u0131",
+    "Tamamlandi": "Tamamland\u0131",
+}
 
 CROP_LABELS = {
-    "wheat": "Buğday",
-    "Bugday": "Buğday",
-    "sunflower": "Ayçiçeği",
-    "Aycicegi": "Ayçiçeği",
+    "wheat": "Bu\u011fday",
+    "Bugday": "Bu\u011fday",
+    "sunflower": "Ay\u00e7i\u00e7e\u011fi",
+    "Aycicegi": "Ay\u00e7i\u00e7e\u011fi",
     "cotton": "Pamuk",
-    "corn": "Mısır",
-    "Misir": "Mısır",
-    "sugar_beet": "Şeker Pancarı",
+    "corn": "M\u0131s\u0131r",
+    "Misir": "M\u0131s\u0131r",
+    "sugar_beet": "\u015eeker Pancar\u0131",
     "olive": "Zeytin",
-    "hazelnut": "Fındık",
-    "grape": "Üzüm",
+    "hazelnut": "F\u0131nd\u0131k",
+    "grape": "\u00dcz\u00fcm",
     "apple": "Elma",
 }
-MONTH_LABELS = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
+MONTH_LABELS = ["Oca", "\u015eub", "Mar", "Nis", "May", "Haz", "Tem", "A\u011fu", "Eyl", "Eki", "Kas", "Ara"]
 
 
 @asynccontextmanager
@@ -274,6 +295,212 @@ def _serialize_plan(plan: dict | None) -> dict | None:
 
 
 
+def _clamp(value: float, minimum: float, maximum: float) -> float:
+    return max(minimum, min(maximum, value))
+
+
+
+def _safe_float(value, default: float | None = 0.0) -> float | None:
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+
+def _normalize_range(value: float | None, minimum: float | None, maximum: float | None, default: float = 50.0) -> float:
+    if value is None or minimum is None or maximum is None:
+        return default
+    if maximum <= minimum:
+        return default
+    return _clamp(((value - minimum) / (maximum - minimum)) * 100, 0, 100)
+
+
+
+def _parse_score_breakdown(value) -> list[dict[str, object]]:
+    if not value:
+        return []
+    if isinstance(value, list):
+        return value
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError:
+            return []
+        return parsed if isinstance(parsed, list) else []
+    return []
+
+
+
+def _confidence_label(score: float) -> str:
+    if score >= 82:
+        return "Yüksek"
+    if score >= 65:
+        return "Dengeli"
+    return "Temkinli"
+
+
+
+def _history_summary(rows: list[dict]) -> dict[str, float | int | None]:
+    yield_values = [_safe_float(row.get("yield_kg_decare"), None) for row in rows]
+    yield_values = [value for value in yield_values if value is not None and value > 0]
+    production_values = [_safe_float(row.get("production_ton"), None) for row in rows]
+    production_values = [value for value in production_values if value is not None and value > 0]
+    latest_row = rows[-1] if rows else None
+    avg_yield = mean(yield_values) if yield_values else None
+    latest_yield = _safe_float(latest_row.get("yield_kg_decare"), None) if latest_row else None
+    latest_production = _safe_float(latest_row.get("production_ton"), None) if latest_row else None
+
+    if len(yield_values) >= 2 and avg_yield and avg_yield > 0:
+        variation = pstdev(yield_values) / avg_yield
+        stability_score = round(_clamp(100 - (variation * 120), 30, 95), 1)
+    elif yield_values:
+        stability_score = 72.0
+    else:
+        stability_score = 55.0
+
+    return {
+        "history_years": len(rows),
+        "avg_yield": avg_yield,
+        "latest_yield": latest_yield,
+        "latest_production": latest_production,
+        "stability_score": stability_score,
+        "avg_production": mean(production_values) if production_values else None,
+    }
+
+
+def _build_confidence_payload(metric_row: dict | None) -> dict[str, object]:
+    if not metric_row:
+        score = 64.0
+        return {
+            "score": score,
+            "label": _confidence_label(score),
+            "summary": "Model güven skoru genel varsayım ile oluşturuldu; alan bazlı ek metrik bulunmadı.",
+            "modelName": None,
+            "modelVersion": None,
+        }
+
+    smape = _safe_float(metric_row.get("avg_smape_pct"), 30.0) or 30.0
+    wape = _safe_float(metric_row.get("avg_wape_pct"), 25.0) or 25.0
+    confidence_score = round(_clamp(100 - (smape * 1.1) - (wape * 0.35), 38, 95), 1)
+    label = _confidence_label(confidence_score)
+    return {
+        "score": confidence_score,
+        "label": label,
+        "summary": (
+            f"Walk-forward doğrulamasında ortalama SMAPE %{smape:.1f} ve WAPE %{wape:.1f} seviyesinde. "
+            f"Bu nedenle model güven seviyesi {label.lower()} olarak değerlendirildi."
+        ),
+        "modelName": metric_row.get("model_name"),
+        "modelVersion": metric_row.get("model_version"),
+    }
+
+
+def _serialize_analysis_report(analysis: dict) -> dict[str, object]:
+    score = _safe_float(analysis.get("score"), 0) or 0
+    confidence_score = _safe_float(analysis.get("confidence_score"), 0) or 0
+    selected_crop = analysis.get("selected_crop_name") or analysis.get("focus_crop_name")
+    return {
+        "id": str(analysis["id"]),
+        "analysisId": str(analysis["id"]),
+        "planId": str(analysis["plan_id"]),
+        "date": _format_date(analysis.get("analyzed_at")),
+        "field": analysis.get("field_name") or analysis.get("city") or "Kayıtlı Plan",
+        "type": f"{_display_crop_name(selected_crop)} AI Analizi" if selected_crop else "AI Analizi",
+        "status": f"Skor %{int(round(score))}",
+        "score": round(score, 1),
+        "confidenceScore": round(confidence_score, 1),
+        "confidenceLabel": _confidence_label(confidence_score) if confidence_score else None,
+        "city": analysis.get("city") or analysis.get("field_city"),
+        "selectedCropName": selected_crop,
+        "analyzedAt": analysis.get("analyzed_at").isoformat() if analysis.get("analyzed_at") else None,
+    }
+
+
+
+def _serialize_saved_recommendation(item: dict) -> dict[str, object]:
+    expected_return = _safe_float(item.get("expected_return_percent"), None)
+    recommendation_score = _safe_float(item.get("recommendation_score"), 0) or 0
+    return {
+        "id": str(item["id"]),
+        "rank": item.get("rank_order"),
+        "crop": item.get("crop_name"),
+        "score": round(recommendation_score, 1),
+        "forecastYear": item.get("forecast_year"),
+        "expectedReturn": f"{expected_return:+.1f}%" if expected_return is not None else "—",
+        "expectedYieldKgDecare": round(_safe_float(item.get("expected_yield_kg_decare"), 0) or 0, 1) if item.get("expected_yield_kg_decare") is not None else None,
+        "estimatedProductionTon": round(_safe_float(item.get("expected_production_ton"), 0) or 0, 1) if item.get("expected_production_ton") is not None else None,
+        "predictedProductionTon": round(_safe_float(item.get("predicted_production_ton"), 0) or 0, 1) if item.get("predicted_production_ton") is not None else None,
+        "reason": item.get("reason"),
+    }
+
+
+
+def _serialize_analysis_response(analysis: dict, recommendations: list[dict], trend_rows: list[dict] | None = None) -> dict[str, object]:
+    selected_crop_name = analysis.get("selected_crop_name") or analysis.get("focus_crop_name")
+    confidence_score = _safe_float(analysis.get("confidence_score"), 0) or 0
+    score = _safe_float(analysis.get("score"), 0) or 0
+
+    return {
+        "success": True,
+        "analysisId": str(analysis["id"]),
+        "analyzedAt": analysis.get("analyzed_at").isoformat() if analysis.get("analyzed_at") else None,
+        "score": round(score, 1),
+        "confidence": {
+            "score": round(confidence_score, 1),
+            "label": _confidence_label(confidence_score),
+        },
+        "summary": analysis.get("summary"),
+        "climateComment": analysis.get("climate_comment"),
+        "marketComment": analysis.get("market_comment"),
+        "scoreBreakdown": _parse_score_breakdown(analysis.get("score_breakdown")),
+        "selectedCrop": {
+            "name": selected_crop_name,
+            "score": round(score, 1),
+            "forecastYear": analysis.get("forecast_year"),
+            "expectedYieldKgDecare": round(_safe_float(analysis.get("expected_yield_kg_decare"), 0) or 0, 1) if analysis.get("expected_yield_kg_decare") is not None else None,
+            "expectedProductionTon": round(_safe_float(analysis.get("expected_production_ton"), 0) or 0, 1) if analysis.get("expected_production_ton") is not None else None,
+        },
+        "focusCrop": analysis.get("focus_crop_name") or selected_crop_name,
+        "plan": {
+            "id": str(analysis.get("plan_id")) if analysis.get("plan_id") else None,
+            "fieldId": str(analysis.get("field_id")) if analysis.get("field_id") else None,
+            "fieldName": analysis.get("field_name"),
+            "city": analysis.get("city") or analysis.get("field_city"),
+            "district": analysis.get("district") or analysis.get("field_district"),
+            "selectedCropName": selected_crop_name,
+            "plannedAreaDecare": round(_safe_float(analysis.get("planned_area_decare"), 0) or 0, 1),
+            "seasonYear": analysis.get("season_year"),
+            "status": _display_status(analysis.get("plan_status")),
+            "targetYieldPercent": round(score, 1),
+            "createdAt": None,
+            "updatedAt": analysis.get("analyzed_at").isoformat() if analysis.get("analyzed_at") else None,
+        },
+        "recommendations": [_serialize_saved_recommendation(item) for item in recommendations],
+        "trendSeries": [
+            {
+                "year": str(row["year"]),
+                "historicalProduction": round(_safe_float(row.get("historical_production_ton"), 0) or 0, 1) if row.get("historical_production_ton") is not None else None,
+                "predictedProduction": round(_safe_float(row.get("predicted_production_ton"), 0) or 0, 1) if row.get("predicted_production_ton") is not None else None,
+            }
+            for row in (trend_rows or [])
+        ],
+    }
+
+
+
+def _analysis_is_current(plan: dict, analysis: dict | None) -> bool:
+    if not plan or not analysis:
+        return False
+    analyzed_at = analysis.get("analyzed_at")
+    updated_at = plan.get("updated_at")
+    if not analyzed_at or not updated_at:
+        return False
+    return analyzed_at >= updated_at
+
+
 def _normalize_profile_payload(payload: ProfileUpdateRequest) -> dict[str, object]:
     if not payload.fullName.strip():
         raise HTTPException(status_code=400, detail="Ad soyad boş bırakılamaz.")
@@ -336,7 +563,7 @@ def _normalize_plan_payload(payload: PlanUpsertRequest, user: dict, *, existing_
         "selected_crop_name": (payload.selectedCropName or "").strip() or None,
         "region_code": (payload.regionCode or (field or {}).get("region_code") or "").strip() or None,
         "season_year": season_year,
-        "status": "Analiz Hazır",
+        "status": "Taslak",
         "target_yield_percent": None,
         "planned_area_decare": planned_area,
         "planned_sowing_date": None,
@@ -348,22 +575,12 @@ def _normalize_plan_payload(payload: PlanUpsertRequest, user: dict, *, existing_
 
 def _build_profile_response(user: dict) -> dict:
     fields = get_fields_for_user(user["id"])
-    plans = get_plan_history(user["id"], limit=20)
+    analyses = list_ai_analyses_for_user(user["id"], limit=20)
     return {
         "user": _serialize_profile_user(user),
         "fields": [_serialize_field(field) for field in fields],
-        "reports": [
-            {
-                "id": str(plan["id"]),
-                "date": _format_date(plan["created_at"]),
-                "field": plan.get("field_name") or plan.get("city") or "Kayıtlı Plan",
-                "type": f"{_display_crop_name(plan['selected_crop_name'])} Üretim Planı" if plan.get("selected_crop_name") else "Üretim Planı",
-                "status": _display_status(plan["status"]),
-            }
-            for plan in plans
-        ],
+        "reports": [_serialize_analysis_report(analysis) for analysis in analyses],
     }
-
 
 @app.get("/")
 def read_root():
@@ -531,101 +748,261 @@ def update_plan(plan_id: str, request: PlanUpsertRequest, user=Depends(require_c
 @app.post("/api/ai/analyze-plan")
 def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user)):
     plan = None
-    city_name = request.region or user.get("city") or "Manisa"
-    selected_crop = _display_crop_name(request.crop) if request.crop else ""
-    planned_area = request.size or 0
+    city_name = (request.region or user.get("city") or "Manisa").strip()
+    selected_crop = (request.crop or "").strip()
+    planned_area = float(request.size or 0)
 
     if request.planId:
         plan = get_production_plan_for_user(user["id"], request.planId)
         if not plan:
             raise HTTPException(status_code=404, detail="Analiz için plan bulunamadı.")
-        city_name = plan.get("city") or plan.get("field_city") or user.get("city") or "Manisa"
-        selected_crop = plan.get("selected_crop_name") or ""
+
+        cached_analysis = get_latest_ai_analysis_for_plan(user["id"], request.planId)
+        if _analysis_is_current(plan, cached_analysis):
+            cached_recommendations = get_ai_recommendations_for_analysis(cached_analysis["id"])
+            focus_crop = cached_analysis.get("focus_crop_name") or cached_analysis.get("selected_crop_name")
+            trend_rows = get_crop_projection_series(cached_analysis.get("city"), focus_crop, history_limit=5, forecast_limit=3)
+            if not trend_rows and focus_crop:
+                trend_rows = get_crop_projection_series(None, focus_crop, history_limit=5, forecast_limit=3)
+            return _serialize_analysis_response(cached_analysis, cached_recommendations, trend_rows)
+
+        city_name = (plan.get("city") or plan.get("field_city") or user.get("city") or "Manisa").strip()
+        selected_crop = (plan.get("selected_crop_name") or "").strip()
         planned_area = float(plan.get("planned_area_decare") or 0)
 
-    recommendations = get_ai_recommendations(city_name, limit=6) or get_ai_recommendations(None, limit=6)
-    if not recommendations:
+    forecast_year = get_latest_forecast_year(reference_year=plan.get("season_year") if plan else date.today().year)
+    if forecast_year is None:
+        raise HTTPException(status_code=404, detail="Analiz için model tahmini bulunamadı.")
+
+    all_candidates = get_candidate_forecasts(city_name, forecast_year, limit=100)
+    if not all_candidates:
+        all_candidates = get_candidate_forecasts(None, forecast_year, limit=100)
+    if not all_candidates:
         raise HTTPException(status_code=404, detail="Analiz için yeterli model tahmini bulunamadı.")
 
     selected_key = _comparison_key(selected_crop)
-    filtered = [item for item in recommendations if _comparison_key(item["product_name"]) != selected_key] if selected_key else recommendations
-    final_recommendations = (filtered or recommendations)[:3]
-    predicted_values = [float(item["predicted_production_ton"]) for item in final_recommendations] or [1.0]
-    top_value = max(predicted_values)
-    min_value = min(predicted_values)
+    candidate_pool = list(all_candidates[:12])
+    if selected_key and not any(_comparison_key(item["product_name"]) == selected_key for item in candidate_pool):
+        selected_row = next((item for item in all_candidates if _comparison_key(item["product_name"]) == selected_key), None)
+        if selected_row:
+            candidate_pool.append(selected_row)
 
-    selected_rank = next(
-        (
-            index
-            for index, item in enumerate(recommendations, start=1)
-            if _comparison_key(item["product_name"]) == selected_key
-        ),
-        None,
-    )
-    if selected_rank == 1:
-        score = 92
-    elif selected_rank == 2:
-        score = 87
-    elif selected_rank == 3:
-        score = 83
-    elif selected_key:
-        score = 78
-    else:
-        score = 85
+    if not selected_crop:
+        selected_crop = candidate_pool[0]["product_name"]
+        selected_key = _comparison_key(selected_crop)
 
-    response_items = []
-    for index, item in enumerate(final_recommendations, start=1):
-        production_value = float(item["predicted_production_ton"])
-        normalized = 0 if top_value == min_value else (production_value - min_value) / (top_value - min_value)
-        expected_return = 8 + round(normalized * 12)
-        response_items.append(
+    climate_rows = list(reversed(get_climate_series(city_name, limit=12)))
+    latest_temp = mean([_safe_float(row.get("temperature_avg_c"), 0) or 0 for row in climate_rows]) if climate_rows else 0
+    latest_rainfall = mean([_safe_float(row.get("rainfall_mm"), 0) or 0 for row in climate_rows]) if climate_rows else 0
+    latest_soil = mean([_safe_float(row.get("soil_moisture_pct"), 0) or 0 for row in climate_rows]) if climate_rows else 0
+    risk = _risk_payload(latest_temp, latest_rainfall, latest_soil)
+
+    latest_actual_year = max((item.get("latest_year") or 0) for item in candidate_pool)
+    horizon = int(_clamp((forecast_year - latest_actual_year) if latest_actual_year else 1, 1, 3))
+    confidence = _build_confidence_payload(get_walk_forward_summary(horizon=horizon))
+    demand_map = get_consumption_projection_map([item["product_name"] for item in candidate_pool], forecast_year)
+
+    raw_items = []
+    for item in candidate_pool:
+        history_rows = get_crop_history_rows(city_name, item["product_name"], years=5)
+        if not history_rows:
+            history_rows = get_crop_history_rows(None, item["product_name"], years=5)
+
+        history = _history_summary(history_rows)
+        expected_yield = history.get("avg_yield") or _safe_float(item.get("latest_yield_kg_decare"), None)
+        latest_production = history.get("latest_production") or _safe_float(item.get("latest_production_ton"), None)
+        predicted_production = _safe_float(item.get("predicted_production_ton"), 0) or 0
+        estimated_production = ((expected_yield or 0) * planned_area / 1000) if planned_area and expected_yield else None
+        demand_value = _safe_float((demand_map.get(item["product_name"]) or {}).get("consumption_value"), None)
+        projected_growth = ((predicted_production - latest_production) / latest_production) * 100 if latest_production else None
+
+        raw_items.append(
             {
-                "id": index,
-                "crop": item["product_name"],
-                "forecastYear": item.get("forecast_year"),
-                "expectedReturn": f"%{expected_return}",
-                "reason": (
-                    f"{city_name} için {item.get('forecast_year')} model tahminlerinde yüksek üretim potansiyeli gösteriyor. "
-                    f"Yaklaşık {production_value:,.0f} tonluk üretim projeksiyonu sayesinde güçlü bir alternatif olarak öne çıkıyor."
-                ),
+                "product_name": item["product_name"],
+                "forecast_year": item.get("forecast_year") or forecast_year,
+                "predicted_production_ton": predicted_production,
+                "expected_yield_kg_decare": expected_yield,
+                "estimated_production_ton": estimated_production,
+                "latest_production_ton": latest_production,
+                "history_years": history.get("history_years"),
+                "stability_score": history.get("stability_score") or 55,
+                "demand_value": demand_value,
+                "projected_growth_percent": projected_growth,
             }
         )
 
-    focus_crop = selected_crop or (final_recommendations[0]["product_name"] if final_recommendations else "")
+    yield_values = [item["expected_yield_kg_decare"] for item in raw_items if item["expected_yield_kg_decare"] is not None]
+    forecast_values = [item["predicted_production_ton"] for item in raw_items if item["predicted_production_ton"] is not None]
+    demand_values = [item["demand_value"] for item in raw_items if item["demand_value"] is not None]
+    yield_min, yield_max = (min(yield_values), max(yield_values)) if yield_values else (None, None)
+    forecast_min, forecast_max = (min(forecast_values), max(forecast_values)) if forecast_values else (None, None)
+    demand_min, demand_max = (min(demand_values), max(demand_values)) if demand_values else (None, None)
+    climate_base = 100 - risk["score"]
+
+    scored_items = []
+    for item in raw_items:
+        yield_score = round(_normalize_range(item["expected_yield_kg_decare"], yield_min, yield_max, default=55), 1)
+        forecast_score = round(_normalize_range(item["predicted_production_ton"], forecast_min, forecast_max, default=55), 1)
+        demand_score = round(_normalize_range(item["demand_value"], demand_min, demand_max, default=50), 1)
+        climate_score = round(_clamp((climate_base * 0.6) + ((item["stability_score"] or 55) * 0.4), 20, 95), 1)
+        total_score = round((yield_score * 0.32) + (forecast_score * 0.33) + (demand_score * 0.17) + (climate_score * 0.18), 1)
+
+        item.update(
+            {
+                "yield_score": yield_score,
+                "forecast_score": forecast_score,
+                "demand_score": demand_score,
+                "climate_score": climate_score,
+                "total_score": total_score,
+                "reason": (
+                    f"{city_name} için geçmiş ortalama verim {item['expected_yield_kg_decare']:.1f} kg/dekar, "
+                    f"{forecast_year} model projeksiyonu {item['predicted_production_ton']:,.0f} ton seviyesinde."
+                    if item["expected_yield_kg_decare"] is not None
+                    else f"{city_name} için {forecast_year} model projeksiyonu {item['predicted_production_ton']:,.0f} ton seviyesinde."
+                ),
+            }
+        )
+        scored_items.append(item)
+
+    scored_items.sort(key=lambda row: (row["total_score"], row["predicted_production_ton"], row["expected_yield_kg_decare"] or 0), reverse=True)
+    selected_item = next((item for item in scored_items if _comparison_key(item["product_name"]) == selected_key), None) or scored_items[0]
+    focus_crop = selected_item["product_name"]
+    selected_key = _comparison_key(focus_crop)
+
+    alternatives = [item for item in scored_items if _comparison_key(item["product_name"]) != selected_key][:3]
+    score_breakdown = [
+        {"key": "yield", "label": "Geçmiş verim", "value": selected_item["yield_score"], "weight": 32},
+        {"key": "forecast", "label": "Model projeksiyonu", "value": selected_item["forecast_score"], "weight": 33},
+        {"key": "demand", "label": "Tüketim eğilimi", "value": selected_item["demand_score"], "weight": 17},
+        {"key": "climate", "label": "İklim dayanıklılığı", "value": selected_item["climate_score"], "weight": 18},
+    ]
+
+    summary = (
+        f"{focus_crop}, {city_name} için {forecast_year} projeksiyonunda %{int(round(selected_item['total_score']))} plan uygunluk skoru aldı. "
+        f"Seçilen {planned_area:.0f} dönüm alanda yaklaşık {selected_item['estimated_production_ton']:.1f} ton üretim potansiyeli öngörülüyor."
+        if selected_item.get("estimated_production_ton") is not None
+        else f"{focus_crop}, {city_name} için {forecast_year} projeksiyonunda %{int(round(selected_item['total_score']))} plan uygunluk skoru aldı."
+    )
+    climate_comment = (
+        f"Son 12 aylık iklim görünümünde ortalama sıcaklık {latest_temp:.1f}°C, yağış {latest_rainfall:.1f} mm ve toprak nemi %{latest_soil:.1f}. "
+        f"Bu desen şehir için {risk['level'].lower()} risk profiline işaret ediyor."
+    )
+    market_comment = (
+        f"Tüketim eğilimi ve model projeksiyonu birlikte değerlendirildiğinde {focus_crop} için güven skoru %{confidence['score']:.1f} seviyesinde. "
+        f"{confidence['summary']}"
+    )
+
     trend_rows = get_crop_projection_series(city_name, focus_crop, history_limit=5, forecast_limit=3)
     if not trend_rows and focus_crop:
         trend_rows = get_crop_projection_series(None, focus_crop, history_limit=5, forecast_limit=3)
 
-    plan_summary = _serialize_plan(plan) if plan else {
-        "id": None,
-        "fieldId": None,
-        "fieldName": None,
+    analysis_payload = {
+        "id": "preview",
+        "plan_id": plan["id"] if plan else None,
+        "field_id": plan.get("field_id") if plan else None,
+        "field_name": plan.get("field_name") if plan else None,
+        "field_city": plan.get("field_city") if plan else None,
+        "field_district": plan.get("field_district") if plan else None,
+        "plan_status": "Analiz Hazır",
+        "season_year": plan.get("season_year") if plan else date.today().year,
+        "score": selected_item["total_score"],
+        "confidence_score": confidence["score"],
+        "summary": summary,
+        "climate_comment": climate_comment,
+        "market_comment": market_comment,
+        "model_name": confidence.get("modelName") or "Dengeli_XGBoost_DirectHorizon",
+        "selected_crop_name": focus_crop,
+        "focus_crop_name": focus_crop,
         "city": city_name,
-        "district": user.get("district"),
-        "selectedCropName": selected_crop or None,
-        "plannedAreaDecare": float(planned_area or 0),
-        "seasonYear": date.today().year,
-        "status": "Analiz Hazır",
-        "targetYieldPercent": None,
-        "createdAt": None,
-        "updatedAt": None,
+        "district": plan.get("district") if plan else user.get("district"),
+        "forecast_year": forecast_year,
+        "planned_area_decare": planned_area,
+        "expected_yield_kg_decare": selected_item.get("expected_yield_kg_decare"),
+        "expected_production_ton": selected_item.get("estimated_production_ton"),
+        "score_breakdown": score_breakdown,
+        "analyzed_at": datetime.now(),
     }
 
-    return {
-        "success": True,
-        "score": score,
-        "focusCrop": focus_crop,
-        "plan": plan_summary,
-        "recommendations": response_items,
-        "trendSeries": [
+    recommendation_payload = []
+    for index, item in enumerate(alternatives, start=1):
+        recommendation_payload.append(
             {
-                "year": str(row["year"]),
-                "historicalProduction": round(float(row["historical_production_ton"]), 1) if row.get("historical_production_ton") is not None else None,
-                "predictedProduction": round(float(row["predicted_production_ton"]), 1) if row.get("predicted_production_ton") is not None else None,
+                "rank_order": index,
+                "crop_name": item["product_name"],
+                "expected_return_percent": round(item["projected_growth_percent"], 2) if item.get("projected_growth_percent") is not None else None,
+                "recommendation_score": item["total_score"],
+                "forecast_year": item["forecast_year"],
+                "predicted_production_ton": item["predicted_production_ton"],
+                "expected_yield_kg_decare": item.get("expected_yield_kg_decare"),
+                "expected_production_ton": item.get("estimated_production_ton"),
+                "reason": (
+                    f"{city_name} için geçmiş verim, iklim dayanıklılığı ve {forecast_year} model projeksiyonu birlikte değerlendirildiğinde güçlü bir alternatif görünüyor."
+                ),
             }
-            for row in trend_rows
-        ],
+        )
+
+    if plan:
+        analysis_id = create_ai_analysis(str(plan["id"]), {
+            "score": selected_item["total_score"],
+            "confidence_score": confidence["score"],
+            "summary": summary,
+            "climate_comment": climate_comment,
+            "market_comment": market_comment,
+            "model_name": confidence.get("modelName") or "Dengeli_XGBoost_DirectHorizon",
+            "selected_crop_name": focus_crop,
+            "focus_crop_name": focus_crop,
+            "city": city_name,
+            "district": plan.get("district") or user.get("district"),
+            "forecast_year": forecast_year,
+            "planned_area_decare": planned_area,
+            "expected_yield_kg_decare": selected_item.get("expected_yield_kg_decare"),
+            "expected_production_ton": selected_item.get("estimated_production_ton"),
+            "score_breakdown": score_breakdown,
+        }, recommendation_payload)
+        update_plan_analysis_result(user["id"], str(plan["id"]), selected_item["total_score"], status="Analiz Hazır")
+        saved_analysis = get_ai_analysis_for_user(user["id"], analysis_id)
+        saved_recommendations = get_ai_recommendations_for_analysis(analysis_id)
+        return _serialize_analysis_response(saved_analysis, saved_recommendations, trend_rows)
+
+    analysis_payload["id"] = "preview"
+    return _serialize_analysis_response(analysis_payload, [
+        {
+            "id": f"preview-{index}",
+            "rank_order": item["rank_order"],
+            "crop_name": item["crop_name"],
+            "expected_return_percent": item["expected_return_percent"],
+            "recommendation_score": item["recommendation_score"],
+            "forecast_year": item["forecast_year"],
+            "predicted_production_ton": item["predicted_production_ton"],
+            "expected_yield_kg_decare": item["expected_yield_kg_decare"],
+            "expected_production_ton": item["expected_production_ton"],
+            "reason": item["reason"],
+        }
+        for index, item in enumerate(recommendation_payload, start=1)
+    ], trend_rows)
+
+@app.get("/api/analyses")
+def list_saved_analyses(user=Depends(require_current_user)):
+    analyses = list_ai_analyses_for_user(user["id"], limit=50)
+    return {
+        "reports": [_serialize_analysis_report(analysis) for analysis in analyses],
+        "count": len(analyses),
     }
+
+
+@app.get("/api/analyses/{analysis_id}")
+def get_saved_analysis(analysis_id: str, user=Depends(require_current_user)):
+    analysis = get_ai_analysis_for_user(user["id"], analysis_id)
+    if not analysis:
+        raise HTTPException(status_code=404, detail="Analiz raporu bulunamadı.")
+
+    recommendations = get_ai_recommendations_for_analysis(analysis_id)
+    focus_crop = analysis.get("focus_crop_name") or analysis.get("selected_crop_name")
+    trend_rows = get_crop_projection_series(analysis.get("city"), focus_crop, history_limit=5, forecast_limit=3)
+    if not trend_rows and focus_crop:
+        trend_rows = get_crop_projection_series(None, focus_crop, history_limit=5, forecast_limit=3)
+    return _serialize_analysis_response(analysis, recommendations, trend_rows)
+
 
 @app.get("/api/regional-analysis")
 def get_regional_analysis(city: str | None = None, user=Depends(require_current_user)):

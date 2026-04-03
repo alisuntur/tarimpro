@@ -13,20 +13,35 @@ import {
     Legend,
     ResponsiveContainer,
 } from 'recharts';
-import { ChevronLeft, MapPin, Scaling, Leaf } from 'lucide-react';
+import { ChevronLeft, MapPin, Scaling, Leaf, ShieldCheck, BarChart3 } from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import './AiRecommendations.css';
 
 const numberFormatter = new Intl.NumberFormat('tr-TR');
 
+const emptyAnalysis = {
+    score: 0,
+    confidence: { score: 0, label: '' },
+    recommendations: [],
+    trendSeries: [],
+    plan: null,
+    focusCrop: '',
+    selectedCrop: null,
+    scoreBreakdown: [],
+    summary: '',
+    climateComment: '',
+    marketComment: '',
+};
+
 const AiRecommendations = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const [searchParams] = useSearchParams();
     const planId = searchParams.get('planId');
+    const analysisId = searchParams.get('analysisId');
     const legacyPlan = location.state || null;
-    const [analysis, setAnalysis] = useState({ score: 0, recommendations: [], trendSeries: [], plan: null, focusCrop: '' });
+    const [analysis, setAnalysis] = useState(emptyAnalysis);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 
@@ -38,23 +53,28 @@ const AiRecommendations = () => {
             setError('');
 
             try {
-                if (!planId && !legacyPlan) {
-                    throw new Error('Önce analiz edilecek bir plan oluşturmanız gerekiyor.');
+                let payload;
+                if (analysisId) {
+                    payload = await apiFetch(`/api/analyses/${analysisId}`);
+                } else {
+                    if (!planId && !legacyPlan) {
+                        throw new Error('Önce analiz edilecek bir plan oluşturmanız gerekiyor.');
+                    }
+
+                    payload = await apiFetch('/api/ai/analyze-plan', {
+                        method: 'POST',
+                        body: planId
+                            ? { planId }
+                            : {
+                                region: legacyPlan?.city || 'Manisa',
+                                size: Number(legacyPlan?.size || 100),
+                                crop: legacyPlan?.crop || '',
+                            },
+                    });
                 }
 
-                const payload = await apiFetch('/api/ai/analyze-plan', {
-                    method: 'POST',
-                    body: planId
-                        ? { planId }
-                        : {
-                            region: legacyPlan?.city || 'Manisa',
-                            size: Number(legacyPlan?.size || 100),
-                            crop: legacyPlan?.crop || '',
-                        },
-                });
-
                 if (active) {
-                    setAnalysis(payload);
+                    setAnalysis({ ...emptyAnalysis, ...payload });
                 }
             } catch (err) {
                 if (active) {
@@ -69,17 +89,20 @@ const AiRecommendations = () => {
         return () => {
             active = false;
         };
-    }, [legacyPlan, planId]);
+    }, [analysisId, legacyPlan, planId]);
 
     const score = analysis.score || 0;
-    const gaugeData = [
-        { name: 'Score', value: score },
-        { name: 'Rest', value: 100 - score },
-    ];
+    const confidence = analysis.confidence || { score: 0, label: '' };
     const chartData = analysis.trendSeries || [];
     const plan = analysis.plan || {};
     const focusCrop = analysis.focusCrop || plan.selectedCropName || 'Öne çıkan ürün';
+    const selectedCrop = analysis.selectedCrop || {};
+    const scoreBreakdown = analysis.scoreBreakdown || [];
     const colors = ['var(--color-accent)', '#e0e0e0'];
+    const gaugeData = [
+        { name: 'Score', value: score },
+        { name: 'Rest', value: Math.max(0, 100 - score) },
+    ];
 
     return (
         <div className="recommendations-container animate-fade-in">
@@ -87,11 +110,11 @@ const AiRecommendations = () => {
                 <div className="header-text-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: 1 }}>
                     <button className="back-btn" onClick={() => navigate(-1)}>
                         <ChevronLeft size={20} />
-                        Geri Dön
+                        {'Geri Dön'}
                     </button>
                     <div className="header-text">
-                        <h1>Yapay Zeka Analiz Sonuçları</h1>
-                        <p className="text-muted">Kayıtlı plan üzerinden üretilen veri tabanlı öneriler</p>
+                        <h1>{'Yapay Zeka Analiz Sonuçları'}</h1>
+                        <p className="text-muted">{'Kayıtlı plan ve geçmiş veri üzerinden oluşturulan öneriler'}</p>
                     </div>
                 </div>
             </div>
@@ -103,7 +126,7 @@ const AiRecommendations = () => {
                 </div>
                 <div className="context-chip">
                     <Scaling size={16} />
-                    <span>{numberFormatter.format(Number(plan.plannedAreaDecare || legacyPlan?.size || 0))} dönüm</span>
+                    <span>{numberFormatter.format(Number(plan.plannedAreaDecare || legacyPlan?.size || 0))} {'dönüm'}</span>
                 </div>
                 <div className="context-chip">
                     <Leaf size={16} />
@@ -112,6 +135,11 @@ const AiRecommendations = () => {
                 {plan.fieldName && (
                     <div className="context-chip">
                         <span>{plan.fieldName}</span>
+                    </div>
+                )}
+                {analysis.analyzedAt && (
+                    <div className="context-chip">
+                        <span>{new Date(analysis.analyzedAt).toLocaleString('tr-TR')}</span>
                     </div>
                 )}
             </div>
@@ -139,26 +167,69 @@ const AiRecommendations = () => {
                     </ResponsiveContainer>
                     <div className="gauge-overlay-text">
                         <h2>%{score}</h2>
-                        <p>Plan Uygunluk Skoru</p>
+                        <p>{'Plan Uygunluk Skoru'}</p>
                     </div>
                 </div>
                 <div className="gauge-info">
-                    <h3>Seçilen Planın Genel Değerlendirmesi</h3>
-                    <p>
-                        {plan.city || legacyPlan?.city || 'Seçili şehir'} için kaydedilen plan, veritabanındaki üretim tahminleriyle
-                        karşılaştırıldı. <strong>{focusCrop}</strong> planın odağındaki ürün olarak kullanıldı ve aşağıdaki alternatifler
-                        aynı il bağlamında sıralandı.
-                    </p>
+                    <div className="analysis-summary-header">
+                        <h3>{'Seçilen Ürün Değerlendirmesi'}</h3>
+                        <div className="confidence-pill">
+                            <ShieldCheck size={16} />
+                            <span>{confidence.label || 'Model Güveni'}</span>
+                            <strong>%{confidence.score || 0}</strong>
+                        </div>
+                    </div>
+                    <p>{analysis.summary || `${focusCrop} için özet analiz hazırlanıyor.`}</p>
+                    <p className="text-muted">{analysis.climateComment}</p>
+                    <p className="text-muted">{analysis.marketComment}</p>
                     {error && <p style={{ color: '#b91c1c', marginTop: '0.75rem' }}>{error}</p>}
+                </div>
+            </div>
+
+            <div className="analysis-insight-grid">
+                <div className="analysis-insight-card card">
+                    <div className="insight-title-row">
+                        <Leaf size={18} />
+                        <h3>{selectedCrop.name || focusCrop}</h3>
+                    </div>
+                    <p className="insight-metric">{'Beklenen Verim'}: <strong>{selectedCrop.expectedYieldKgDecare != null ? `${numberFormatter.format(selectedCrop.expectedYieldKgDecare)} kg/dekar` : 'Veri yok'}</strong></p>
+                    <p className="insight-metric">{'Beklenen Üretim'}: <strong>{selectedCrop.expectedProductionTon != null ? `${numberFormatter.format(selectedCrop.expectedProductionTon)} ton` : 'Veri yok'}</strong></p>
+                    <p className="insight-metric">{'Tahmin Yılı'}: <strong>{selectedCrop.forecastYear || '-'}</strong></p>
+                </div>
+
+                <div className="analysis-insight-card card">
+                    <div className="insight-title-row">
+                        <ShieldCheck size={18} />
+                        <h3>{'Model Güveni'}</h3>
+                    </div>
+                    <p className="insight-metric">{'Güven Skoru'}: <strong>%{confidence.score || 0}</strong></p>
+                    <p className="insight-metric">{'Seviye'}: <strong>{confidence.label || '-'}</strong></p>
+                    <p className="text-muted">{'Walk-forward doğrulama metrikleri üzerinden hesaplanır.'}</p>
+                </div>
+
+                <div className="analysis-insight-card card">
+                    <div className="insight-title-row">
+                        <BarChart3 size={18} />
+                        <h3>{'Puan Kırılımı'}</h3>
+                    </div>
+                    <div className="breakdown-list">
+                        {scoreBreakdown.map((item) => (
+                            <div key={item.key} className="breakdown-row">
+                                <span>{item.label}</span>
+                                <strong>%{Math.round(item.value || 0)}</strong>
+                            </div>
+                        ))}
+                        {scoreBreakdown.length === 0 && <p className="text-muted">{'Puan kırılımı bulunamadı.'}</p>}
+                    </div>
                 </div>
             </div>
 
             <div className="recommendations-content">
                 <div className="recommendations-left">
-                    <h2 className="section-title">Alternatif Ürün Önerileri</h2>
+                    <h2 className="section-title">{'Alternatif Ürün Önerileri'}</h2>
                     <div className="recommendation-cards">
                         {loading ? (
-                            <div className="suggestion-card card"><p>Analiz yükleniyor...</p></div>
+                            <div className="suggestion-card card"><p>{'Analiz yükleniyor...'}</p></div>
                         ) : analysis.recommendations.length > 0 ? (
                             analysis.recommendations.map((item) => (
                                 <div key={item.id} className="suggestion-card card">
@@ -170,20 +241,25 @@ const AiRecommendations = () => {
                                             </div>
                                         </div>
                                     </div>
+                                    <div className="suggestion-meta-grid">
+                                        <span>{'Skor'}: <strong>%{Math.round(item.score || 0)}</strong></span>
+                                        <span>{'Beklenen verim'}: <strong>{item.expectedYieldKgDecare != null ? `${numberFormatter.format(item.expectedYieldKgDecare)} kg/dekar` : 'Veri yok'}</strong></span>
+                                        <span>{'Beklenen üretim'}: <strong>{item.estimatedProductionTon != null ? `${numberFormatter.format(item.estimatedProductionTon)} ton` : 'Veri yok'}</strong></span>
+                                    </div>
                                     <div className="suggestion-body">
-                                        <p className="reason-label">Neden bu ürün?</p>
+                                        <p className="reason-label">{'Neden bu ürün?'}</p>
                                         <p>{item.reason}</p>
                                     </div>
                                 </div>
                             ))
                         ) : (
-                            <div className="suggestion-card card"><p>Gösterilecek öneri bulunamadı.</p></div>
+                            <div className="suggestion-card card"><p>{'Gösterilecek öneri bulunamadı.'}</p></div>
                         )}
                     </div>
                 </div>
 
                 <div className="recommendations-right">
-                    <h2 className="section-title">Geçmiş Üretim ve Gelecek Projeksiyonu</h2>
+                    <h2 className="section-title">{'Geçmiş Üretim ve Gelecek Projeksiyonu'}</h2>
                     <div className="chart-card card">
                         {chartData.length > 0 ? (
                             <ResponsiveContainer width="100%" height={400}>
@@ -203,13 +279,13 @@ const AiRecommendations = () => {
                                         }}
                                     />
                                     <Legend wrapperStyle={{ paddingTop: '20px', fontWeight: '600', fontSize: '14px' }} iconType="circle" />
-                                    <Bar name="Geçmiş Üretim (Ton)" dataKey="historicalProduction" fill="var(--color-primary)" radius={[4, 4, 0, 0]} barSize={32} />
-                                    <Line type="monotone" name="Model Projeksiyonu (Ton)" dataKey="predictedProduction" stroke="#f59e0b" strokeWidth={4} dot={{ r: 5, fill: 'white', stroke: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 8, fill: '#f59e0b', stroke: 'white', strokeWidth: 2 }} />
+                                    <Bar name={'Geçmiş Üretim (Ton)'} dataKey="historicalProduction" fill="var(--color-primary)" radius={[4, 4, 0, 0]} barSize={32} />
+                                    <Line type="monotone" name={'Model Projeksiyonu (Ton)'} dataKey="predictedProduction" stroke="#f59e0b" strokeWidth={4} dot={{ r: 5, fill: 'white', stroke: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 8, fill: '#f59e0b', stroke: 'white', strokeWidth: 2 }} />
                                 </ComposedChart>
                             </ResponsiveContainer>
                         ) : (
                             <div className="empty-chart-state">
-                                Bu plan için yeterli üretim trendi bulunamadı.
+                                {'Bu plan için yeterli üretim trendi bulunamadı.'}
                             </div>
                         )}
                     </div>

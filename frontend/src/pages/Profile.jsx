@@ -343,14 +343,25 @@ const Profile = () => {
                         <div className="tab-pane animate-fade-in">
                             <h2 className="tab-title">Geçmiş Analiz Raporları</h2>
                             <div className="field-list">
-                                {reports.map((report) => (
-                                    <div className="field-item" key={report.id}>
+                                {reports.length > 0 ? reports.map((report) => (
+                                    <div className="field-item" key={report.id} style={{ justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
                                         <div className="field-info">
                                             <h4>{report.type}</h4>
                                             <p className="text-muted">{report.field} • {report.date}</p>
+                                            <p className="text-muted">Skor: %{Math.round(report.score || 0)} • Güven: {report.confidenceLabel || '-'}{report.confidenceScore ? ` (%${Math.round(report.confidenceScore)})` : ''}</p>
+                                        </div>
+                                        <button className="btn-secondary" onClick={() => navigate(`/ai-recommendations?analysisId=${report.analysisId}`)}>
+                                            Raporu Aç
+                                        </button>
+                                    </div>
+                                )) : (
+                                    <div className="field-item">
+                                        <div className="field-info">
+                                            <h4>Henüz kayıtlı analiz yok</h4>
+                                            <p className="text-muted">Yeni bir üretim planı analiz ettiğinizde raporlar burada listelenecek.</p>
                                         </div>
                                     </div>
-                                ))}
+                                )}
                             </div>
                         </div>
                     )}

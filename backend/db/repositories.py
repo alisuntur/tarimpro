@@ -1,4 +1,5 @@
-﻿from datetime import date
+﻿import json
+from datetime import date
 
 from psycopg.rows import dict_row
 
@@ -700,3 +701,374 @@ def get_crop_projection_series(
         entry["predicted_production_ton"] = row["predicted_production_ton"]
 
     return [combined[year] for year in sorted(combined)]
+
+
+
+def get_latest_forecast_year(reference_year: int | None = None):
+    years = _forecast_years(limit=1, reference_year=reference_year)
+    return years[0] if years else None
+
+
+
+def get_candidate_forecasts(city_name: str | None, forecast_year: int | None = None, limit: int = 12):
+    effective_year = forecast_year or get_latest_forecast_year()
+    if effective_year is None:
+        return []
+
+    forecast_where = ["mp.year = %(forecast_year)s"]
+    history_where = ["p.product_name = forecast.product_name"]
+    params: dict[str, object] = {"forecast_year": effective_year, "limit": limit}
+    city_candidates = _lookup_candidates(city_name) if city_name else []
+    if city_candidates:
+        forecast_where.append("mp.city_name = ANY(%(city_candidates)s)")
+        history_where.append("p.city_name = ANY(%(city_candidates)s)")
+        params["city_candidates"] = city_candidates
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                WITH forecast AS (
+                    SELECT mp.product_name,
+                           %(forecast_year)s AS forecast_year,
+                           SUM(mp.predicted_production_ton) AS predicted_production_ton
+                    FROM analytics.model_predictions AS mp
+                    WHERE {' AND '.join(forecast_where)}
+                    GROUP BY mp.product_name
+                )
+                SELECT forecast.product_name,
+                       forecast.forecast_year,
+                       forecast.predicted_production_ton,
+                       latest.latest_year,
+                       latest.latest_production_ton,
+                       latest.latest_yield_kg_decare
+                FROM forecast
+                LEFT JOIN LATERAL (
+                    SELECT p.year AS latest_year,
+                           SUM(p.production_ton) AS latest_production_ton,
+                           AVG(NULLIF(p.yield_kg_decare, 0)) AS latest_yield_kg_decare
+                    FROM analytics.production_history AS p
+                    WHERE {' AND '.join(history_where)}
+                    GROUP BY p.year
+                    ORDER BY p.year DESC
+                    LIMIT 1
+                ) AS latest ON TRUE
+                ORDER BY forecast.predicted_production_ton DESC NULLS LAST, forecast.product_name ASC
+                LIMIT %(limit)s
+                """,
+                params,
+            )
+            return cursor.fetchall()
+
+
+
+def get_crop_history_rows(city_name: str | None, product_name: str, years: int = 5):
+    if not product_name:
+        return []
+
+    where_clauses = ["product_name = %(product_name)s"]
+    params: dict[str, object] = {"product_name": product_name, "years": years}
+    city_candidates = _lookup_candidates(city_name) if city_name else []
+    if city_candidates:
+        where_clauses.append("city_name = ANY(%(city_candidates)s)")
+        params["city_candidates"] = city_candidates
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT year,
+                       SUM(production_ton) AS production_ton,
+                       AVG(NULLIF(yield_kg_decare, 0)) AS yield_kg_decare
+                FROM analytics.production_history
+                WHERE {' AND '.join(where_clauses)}
+                GROUP BY year
+                ORDER BY year DESC
+                LIMIT %(years)s
+                """,
+                params,
+            )
+            rows = cursor.fetchall()
+    return list(reversed(rows))
+
+
+
+def get_consumption_projection_map(product_names: list[str], forecast_year: int | None = None):
+    cleaned = [item for item in dict.fromkeys(product_names) if item]
+    if not cleaned:
+        return {}
+
+    target_year = forecast_year or get_latest_forecast_year()
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH aggregated AS (
+                    SELECT product_name,
+                           year,
+                           AVG(value) AS consumption_value
+                    FROM analytics.consumption_history
+                    WHERE product_name = ANY(%(product_names)s)
+                      AND metric_name ILIKE 'T%%ketim%%'
+                    GROUP BY product_name, year
+                )
+                SELECT DISTINCT ON (product_name)
+                       product_name,
+                       year,
+                       consumption_value
+                FROM aggregated
+                ORDER BY product_name,
+                         CASE WHEN year = %(target_year)s THEN 0 ELSE 1 END,
+                         year DESC
+                """,
+                {"product_names": cleaned, "target_year": target_year},
+            )
+            return {row["product_name"]: row for row in cursor.fetchall()}
+
+
+
+def get_walk_forward_summary(horizon: int | None = None):
+    base_sql = """
+        SELECT model_name,
+               COALESCE(model_version, 'v1') AS model_version,
+               horizon,
+               MAX(forecast_year) AS latest_forecast_year,
+               AVG(smape_pct) AS avg_smape_pct,
+               AVG(wape_pct) AS avg_wape_pct,
+               AVG(rmse) AS avg_rmse
+        FROM analytics.walk_forward_metrics
+        {where_clause}
+        GROUP BY model_name, COALESCE(model_version, 'v1'), horizon
+        ORDER BY latest_forecast_year DESC, avg_smape_pct ASC NULLS LAST
+        LIMIT 1
+    """
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            if horizon is not None:
+                cursor.execute(
+                    base_sql.format(where_clause='WHERE horizon = %(horizon)s'),
+                    {"horizon": horizon},
+                )
+                row = cursor.fetchone()
+                if row:
+                    return row
+
+            cursor.execute(base_sql.format(where_clause=''))
+            return cursor.fetchone()
+
+
+
+def update_plan_analysis_result(user_id: str, plan_id: str, score: float, status: str = 'Analiz Hazır'):
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE app.production_plans
+                SET target_yield_percent = %(score)s,
+                    status = %(status)s
+                WHERE id = %(plan_id)s
+                  AND user_id = %(user_id)s
+                RETURNING id
+                """,
+                {"user_id": user_id, "plan_id": plan_id, "score": score, "status": status},
+            )
+            updated = cursor.fetchone()
+        connection.commit()
+    return bool(updated)
+
+
+
+def _analysis_select_sql() -> str:
+    return """
+        SELECT a.id,
+               a.plan_id,
+               a.score,
+               a.confidence_score,
+               a.summary,
+               a.climate_comment,
+               a.market_comment,
+               a.model_name,
+               a.selected_crop_name,
+               a.focus_crop_name,
+               a.city,
+               a.district,
+               a.forecast_year,
+               a.planned_area_decare,
+               a.expected_yield_kg_decare,
+               a.expected_production_ton,
+               a.score_breakdown,
+               a.analyzed_at,
+               p.field_id,
+               p.status AS plan_status,
+               p.season_year,
+               p.updated_at AS plan_updated_at,
+               f.name AS field_name,
+               f.city AS field_city,
+               f.district AS field_district
+        FROM app.ai_analyses AS a
+        INNER JOIN app.production_plans AS p ON p.id = a.plan_id
+        LEFT JOIN app.fields AS f ON f.id = p.field_id
+    """
+
+
+
+def get_latest_ai_analysis_for_plan(user_id: str, plan_id: str):
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                {_analysis_select_sql()}
+                WHERE p.user_id = %(user_id)s
+                  AND a.plan_id = %(plan_id)s
+                ORDER BY a.analyzed_at DESC
+                LIMIT 1
+                """,
+                {"user_id": user_id, "plan_id": plan_id},
+            )
+            return cursor.fetchone()
+
+
+
+def get_ai_analysis_for_user(user_id: str, analysis_id: str):
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                {_analysis_select_sql()}
+                WHERE p.user_id = %(user_id)s
+                  AND a.id = %(analysis_id)s
+                LIMIT 1
+                """,
+                {"user_id": user_id, "analysis_id": analysis_id},
+            )
+            return cursor.fetchone()
+
+
+
+def get_ai_recommendations_for_analysis(analysis_id: str):
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT id,
+                       analysis_id,
+                       rank_order,
+                       crop_name,
+                       expected_return_percent,
+                       recommendation_score,
+                       forecast_year,
+                       predicted_production_ton,
+                       expected_yield_kg_decare,
+                       expected_production_ton,
+                       reason
+                FROM app.ai_recommendations
+                WHERE analysis_id = %(analysis_id)s
+                ORDER BY rank_order ASC, crop_name ASC
+                """,
+                {"analysis_id": analysis_id},
+            )
+            return cursor.fetchall()
+
+
+
+def list_ai_analyses_for_user(user_id: str, limit: int = 20):
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                {_analysis_select_sql()}
+                WHERE p.user_id = %(user_id)s
+                ORDER BY a.analyzed_at DESC
+                LIMIT %(limit)s
+                """,
+                {"user_id": user_id, "limit": limit},
+            )
+            return cursor.fetchall()
+
+
+
+def create_ai_analysis(plan_id: str, payload: dict[str, object], recommendations: list[dict[str, object]]):
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO app.ai_analyses (
+                    plan_id,
+                    score,
+                    confidence_score,
+                    summary,
+                    climate_comment,
+                    market_comment,
+                    model_name,
+                    selected_crop_name,
+                    focus_crop_name,
+                    city,
+                    district,
+                    forecast_year,
+                    planned_area_decare,
+                    expected_yield_kg_decare,
+                    expected_production_ton,
+                    score_breakdown
+                )
+                VALUES (
+                    %(plan_id)s,
+                    %(score)s,
+                    %(confidence_score)s,
+                    %(summary)s,
+                    %(climate_comment)s,
+                    %(market_comment)s,
+                    %(model_name)s,
+                    %(selected_crop_name)s,
+                    %(focus_crop_name)s,
+                    %(city)s,
+                    %(district)s,
+                    %(forecast_year)s,
+                    %(planned_area_decare)s,
+                    %(expected_yield_kg_decare)s,
+                    %(expected_production_ton)s,
+                    %(score_breakdown)s::jsonb
+                )
+                RETURNING id
+                """,
+                {
+                    **payload,
+                    "plan_id": plan_id,
+                    "score_breakdown": json.dumps(payload.get("score_breakdown") or []),
+                },
+            )
+            analysis = cursor.fetchone()
+            analysis_id = analysis["id"]
+
+            for recommendation in recommendations:
+                cursor.execute(
+                    """
+                    INSERT INTO app.ai_recommendations (
+                        analysis_id,
+                        rank_order,
+                        crop_name,
+                        expected_return_percent,
+                        recommendation_score,
+                        forecast_year,
+                        predicted_production_ton,
+                        expected_yield_kg_decare,
+                        expected_production_ton,
+                        reason
+                    )
+                    VALUES (
+                        %(analysis_id)s,
+                        %(rank_order)s,
+                        %(crop_name)s,
+                        %(expected_return_percent)s,
+                        %(recommendation_score)s,
+                        %(forecast_year)s,
+                        %(predicted_production_ton)s,
+                        %(expected_yield_kg_decare)s,
+                        %(expected_production_ton)s,
+                        %(reason)s
+                    )
+                    """,
+                    {"analysis_id": analysis_id, **recommendation},
+                )
+        connection.commit()
+    return analysis_id

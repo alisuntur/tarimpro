@@ -281,3 +281,77 @@
     text-align: center;
     color: var(--color-text-muted);
 }
+.analysis-summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.confidence-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.55rem 0.85rem;
+    border-radius: var(--radius-full);
+    background: rgba(15, 23, 42, 0.05);
+    color: var(--color-text-main);
+    font-weight: 600;
+}
+
+.analysis-insight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+    margin: 1.5rem 0 2rem;
+}
+
+.analysis-insight-card {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.insight-title-row {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.insight-title-row h3 {
+    margin: 0;
+    font-size: 1rem;
+}
+
+.insight-metric {
+    margin: 0;
+    color: var(--color-text-main);
+}
+
+.breakdown-list {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.breakdown-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    color: var(--color-text-main);
+}
+
+.suggestion-meta-grid {
+    display: grid;
+    gap: 0.45rem;
+    margin-bottom: 1rem;
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+}
+
+@media (max-width: 768px) {
+    .analysis-summary-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}

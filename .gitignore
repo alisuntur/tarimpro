@@ -22,3 +22,5 @@ docs/danisman_birlesik_dokuman.html
 docs/mac_kurulum_rehberi.html
 docs/haftalik_sunum_interaktif.html
 docs/SPRINTLER_DETAYLI_ANALIZ.md
+models/dengeli_xgboost_direct_horizon_guardrailli_pipeline.ipynb
+models/Tuketimv3.ipynb

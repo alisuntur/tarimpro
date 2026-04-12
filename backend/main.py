@@ -1,4 +1,5 @@
 import json
+import re
 from contextlib import asynccontextmanager
 from datetime import date, datetime
 from math import sqrt
@@ -14,6 +15,7 @@ from db.repositories import (
     create_ai_analysis,
     create_field,
     create_production_plan,
+    create_user,
     create_user_session,
     delete_field,
     get_ai_analysis_for_user,
@@ -52,7 +54,7 @@ from db.repositories import (
 )
 from dependencies import require_current_user, security
 from scoring import compute_weighted_score, get_scoring_profile
-from security import generate_session_token, hash_session_token, verify_password
+from security import generate_session_token, hash_password, hash_session_token, verify_password
 
 
 TURKISH_ASCII_TRANSLATION = str.maketrans({"\u00e7": "c", "\u00c7": "C", "\u011f": "g", "\u011e": "G", "\u0131": "i", "\u0130": "I", "\u00f6": "o", "\u00d6": "O", "\u015f": "s", "\u015e": "S", "\u00fc": "u", "\u00dc": "U"})
@@ -104,6 +106,17 @@ app.add_middleware(
 class LoginRequest(BaseModel):
     identifier: str
     password: str
+    rememberMe: bool = False
+
+
+class RegisterRequest(BaseModel):
+    fullName: str
+    phone: str
+    password: str
+    email: str | None = None
+    city: str | None = None
+    district: str | None = None
+    tcIdentityNo: str | None = None
     rememberMe: bool = False
 
 
@@ -834,6 +847,48 @@ def _analysis_is_current(plan: dict, analysis: dict | None) -> bool:
 
 
 
+def _normalize_phone(value: str) -> str:
+    digits = re.sub(r"\D", "", value or "")
+    if len(digits) == 10:
+        phone = f"0{digits}"
+    elif len(digits) == 11 and digits.startswith("0"):
+        phone = digits
+    elif len(digits) == 12 and digits.startswith("90"):
+        phone = f"0{digits[-10:]}"
+    else:
+        phone = digits
+
+    if not re.fullmatch(r"0\d{10}", phone):
+        raise HTTPException(status_code=400, detail="Telefon numarası 05XXXXXXXXX formatında olmalıdır.")
+    return phone
+
+
+def _normalize_register_payload(payload: RegisterRequest) -> dict[str, object]:
+    full_name = payload.fullName.strip()
+    if len(full_name) < 3:
+        raise HTTPException(status_code=400, detail="Ad soyad en az 3 karakter olmalıdır.")
+    if len(payload.password or "") < 6:
+        raise HTTPException(status_code=400, detail="Şifre en az 6 karakter olmalıdır.")
+
+    phone = _normalize_phone(payload.phone)
+    email = (payload.email or "").strip().lower() or None
+    if email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
+        raise HTTPException(status_code=400, detail="Geçerli bir e-posta adresi giriniz.")
+
+    tc_identity_no = (payload.tcIdentityNo or "").strip() or None
+    if tc_identity_no and not re.fullmatch(r"\d{11}", tc_identity_no):
+        raise HTTPException(status_code=400, detail="T.C. kimlik numarası 11 haneli olmalıdır.")
+
+    return {
+        "tc_identity_no": tc_identity_no,
+        "phone": phone,
+        "email": email,
+        "password_hash": hash_password(payload.password),
+        "full_name": full_name,
+        "city": (payload.city or "").strip() or None,
+        "district": (payload.district or "").strip() or None,
+    }
+
 def _normalize_profile_payload(payload: ProfileUpdateRequest) -> dict[str, object]:
     if not payload.fullName.strip():
         raise HTTPException(status_code=400, detail="Ad soyad boş bırakılamaz.")
@@ -919,6 +974,29 @@ def _build_profile_response(user: dict) -> dict:
 def read_root():
     return {"message": "Welcome to Tarım Yapay Zeka API"}
 
+
+@app.post("/api/auth/register", status_code=status.HTTP_201_CREATED)
+def register(request: RegisterRequest):
+    payload = _normalize_register_payload(request)
+
+    if get_user_by_identifier(payload["phone"]):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu telefon numarasıyla kayıtlı bir hesap var.")
+    if payload.get("email") and get_user_by_identifier(payload["email"]):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu e-posta adresi zaten kullanılıyor.")
+    if payload.get("tc_identity_no") and get_user_by_identifier(payload["tc_identity_no"]):
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu T.C. kimlik numarasıyla kayıtlı bir hesap var.")
+
+    user = create_user(payload)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Bu bilgilerle kayıtlı bir hesap var.")
+
+    raw_token = generate_session_token()
+    create_user_session(user["id"], hash_session_token(raw_token), remember_me=request.rememberMe)
+    return {
+        "success": True,
+        "token": raw_token,
+        "user": _serialize_user(user),
+    }
 
 @app.post("/api/auth/login")
 def login(request: LoginRequest):

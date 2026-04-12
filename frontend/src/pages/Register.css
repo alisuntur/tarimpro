@@ -1,0 +1,44 @@
+.register-container .login-image-section {
+    background-position: center right;
+}
+
+.register-overlay {
+    background: linear-gradient(to bottom, rgba(21, 64, 48, 0.82), rgba(77, 114, 75, 0.66));
+}
+
+.register-form-wrapper {
+    max-width: 560px;
+    padding: 2.5rem;
+}
+
+.register-form {
+    gap: 1.1rem;
+}
+
+.register-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.optional-label {
+    color: var(--color-text-muted);
+    font-weight: 400;
+    font-size: 0.85rem;
+}
+
+.auth-error {
+    color: #b91c1c;
+    margin: 0.25rem 0 0;
+    font-size: 0.95rem;
+}
+
+@media (max-width: 680px) {
+    .register-form-wrapper {
+        padding: 2rem;
+    }
+
+    .register-grid {
+        grid-template-columns: 1fr;
+    }
+}

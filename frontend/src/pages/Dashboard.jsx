@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     CloudSun,
     Droplets,
@@ -162,7 +162,13 @@ const Dashboard = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {history.map((plan) => (
+                                    {history.length === 0 ? (
+                                        <tr>
+                                            <td colSpan="4" className="text-muted">
+                                                Henüz üretim planı oluşturmadınız. İlk planınızı oluşturduğunuzda geçmiş kayıtlar burada listelenecek.
+                                            </td>
+                                        </tr>
+                                    ) : history.map((plan) => (
                                         <tr key={plan.id}>
                                             <td>
                                                 <div className="plan-name-cell">
@@ -195,7 +201,14 @@ const Dashboard = () => {
                         </div>
 
                         <div className="alerts-list">
-                            {alerts.map((alert) => (
+                            {alerts.length === 0 ? (
+                                <div className="alert-item">
+                                    <div className="alert-content">
+                                        <p className="alert-message">Henüz acil uyarı yok.</p>
+                                        <span className="alert-time">Yeni analiz ve planlarınız oluştukça uyarılar burada görünecek.</span>
+                                    </div>
+                                </div>
+                            ) : alerts.map((alert) => (
                                 <div key={alert.id} className={`alert-item alert-${alert.type}`}>
                                     <div className="alert-icon">
                                         {alert.type === 'danger' ? <AlertCircle size={20} /> : <AlertTriangle size={20} />}

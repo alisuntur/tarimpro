@@ -1,4 +1,4 @@
-﻿import json
+import json
 import re
 from datetime import date
 
@@ -198,6 +198,32 @@ def get_user_by_identifier(identifier: str):
                 {"identifier": identifier},
             )
             return cursor.fetchone()
+
+
+def create_user(payload: dict[str, object]):
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO app.users (
+                    tc_identity_no, phone, email, password_hash, full_name,
+                    city, district, member_since, role, active_badge, is_active
+                )
+                VALUES (
+                    %(tc_identity_no)s, %(phone)s, %(email)s, %(password_hash)s,
+                    %(full_name)s, %(city)s, %(district)s, CURRENT_DATE,
+                    'farmer', false, true
+                )
+                ON CONFLICT DO NOTHING
+                RETURNING id, tc_identity_no, phone, email, password_hash, full_name,
+                          city, district, member_since, role, active_badge, is_active,
+                          created_at, updated_at
+                """,
+                payload,
+            )
+            user = cursor.fetchone()
+        connection.commit()
+    return user
 
 
 def update_user_profile(user_id: str, payload: dict[str, object]):

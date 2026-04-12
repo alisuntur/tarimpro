@@ -1,5 +1,5 @@
-﻿import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
     User,
     Map,
@@ -55,8 +55,14 @@ const Profile = () => {
     const [savingField, setSavingField] = useState(false);
     const [fieldError, setFieldError] = useState('');
     const navigate = useNavigate();
+    const location = useLocation();
     const { logout, refreshSession } = useAuth();
 
+    useEffect(() => {
+        if (location.state?.onboarding) {
+            setActiveTab('fields');
+        }
+    }, [location.state]);
     const loadProfile = async () => {
         const payload = await apiFetch('/api/profile/me');
         setProfile(payload);
@@ -316,7 +322,14 @@ const Profile = () => {
                             </form>
 
                             <div className="field-list">
-                                {fields.map((field) => (
+                                {fields.length === 0 ? (
+                                    <div className="field-item">
+                                        <div className="field-info">
+                                            <h4>Henüz kayıtlı tarla yok</h4>
+                                            <p className="text-muted">İlk tarlanı ekleyerek üretim planı ve analiz akışını kişiselleştirebilirsin.</p>
+                                        </div>
+                                    </div>
+                                ) : fields.map((field) => (
                                     <div className="field-item" key={field.id} style={{ justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
                                         <div className="field-info">
                                             <h4>{field.name}</h4>

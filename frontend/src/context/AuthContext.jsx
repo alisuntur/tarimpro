@@ -66,6 +66,16 @@ export const AuthProvider = ({ children }) => {
     return response;
   }, [applyStoredAuth]);
 
+  const register = useCallback(async (payload) => {
+    const response = await apiFetch('/api/auth/register', {
+      method: 'POST',
+      body: payload,
+      auth: false,
+    });
+    setStoredAuth(response);
+    applyStoredAuth(response);
+    return response;
+  }, [applyStoredAuth]);
   const logout = useCallback(async () => {
     try {
       await apiFetch('/api/auth/logout', { method: 'POST' });
@@ -84,9 +94,10 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated: Boolean(user && token),
     login,
+    register,
     logout,
     refreshSession: syncSession,
-  }), [user, token, loading, login, logout, syncSession]);
+  }), [user, token, loading, login, register, logout, syncSession]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

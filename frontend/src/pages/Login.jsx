@@ -1,5 +1,5 @@
-﻿import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Sprout } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import './Login.css';
@@ -111,7 +111,7 @@ const Login = () => {
                     </form>
 
                     <div className="register-link">
-                        Sprint 1 kapsamında giriş sistemi gerçek oturum mantığı ile çalışır.
+                        Hesabın yok mu? <Link to="/register">Kayıt ol</Link>
                     </div>
                 </div>
             </div>

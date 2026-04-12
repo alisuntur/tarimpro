@@ -9,8 +9,22 @@ import './ClimateMarket.css';
 
 const periodLabels = { '6M': '6 Ay', '1Y': '1 Yıl', '5Y': '5 Yıl' };
 
+const locationOptionKey = (value) => (
+    String(value || '')
+        .trim()
+        .toLocaleLowerCase('tr-TR')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ı/g, 'i')
+        .replace(/\s+/g, ' ')
+);
+
 const addUnique = (items, value) => {
-    if (value && !items.includes(value)) items.push(value);
+    if (!value) return;
+    const valueKey = locationOptionKey(value);
+    if (!items.some((item) => locationOptionKey(item) === valueKey)) {
+        items.push(value);
+    }
 };
 
 const ClimateMarket = () => {
@@ -87,7 +101,8 @@ const ClimateMarket = () => {
     }, [period, selectedCity]);
 
     const cities = useMemo(() => {
-        const options = [...cityOptions];
+        const options = [];
+        cityOptions.forEach((city) => addUnique(options, city));
         addUnique(options, user?.city || '');
         addUnique(options, selectedCity);
         return options;

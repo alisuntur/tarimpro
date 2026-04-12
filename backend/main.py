@@ -222,6 +222,10 @@ def _comparison_key(value: str | None) -> str:
     return " ".join(str(value).strip().translate(TURKISH_ASCII_TRANSLATION).lower().split())
 
 
+def _location_option_key(value: str | None) -> str:
+    return _comparison_key(value)
+
+
 def _display_crop_name(value: str | None) -> str:
     if not value:
         return "Ürün"
@@ -1146,20 +1150,30 @@ def get_location_options(user=Depends(require_current_user)):
     rows = list_location_options()
     cities: list[str] = []
     districts_by_city: dict[str, list[str]] = {}
+    city_key_map: dict[str, str] = {}
+    district_key_maps: dict[str, set[str]] = {}
 
     def add_city(city_name: str | None) -> str | None:
         city_value = (city_name or "").strip()
         if not city_value:
             return None
+        city_key = _location_option_key(city_value)
+        existing_city = city_key_map.get(city_key)
+        if existing_city:
+            return existing_city
+        city_key_map[city_key] = city_value
         if city_value not in cities:
             cities.append(city_value)
         districts_by_city.setdefault(city_value, [])
+        district_key_maps.setdefault(city_value, set())
         return city_value
 
     def add_district(city_name: str | None, district_name: str | None) -> None:
         city_value = add_city(city_name)
         district_value = (district_name or "").strip()
-        if city_value and district_value and district_value not in districts_by_city[city_value]:
+        district_key = _location_option_key(district_value)
+        if city_value and district_value and district_key not in district_key_maps[city_value]:
+            district_key_maps[city_value].add(district_key)
             districts_by_city[city_value].append(district_value)
 
     for row in rows:

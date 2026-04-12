@@ -36,8 +36,22 @@ const formatLocation = (city, district) => {
     return city || district || '';
 };
 
+const locationOptionKey = (value) => (
+    String(value || '')
+        .trim()
+        .toLocaleLowerCase('tr-TR')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ı/g, 'i')
+        .replace(/\s+/g, ' ')
+);
+
 const addUnique = (items, value) => {
-    if (value && !items.includes(value)) items.push(value);
+    if (!value) return;
+    const valueKey = locationOptionKey(value);
+    if (!items.some((item) => locationOptionKey(item) === valueKey)) {
+        items.push(value);
+    }
 };
 
 const buildSmartNotes = (summary, locationLabel) => {
@@ -207,7 +221,8 @@ const Dashboard = () => {
     }, [routeLocation.hash, loading, alerts.length]);
 
     const cityOptions = useMemo(() => {
-        const options = [...locationOptions.cities];
+        const options = [];
+        (locationOptions.cities || []).forEach((city) => addUnique(options, city));
         addUnique(options, profileLocation.city);
         addUnique(options, locationForm.city);
         addUnique(options, appliedLocation.city);
@@ -215,7 +230,8 @@ const Dashboard = () => {
     }, [locationOptions.cities, profileLocation.city, locationForm.city, appliedLocation.city]);
 
     const districtOptions = useMemo(() => {
-        const options = [...(locationOptions.districtsByCity[locationForm.city] || [])];
+        const options = [];
+        (locationOptions.districtsByCity[locationForm.city] || []).forEach((district) => addUnique(options, district));
         addUnique(options, profileLocation.city === locationForm.city ? profileLocation.district : '');
         addUnique(options, locationForm.district);
         return options;

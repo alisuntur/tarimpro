@@ -705,6 +705,41 @@ def list_geo_locations(limit: int | None = None):
             return cursor.fetchall()
 
 
+def list_location_options():
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                WITH candidates AS (
+                    SELECT city_name::varchar(100) AS city_name,
+                           NULL::varchar(100) AS district_name
+                    FROM analytics.cities
+                    UNION
+                    SELECT city_name::varchar(100) AS city_name,
+                           district_name::varchar(100) AS district_name
+                    FROM analytics.geo_locations
+                    UNION
+                    SELECT city::varchar(100) AS city_name,
+                           district::varchar(100) AS district_name
+                    FROM app.users
+                    WHERE city IS NOT NULL
+                    UNION
+                    SELECT city::varchar(100) AS city_name,
+                           district::varchar(100) AS district_name
+                    FROM app.fields
+                    WHERE city IS NOT NULL
+                )
+                SELECT DISTINCT btrim(city_name) AS city_name,
+                       NULLIF(btrim(district_name), '') AS district_name
+                FROM candidates
+                WHERE city_name IS NOT NULL
+                  AND btrim(city_name) <> ''
+                ORDER BY city_name ASC, district_name ASC NULLS FIRST
+                """
+            )
+            return cursor.fetchall()
+
+
 def list_weather_location_candidates(limit: int | None = None):
     sql = """
         WITH candidates AS (

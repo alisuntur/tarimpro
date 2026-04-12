@@ -49,6 +49,7 @@ from db.repositories import (
     get_walk_forward_calibration,
     get_walk_forward_summary,
     list_ai_analyses_for_user,
+    list_location_options,
     revoke_user_session,
     update_field,
     update_plan_analysis_result,
@@ -290,7 +291,7 @@ def _format_date(value) -> str:
 
 
 def _dashboard_city(user: dict, city: str | None) -> str:
-    return city or user.get("city") or "Manisa"
+    return (city or user.get("city") or "").strip()
 
 
 
@@ -1103,13 +1104,51 @@ def auth_me(user=Depends(require_current_user)):
     }
 
 
+@app.get("/api/locations/options")
+def get_location_options(user=Depends(require_current_user)):
+    rows = list_location_options()
+    cities: list[str] = []
+    districts_by_city: dict[str, list[str]] = {}
+
+    def add_city(city_name: str | None) -> str | None:
+        city_value = (city_name or "").strip()
+        if not city_value:
+            return None
+        if city_value not in cities:
+            cities.append(city_value)
+        districts_by_city.setdefault(city_value, [])
+        return city_value
+
+    def add_district(city_name: str | None, district_name: str | None) -> None:
+        city_value = add_city(city_name)
+        district_value = (district_name or "").strip()
+        if city_value and district_value and district_value not in districts_by_city[city_value]:
+            districts_by_city[city_value].append(district_value)
+
+    for row in rows:
+        add_district(row.get("city_name"), row.get("district_name"))
+
+    add_district(user.get("city"), user.get("district"))
+
+    return {
+        "cities": cities,
+        "districtsByCity": districts_by_city,
+        "profile": {
+            "city": user.get("city"),
+            "district": user.get("district"),
+        },
+    }
+
+
 @app.get("/api/dashboard/summary")
 def get_dashboard_summary(city: str | None = None, district: str | None = None, user=Depends(require_current_user)):
     city_name = _dashboard_city(user, city)
     use_user_district = not city or (user.get("city") and city.strip() == user.get("city"))
     district_name = (district or (user.get("district") if use_user_district else None) or "").strip() or None
     weather = get_daily_weather(city_name, district_name)
-    climate = get_latest_climate(city_name) or get_latest_climate(user.get("city") or "Manisa")
+    climate = get_latest_climate(city_name) if city_name else None
+    if not climate and user.get("city") and user.get("city") != city_name:
+        climate = get_latest_climate(user.get("city"))
     market_rows = get_market_projection(city_name) or get_market_projection(None)
 
     if weather:
@@ -1179,6 +1218,7 @@ def get_alerts(user=Depends(require_current_user)):
         {
             "id": str(alert["id"]),
             "type": alert["alert_type"],
+            "title": alert.get("title"),
             "message": alert["message"],
             "color": "red" if alert["alert_type"] == "danger" else "yellow",
             "time": _format_relative_time(alert["created_at"]),

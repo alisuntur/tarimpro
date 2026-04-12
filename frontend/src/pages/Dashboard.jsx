@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import {
     CloudSun,
     Droplets,
@@ -6,51 +6,159 @@ import {
     AlertTriangle,
     AlertCircle,
     Leaf,
+    MapPin,
+    Info,
+    CheckCircle2,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
+import { useAuth } from '../context/AuthContext';
 import './Dashboard.css';
 
-const cities = [
-    'Adana', 'Adıyaman', 'Afyonkarahisar', 'Ağrı', 'Amasya', 'Ankara', 'Antalya', 'Artvin',
-    'Aydın', 'Balıkesir', 'Bilecik', 'Bingöl', 'Bitlis', 'Bolu', 'Burdur', 'Bursa', 'Çanakkale',
-    'Çankırı', 'Çorum', 'Denizli', 'Diyarbakır', 'Edirne', 'Elazığ', 'Erzincan', 'Erzurum',
-    'Eskişehir', 'Gaziantep', 'Giresun', 'Gümüşhane', 'Hakkari', 'Hatay', 'Isparta', 'Mersin',
-    'İstanbul', 'İzmir', 'Kars', 'Kastamonu', 'Kayseri', 'Kırklareli', 'Kırşehir', 'Kocaeli',
-    'Konya', 'Kütahya', 'Malatya', 'Manisa', 'Kahramanmaraş', 'Mardin', 'Muğla', 'Muş',
-    'Nevşehir', 'Niğde', 'Ordu', 'Rize', 'Sakarya', 'Samsun', 'Siirt', 'Sinop', 'Sivas',
-    'Tekirdağ', 'Tokat', 'Trabzon', 'Tunceli', 'Şanlıurfa', 'Uşak', 'Van', 'Yozgat',
-    'Zonguldak',
-].sort((a, b) => a.localeCompare(b, 'tr'));
-
 const initialSummary = {
-    weather: { temp: '—', condition: 'Yükleniyor...', humidity: '—', city: 'Manisa', district: null, source: '', date: null },
+    weather: { temp: '—', condition: 'Yükleniyor...', humidity: '—', city: '', district: null, source: '', date: null },
     soilMoisture: { level: '—', status: 'Yükleniyor...', source: '' },
     marketTrend: { status: 'Yükleniyor...', indicator: '0.0%' },
 };
 
+const emptyLocationOptions = {
+    cities: [],
+    districtsByCity: {},
+};
+
+const parsePercentValue = (value) => {
+    const numeric = Number(String(value || '').replace('%', '').replace('+', '').replace(',', '.'));
+    return Number.isFinite(numeric) ? numeric : null;
+};
+
+const formatLocation = (city, district) => {
+    if (city && district) return `${city} / ${district}`;
+    return city || district || '';
+};
+
+const addUnique = (items, value) => {
+    if (value && !items.includes(value)) items.push(value);
+};
+
+const buildSmartNotes = (summary, locationLabel) => {
+    const soilLevel = parsePercentValue(summary.soilMoisture.level);
+    const marketTrend = parsePercentValue(summary.marketTrend.indicator);
+    const place = locationLabel || 'Seçili bölge';
+    const notes = [];
+
+    if (soilLevel !== null && soilLevel < 35) {
+        notes.push({
+            id: 'soil-low',
+            type: 'warning',
+            title: 'Toprak nemi takibi',
+            message: `${place} için toprak nemi düşük görünüyor. Sulama planını kontrol etmek iyi olur.`,
+            time: 'Güncel özet verisine göre',
+        });
+    } else if (soilLevel !== null && soilLevel > 70) {
+        notes.push({
+            id: 'soil-high',
+            type: 'warning',
+            title: 'Nem yüksek',
+            message: `${place} için toprak nemi yüksek. Drenaj ve mantari hastalık riskini izleyin.`,
+            time: 'Güncel özet verisine göre',
+        });
+    } else if (soilLevel !== null) {
+        notes.push({
+            id: 'soil-ok',
+            type: 'success',
+            title: 'Toprak nemi dengeli',
+            message: `${place} için toprak nemi normal aralıkta görünüyor.`,
+            time: 'Güncel özet verisine göre',
+        });
+    }
+
+    if (marketTrend !== null && marketTrend < -1) {
+        notes.push({
+            id: 'market-down',
+            type: 'warning',
+            title: 'Piyasa trendi zayıf',
+            message: `Model projeksiyonu ${place} için düşüş sinyali veriyor. Yeni plan öncesi ürün alternatiflerini karşılaştırın.`,
+            time: `${summary.marketTrend.indicator} model projeksiyonu`,
+        });
+    } else if (marketTrend !== null && marketTrend > 1) {
+        notes.push({
+            id: 'market-up',
+            type: 'info',
+            title: 'Piyasa trendi pozitif',
+            message: `Model projeksiyonu ${place} için üretim trendinde yükseliş gösteriyor.`,
+            time: `${summary.marketTrend.indicator} model projeksiyonu`,
+        });
+    }
+
+    if (notes.length === 0) {
+        notes.push({
+            id: 'no-critical-alert',
+            type: 'info',
+            title: 'Kritik uyarı yok',
+            message: `${place} için şu anda acil müdahale gerektiren bir sinyal görünmüyor.`,
+            time: 'Veriler yenilendikçe güncellenir',
+        });
+    }
+
+    return notes.slice(0, 3);
+};
+
+const renderAlertIcon = (type) => {
+    if (type === 'danger') return <AlertCircle size={20} />;
+    if (type === 'success') return <CheckCircle2 size={20} />;
+    if (type === 'info') return <Info size={20} />;
+    return <AlertTriangle size={20} />;
+};
+
 const Dashboard = () => {
     const navigate = useNavigate();
+    const routeLocation = useLocation();
+    const { user } = useAuth();
+    const profileLocation = useMemo(() => ({
+        city: user?.city || '',
+        district: user?.district || '',
+    }), [user?.city, user?.district]);
     const [summary, setSummary] = useState(initialSummary);
     const [alerts, setAlerts] = useState([]);
     const [history, setHistory] = useState([]);
+    const [locationOptions, setLocationOptions] = useState(emptyLocationOptions);
+    const [locationForm, setLocationForm] = useState(profileLocation);
+    const [appliedLocation, setAppliedLocation] = useState(profileLocation);
     const [loading, setLoading] = useState(true);
-    const [weatherCity, setWeatherCity] = useState('Manisa');
+    const [summaryLoading, setSummaryLoading] = useState(false);
     const [error, setError] = useState('');
+
+    useEffect(() => {
+        setLocationForm(profileLocation);
+        setAppliedLocation(profileLocation);
+    }, [profileLocation]);
 
     useEffect(() => {
         let active = true;
 
         const loadDashboardData = async () => {
             try {
-                const [alertsData, historyData] = await Promise.all([
+                const [alertsData, historyData, locationsData] = await Promise.all([
                     apiFetch('/api/dashboard/alerts'),
                     apiFetch('/api/dashboard/history'),
+                    apiFetch('/api/locations/options'),
                 ]);
 
                 if (!active) return;
                 setAlerts(alertsData);
                 setHistory(historyData);
+                setLocationOptions({
+                    cities: locationsData.cities || [],
+                    districtsByCity: locationsData.districtsByCity || {},
+                });
+
+                const profileCity = locationsData.profile?.city || profileLocation.city;
+                const profileDistrict = locationsData.profile?.district || profileLocation.district;
+                if (profileCity) {
+                    const nextLocation = { city: profileCity, district: profileDistrict || '' };
+                    setLocationForm(nextLocation);
+                    setAppliedLocation(nextLocation);
+                }
             } catch (err) {
                 if (!active) return;
                 setError(err.message || 'Gösterge paneli verileri yüklenemedi.');
@@ -63,17 +171,24 @@ const Dashboard = () => {
         return () => {
             active = false;
         };
-    }, []);
+    }, [profileLocation.city, profileLocation.district]);
 
     useEffect(() => {
         let active = true;
 
         const loadSummary = async () => {
+            setSummaryLoading(true);
             try {
-                const summaryData = await apiFetch(`/api/dashboard/summary?city=${encodeURIComponent(weatherCity)}`);
+                const query = new URLSearchParams();
+                if (appliedLocation.city) query.set('city', appliedLocation.city);
+                if (appliedLocation.district) query.set('district', appliedLocation.district);
+                const suffix = query.toString() ? `?${query.toString()}` : '';
+                const summaryData = await apiFetch(`/api/dashboard/summary${suffix}`);
                 if (active) setSummary(summaryData);
             } catch (err) {
                 if (active) setError(err.message || 'Özet verileri yüklenemedi.');
+            } finally {
+                if (active) setSummaryLoading(false);
             }
         };
 
@@ -81,7 +196,60 @@ const Dashboard = () => {
         return () => {
             active = false;
         };
-    }, [weatherCity]);
+    }, [appliedLocation]);
+
+    useEffect(() => {
+        if (routeLocation.hash !== '#alerts' || loading) return;
+        const timer = window.setTimeout(() => {
+            document.getElementById('dashboard-alerts')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 80);
+        return () => window.clearTimeout(timer);
+    }, [routeLocation.hash, loading, alerts.length]);
+
+    const cityOptions = useMemo(() => {
+        const options = [...locationOptions.cities];
+        addUnique(options, profileLocation.city);
+        addUnique(options, locationForm.city);
+        addUnique(options, appliedLocation.city);
+        return options;
+    }, [locationOptions.cities, profileLocation.city, locationForm.city, appliedLocation.city]);
+
+    const districtOptions = useMemo(() => {
+        const options = [...(locationOptions.districtsByCity[locationForm.city] || [])];
+        addUnique(options, profileLocation.city === locationForm.city ? profileLocation.district : '');
+        addUnique(options, locationForm.district);
+        return options;
+    }, [locationOptions.districtsByCity, locationForm.city, locationForm.district, profileLocation.city, profileLocation.district]);
+
+    const weatherLocation = summary.weather.district
+        ? `${summary.weather.city} / ${summary.weather.district}`
+        : summary.weather.city;
+    const weatherSource = [summary.weather.source, summary.weather.date].filter(Boolean).join(' • ');
+    const currentLocationLabel = weatherLocation || formatLocation(appliedLocation.city, appliedLocation.district) || 'Profil konumu';
+    const smartNotes = useMemo(() => buildSmartNotes(summary, currentLocationLabel), [summary, currentLocationLabel]);
+    const displayedAlerts = alerts.length > 0 ? alerts : smartNotes;
+    const showingSmartNotes = alerts.length === 0;
+
+    const handleCityChange = (event) => {
+        setLocationForm({ city: event.target.value, district: '' });
+    };
+
+    const handleDistrictChange = (event) => {
+        setLocationForm((prev) => ({ ...prev, district: event.target.value }));
+    };
+
+    const handleLocationApply = (event) => {
+        event.preventDefault();
+        if (!locationForm.city) {
+            setError('Konum güncellemek için önce il seçmelisiniz.');
+            return;
+        }
+        setError('');
+        setAppliedLocation({
+            city: locationForm.city,
+            district: locationForm.district,
+        });
+    };
 
     if (loading) {
         return (
@@ -91,11 +259,6 @@ const Dashboard = () => {
             </div>
         );
     }
-
-    const weatherLocation = summary.weather.district
-        ? `${summary.weather.city} / ${summary.weather.district}`
-        : summary.weather.city;
-    const weatherSource = [summary.weather.source, summary.weather.date].filter(Boolean).join(' • ');
 
     return (
         <div className="dashboard-wrapper animate-fade-in">
@@ -113,16 +276,9 @@ const Dashboard = () => {
                                 <CloudSun size={24} />
                             </div>
                             <div className="card-content">
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                                    <p className="card-label" style={{ marginBottom: 0 }}>Bölgesel Hava Durumu</p>
-                                    <select
-                                        value={weatherCity}
-                                        onChange={(e) => setWeatherCity(e.target.value)}
-                                        className="city-select-small"
-                                        style={{ alignSelf: 'flex-start', maxWidth: '100%' }}
-                                    >
-                                        {cities.map((city) => <option key={city} value={city}>{city}</option>)}
-                                    </select>
+                                <div className="summary-card-heading">
+                                    <p className="card-label">Bölgesel Hava Durumu</p>
+                                    {summaryLoading && <span className="summary-refreshing">Güncelleniyor</span>}
                                 </div>
                                 <h3 className="card-value">{summary.weather.temp}</h3>
                                 <p className="card-meta">{summary.weather.condition} • Nem: {summary.weather.humidity}</p>
@@ -201,26 +357,57 @@ const Dashboard = () => {
                 </div>
 
                 <div className="dashboard-sidebar">
-                    <div className="alerts-section card">
+                    <form className="location-filter-card card" onSubmit={handleLocationApply}>
+                        <div className="location-filter-header">
+                            <div className="location-filter-icon">
+                                <MapPin size={20} />
+                            </div>
+                            <div>
+                                <h2>Konum Seçimi</h2>
+                                <p>{formatLocation(appliedLocation.city, appliedLocation.district) || currentLocationLabel}</p>
+                            </div>
+                        </div>
+
+                        <div className="location-filter-grid">
+                            <label className="location-field">
+                                <span>İl</span>
+                                <select value={locationForm.city} onChange={handleCityChange}>
+                                    <option value="">İl seçin</option>
+                                    {cityOptions.map((city) => (
+                                        <option key={city} value={city}>{city}</option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label className="location-field">
+                                <span>İlçe</span>
+                                <select value={locationForm.district} onChange={handleDistrictChange} disabled={!locationForm.city || districtOptions.length === 0}>
+                                    <option value="">İl geneli</option>
+                                    {districtOptions.map((district) => (
+                                        <option key={district} value={district}>{district}</option>
+                                    ))}
+                                </select>
+                            </label>
+                        </div>
+
+                        <button className="btn-primary w-full" type="submit" disabled={summaryLoading || !locationForm.city}>
+                            {summaryLoading ? 'Güncelleniyor...' : 'Uygula'}
+                        </button>
+                    </form>
+
+                    <div id="dashboard-alerts" className="alerts-section card">
                         <div className="section-header">
-                            <h2>Acil Uyarılar</h2>
-                            <span className="alert-count">{alerts.length}</span>
+                            <h2>{showingSmartNotes ? 'Bölgesel Notlar' : 'Acil Uyarılar'}</h2>
+                            <span className={`alert-count ${showingSmartNotes ? 'neutral' : ''}`}>{displayedAlerts.length}</span>
                         </div>
 
                         <div className="alerts-list">
-                            {alerts.length === 0 ? (
-                                <div className="alert-item">
-                                    <div className="alert-content">
-                                        <p className="alert-message">Henüz acil uyarı yok.</p>
-                                        <span className="alert-time">Yeni analiz ve planlarınız oluştukça uyarılar burada görünecek.</span>
-                                    </div>
-                                </div>
-                            ) : alerts.map((alert) => (
+                            {displayedAlerts.map((alert) => (
                                 <div key={alert.id} className={`alert-item alert-${alert.type}`}>
                                     <div className="alert-icon">
-                                        {alert.type === 'danger' ? <AlertCircle size={20} /> : <AlertTriangle size={20} />}
+                                        {renderAlertIcon(alert.type)}
                                     </div>
                                     <div className="alert-content">
+                                        {alert.title && <span className="alert-title">{alert.title}</span>}
                                         <p className="alert-message">{alert.message}</p>
                                         <span className="alert-time">{alert.time}</span>
                                     </div>
@@ -231,7 +418,7 @@ const Dashboard = () => {
                         <div className="ai-insight-box">
                             <p className="insight-title">Yapay Zeka Yorumu</p>
                             <p className="insight-text">
-                                Veritabanındaki iklim ve üretim planı verilerine göre yeni bir üretim planı oluşturarak riskleri daha iyi yönetebilirsiniz.
+                                {currentLocationLabel} için veritabanındaki iklim ve üretim planı verilerine göre yeni bir üretim planı oluşturarak riskleri daha iyi yönetebilirsiniz.
                             </p>
                             <button className="btn-primary w-full mt-3" onClick={() => navigate('/plan-wizard')}>
                                 Yeni Plan Analizi Başlat

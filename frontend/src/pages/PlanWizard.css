@@ -108,12 +108,17 @@
     background-size: 1em;
 }
 
+.size-input {
+    padding-right: 5.5rem !important;
+}
+
 .unit-label {
     position: absolute;
     right: 1.5rem;
     font-weight: 500;
     color: var(--color-text-muted);
     font-size: 1.1rem;
+    pointer-events: none;
 }
 
 /* Crop Selection */
@@ -127,6 +132,75 @@
     .crop-selector {
         grid-template-columns: repeat(4, 1fr);
     }
+}
+
+/* Crop Category Tabs */
+.crop-category-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    overflow-x: auto;
+    padding-bottom: 0.5rem;
+}
+
+.crop-category-tabs::-webkit-scrollbar {
+    height: 4px;
+}
+
+.crop-category-tabs::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 2px;
+}
+
+.crop-category-tabs::-webkit-scrollbar-thumb {
+    background: rgba(45, 106, 79, 0.3);
+    border-radius: 2px;
+}
+
+.crop-category-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    background-color: var(--color-bg-main);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius-full);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-normal);
+    white-space: nowrap;
+}
+
+.crop-category-tab:hover {
+    background-color: rgba(116, 198, 157, 0.08);
+    border-color: rgba(45, 106, 79, 0.2);
+    color: var(--color-text-main);
+}
+
+.crop-category-tab.active {
+    background-color: var(--color-primary-light);
+    border-color: var(--color-primary);
+    color: white;
+    box-shadow: 0 4px 12px rgba(116, 198, 157, 0.3);
+}
+
+.category-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    background-color: rgba(255, 255, 255, 0.3);
+    border-radius: 50%;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+.crop-category-tab.active .category-count {
+    background-color: rgba(255, 255, 255, 0.5);
 }
 
 .crop-btn {

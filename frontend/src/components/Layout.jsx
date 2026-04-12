@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Outlet, NavLink, useNavigate } from 'react-router-dom';
 import {
     Home,
@@ -19,6 +19,9 @@ import './Layout.css';
 const Layout = () => {
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [alertCount, setAlertCount] = useState(0);
+    const [alerts, setAlerts] = useState([]);
+    const [notificationsOpen, setNotificationsOpen] = useState(false);
+    const notificationRef = useRef(null);
     const navigate = useNavigate();
     const { user, logout } = useAuth();
 
@@ -27,16 +30,35 @@ const Layout = () => {
 
         const loadAlerts = async () => {
             try {
-                const alerts = await apiFetch('/api/dashboard/alerts');
-                if (active) setAlertCount(alerts.length);
+                const dashboardAlerts = await apiFetch('/api/dashboard/alerts');
+                if (active) {
+                    setAlerts(dashboardAlerts);
+                    setAlertCount(dashboardAlerts.length);
+                }
             } catch {
-                if (active) setAlertCount(0);
+                if (active) {
+                    setAlerts([]);
+                    setAlertCount(0);
+                }
             }
         };
 
         loadAlerts();
         return () => {
             active = false;
+        };
+    }, []);
+
+    useEffect(() => {
+        const handleDocumentClick = (event) => {
+            if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+                setNotificationsOpen(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleDocumentClick);
+        return () => {
+            document.removeEventListener('mousedown', handleDocumentClick);
         };
     }, []);
 
@@ -49,7 +71,13 @@ const Layout = () => {
         navigate('/login', { replace: true });
     };
 
+    const handleAlertsNavigate = () => {
+        setNotificationsOpen(false);
+        navigate('/dashboard#alerts');
+    };
+
     const firstName = user?.name?.split(' ')[0] || 'Çiftçi';
+    const recentAlerts = alerts.slice(0, 3);
 
     const menuItems = [
         { path: '/dashboard', label: 'Ana Sayfa', icon: <Home size={20} /> },
@@ -107,10 +135,51 @@ const Layout = () => {
                     </div>
 
                     <div className="header-right">
-                        <button className="notification-btn" onClick={() => navigate('/dashboard')}>
-                            <Bell size={22} color="var(--color-text-muted)" />
-                            <span className="badge">{alertCount}</span>
-                        </button>
+                        <div className="notification-wrapper" ref={notificationRef}>
+                            <button
+                                className="notification-btn"
+                                type="button"
+                                aria-expanded={notificationsOpen}
+                                aria-label="Bildirimleri aç"
+                                onClick={() => setNotificationsOpen((open) => !open)}
+                            >
+                                <Bell size={22} color="var(--color-text-muted)" />
+                                <span className={`badge ${alertCount === 0 ? 'badge-empty' : ''}`}>{alertCount}</span>
+                            </button>
+
+                            {notificationsOpen && (
+                                <div className="notification-menu">
+                                    <div className="notification-menu-header">
+                                        <strong>Bildirimler</strong>
+                                        <span>{alertCount} uyarı</span>
+                                    </div>
+
+                                    <div className="notification-menu-list">
+                                        {recentAlerts.length === 0 ? (
+                                            <div className="notification-empty">
+                                                <p>Kritik bildirim yok</p>
+                                                <span>Yeni uyarılar oluştuğunda burada görünecek.</span>
+                                            </div>
+                                        ) : recentAlerts.map((alert) => (
+                                            <button
+                                                key={alert.id}
+                                                type="button"
+                                                className={`notification-item notification-${alert.type}`}
+                                                onClick={handleAlertsNavigate}
+                                            >
+                                                <span>{alert.title || 'Uyarı'}</span>
+                                                <p>{alert.message}</p>
+                                                <small>{alert.time}</small>
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    <button className="notification-footer-btn" type="button" onClick={handleAlertsNavigate}>
+                                        Uyarılara Git
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                         <div className="user-profile" onClick={() => navigate('/profile')} title={user?.name || 'Profil'}>
                             <div className="avatar">
                                 <User size={20} color="white" />

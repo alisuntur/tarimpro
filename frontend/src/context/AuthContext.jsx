@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
       body: credentials,
       auth: false,
     });
-    setStoredAuth(response);
+    setStoredAuth(response, Boolean(credentials.rememberMe));
     applyStoredAuth(response);
     return response;
   }, [applyStoredAuth]);
@@ -72,7 +72,7 @@ export const AuthProvider = ({ children }) => {
       body: payload,
       auth: false,
     });
-    setStoredAuth(response);
+    setStoredAuth(response, Boolean(payload.rememberMe));
     applyStoredAuth(response);
     return response;
   }, [applyStoredAuth]);

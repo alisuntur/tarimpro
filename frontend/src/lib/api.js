@@ -1,23 +1,28 @@
-﻿const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000';
+const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000';
 const AUTH_STORAGE_KEY = 'tarimpro.auth';
 const AUTH_EVENT = 'tarimpro-auth-changed';
 
 export function getStoredAuth() {
   try {
-    const raw = localStorage.getItem(AUTH_STORAGE_KEY);
+    const raw = localStorage.getItem(AUTH_STORAGE_KEY) ?? sessionStorage.getItem(AUTH_STORAGE_KEY);
     return raw ? JSON.parse(raw) : null;
   } catch {
     return null;
   }
 }
 
-export function setStoredAuth(payload) {
-  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
+export function setStoredAuth(payload, remember = false) {
+  const storage = remember ? localStorage : sessionStorage;
+  const staleStorage = remember ? sessionStorage : localStorage;
+
+  staleStorage.removeItem(AUTH_STORAGE_KEY);
+  storage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
   window.dispatchEvent(new Event(AUTH_EVENT));
 }
 
 export function clearStoredAuth() {
   localStorage.removeItem(AUTH_STORAGE_KEY);
+  sessionStorage.removeItem(AUTH_STORAGE_KEY);
   window.dispatchEvent(new Event(AUTH_EVENT));
 }
 

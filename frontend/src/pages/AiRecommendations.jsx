@@ -35,10 +35,39 @@ const formatSignedTon = (value) => {
     return `${sign}${tonFormatter.format(value)} ton`;
 };
 
+const formatMarketTon = (value) => {
+    if (value == null) {
+        return '-';
+    }
+    const absValue = Math.abs(Number(value));
+    if (absValue >= 1_000_000) {
+        return `${tonFormatter.format(Number(value) / 1_000_000)} milyon ton`;
+    }
+    if (absValue >= 1_000) {
+        return `${tonFormatter.format(Number(value) / 1_000)} bin ton`;
+    }
+    return formatTon(value);
+};
+
+const formatSignedMarketTon = (value) => {
+    if (value == null) {
+        return '-';
+    }
+    const sign = value > 0 ? '+' : value < 0 ? '-' : '';
+    return `${sign}${formatMarketTon(Math.abs(Number(value)))}`;
+};
+
 const seriesLabels = {
-    historicalProduction: 'Geçmiş üretim (Ton)',
-    predictedSupply: 'Tahmini üretim (Ton)',
-    predictedDemand: 'Tahmini tüketim (Ton)',
+    historicalProduction: 'Türkiye gerçekleşen üretim (ton)',
+    predictedSupply: 'Türkiye tahmini üretim (ton)',
+    predictedDemand: 'Türkiye tahmini tüketim (ton)',
+};
+
+const breakdownHelp = {
+    yield: 'Seçilen ilde ürünün geçmiş verimi; verim boşsa üretim/alan oranından türetilir.',
+    forecast: 'Seçilen il için modelin tahmin ettiği üretim potansiyelinin diğer adaylara göre konumu.',
+    demand: 'Türkiye geneli arz-talep açığı veya fazlasından gelen piyasa sinyali.',
+    climate: 'Seçilen ilin son iklim görünümü ve ürünün geçmiş verim istikrarı.',
 };
 
 const emptyAnalysis = {
@@ -61,6 +90,11 @@ const emptyAnalysis = {
     climateComment: '',
     marketComment: '',
     supplyDemand: null,
+};
+
+const shouldRefreshStalePlanAnalysis = (payload) => {
+    const plannedArea = Number(payload?.plan?.plannedAreaDecare || 0);
+    return Boolean(payload?.plan?.id && plannedArea > 0 && payload?.selectedCrop?.expectedProductionTon == null);
 };
 
 const AiRecommendations = () => {
@@ -114,6 +148,13 @@ const AiRecommendations = () => {
                     payload = await apiFetch(`/api/analyses/${latestReport.id}`);
                 }
 
+                if (shouldRefreshStalePlanAnalysis(payload)) {
+                    payload = await apiFetch('/api/ai/analyze-plan', {
+                        method: 'POST',
+                        body: { planId: payload.plan.id },
+                    });
+                }
+
                 if (active) {
                     setAnalysis({ ...emptyAnalysis, ...payload });
                 }
@@ -146,6 +187,9 @@ const AiRecommendations = () => {
     const selectedCrop = analysis.selectedCrop || {};
     const supplyDemand = analysis.supplyDemand || {};
     const scoreBreakdown = analysis.scoreBreakdown || [];
+    const planCity = plan.city || legacyPlan?.city || 'Seçilen il';
+    const planArea = Number(plan.plannedAreaDecare || legacyPlan?.size || 0);
+    const localPlanScope = `${planCity}${planArea ? `, ${numberFormatter.format(planArea)} dönüm` : ''}`;
     const colors = ['var(--color-accent)', '#e0e0e0'];
     const shouldShowEmptyState = emptyState && !loading;
     const gaugeData = [
@@ -266,17 +310,19 @@ const AiRecommendations = () => {
             {!shouldShowEmptyState && (
                 <>
                     <div className="analysis-insight-grid">
-                        <div className="analysis-insight-card card">
+                        <div className="analysis-insight-card card local-plan-card">
                             <div className="insight-title-row">
                                 <Leaf size={18} />
-                                <h3>{selectedCrop.name || focusCrop}</h3>
+                                <h3>{'Yerel Plan Çıktısı'}</h3>
                             </div>
+                            <p className="card-scope-note">{`${localPlanScope} için hesaplanır; Türkiye geneli piyasa tonajı değildir.`}</p>
+                            <p className="insight-metric">{'Ürün'}: <strong>{selectedCrop.name || focusCrop}</strong></p>
                             <p className="insight-metric">{'Beklenen Verim'}: <strong>{selectedCrop.expectedYieldKgDecare != null ? `${numberFormatter.format(selectedCrop.expectedYieldKgDecare)} kg/dekar` : 'Veri yok'}</strong></p>
-                            <p className="insight-metric">{'Beklenen Üretim'}: <strong>{selectedCrop.expectedProductionTon != null ? `${numberFormatter.format(selectedCrop.expectedProductionTon)} ton` : 'Veri yok'}</strong></p>
+                            <p className="insight-metric">{'Plan Bazlı Beklenen Üretim'}: <strong>{selectedCrop.expectedProductionTon != null ? `${numberFormatter.format(selectedCrop.expectedProductionTon)} ton` : 'Veri yok'}</strong></p>
                             <p className="insight-metric">{'Tahmin Yılı'}: <strong>{selectedCrop.forecastYear || '-'}</strong></p>
-                            <p className="insight-metric">{'Geçmiş Verim Skoru'}: <strong>{formatPercent(selectedCrop.yieldScore)}</strong></p>
-                            <p className="insight-metric">{'Ulusal Verim Endeksi'}: <strong>{formatPercent(selectedCrop.yieldIndexPct)}</strong></p>
-                            <p className="insight-metric">{'Şehir Persentili'}: <strong>{formatPercent(selectedCrop.yieldPercentile)}</strong></p>
+                            <p className="insight-metric">{'Yerel Verim Skoru'}: <strong>{formatPercent(selectedCrop.yieldScore)}</strong></p>
+                            <p className="insight-metric">{'Konya/Türkiye Verim Endeksi'}: <strong>{formatPercent(selectedCrop.yieldIndexPct)}</strong></p>
+                            <p className="insight-metric">{'İller Arası Verim Konumu'}: <strong>{formatPercent(selectedCrop.yieldPercentile)}</strong></p>
                         </div>
 
                         <div className="analysis-insight-card card">
@@ -284,6 +330,7 @@ const AiRecommendations = () => {
                                 <ShieldCheck size={18} />
                                 <h3>{'Öneri Güveni'}</h3>
                             </div>
+                            <p className="card-scope-note">{'Bu değer geçmiş walk-forward testlerinde benzer senaryoların başarı oranından kalibre edilir; gelir veya hasat garantisi değildir.'}</p>
                             <div className="confidence-detail-list">
                                 <div className="confidence-detail-row">
                                     <span>{'Başarı Olasılığı'}</span>
@@ -325,16 +372,17 @@ const AiRecommendations = () => {
                             <p className="text-muted confidence-note">{confidence.successDefinition || 'Başarılı senaryo tanımı bulunamadı.'}</p>
                         </div>
 
-                        <div className="analysis-insight-card card">
+                        <div className="analysis-insight-card card market-scope-card">
                             <div className="insight-title-row">
                                 <Scaling size={18} />
-                                <h3>{'Arz-Talep Dengesi'}</h3>
+                                <h3>{supplyDemand.scopeTitle || 'Türkiye Geneli Arz-Talep Dengesi'}</h3>
                             </div>
+                            <p className="card-scope-note">{`Bu kart ${localPlanScope} için beklenen hasat hesabı değildir; ürünün Türkiye geneli piyasa sinyalini gösterir.`}</p>
                             <p className="insight-metric">{'Durum'}: <strong>{supplyDemand.status || '-'}</strong></p>
                             <p className="insight-metric">{'Karşılama Oranı'}: <strong>{formatPercent(supplyDemand.coverageRatioPct)}</strong></p>
-                            <p className="insight-metric">{'Tahmini Üretim'}: <strong>{formatTon(supplyDemand.predictedSupplyTon)}</strong></p>
-                            <p className="insight-metric">{'Tahmini Tüketim'}: <strong>{formatTon(supplyDemand.predictedDemandTon)}</strong></p>
-                            <p className="insight-metric">{'Denge Farkı'}: <strong>{formatSignedTon(supplyDemand.balanceTon)}</strong></p>
+                            <p className="insight-metric">{'Türkiye Üretim Tahmini'}: <strong>{formatMarketTon(supplyDemand.predictedSupplyTon)}</strong></p>
+                            <p className="insight-metric">{'Türkiye Tüketim Tahmini'}: <strong>{formatMarketTon(supplyDemand.predictedDemandTon)}</strong></p>
+                            <p className="insight-metric">{'Türkiye Denge Farkı'}: <strong>{formatSignedMarketTon(supplyDemand.balanceTon)}</strong></p>
                             <p className="text-muted confidence-note">{supplyDemand.summary || 'Türkiye ürün dengesi için yeterli veri bulunamadı.'}</p>
                             {!!supplyDemand.note && <p className="text-muted confidence-note">{supplyDemand.note}</p>}
                         </div>
@@ -344,11 +392,16 @@ const AiRecommendations = () => {
                                 <BarChart3 size={18} />
                                 <h3>{'Puan Kırılımı'}</h3>
                             </div>
+                            <p className="card-scope-note">{'Plan skoru; yerel verim, Konya model projeksiyonu, Türkiye piyasa dengesi ve iklim bileşenlerinin AHP ağırlıklı toplamıdır.'}</p>
                             <div className="breakdown-list">
                                 {scoreBreakdown.map((item) => (
-                                    <div key={item.key} className="breakdown-row">
-                                        <span>{item.label}</span>
-                                        <strong>%{Math.round(item.value || 0)}</strong>
+                                    <div key={item.key} className="breakdown-row detailed-breakdown-row">
+                                        <div>
+                                            <span>{item.label}</span>
+                                            <small>{breakdownHelp[item.key] || 'Bu bileşen model puanının bir parçasıdır.'}</small>
+                                            {item.weight != null && <em>{`Ağırlık: ${formatPercent(item.weight)}`}</em>}
+                                        </div>
+                                        <strong>{formatPercent(item.value)}</strong>
                                     </div>
                                 ))}
                                 {scoreBreakdown.length === 0 && <p className="text-muted">{'Puan kırılımı bulunamadı.'}</p>}
@@ -374,9 +427,9 @@ const AiRecommendations = () => {
                                                 </div>
                                             </div>
                                             <div className="suggestion-meta-grid">
-                                                <span>{'Skor'}: <strong>%{Math.round(item.score || 0)}</strong></span>
+                                                <span>{'Plan skoru'}: <strong>%{Math.round(item.score || 0)}</strong></span>
                                                 <span>{'Beklenen verim'}: <strong>{item.expectedYieldKgDecare != null ? `${numberFormatter.format(item.expectedYieldKgDecare)} kg/dekar` : 'Veri yok'}</strong></span>
-                                                <span>{'Beklenen üretim'}: <strong>{item.estimatedProductionTon != null ? `${numberFormatter.format(item.estimatedProductionTon)} ton` : 'Veri yok'}</strong></span>
+                                                <span>{'Plan bazlı üretim'}: <strong>{item.estimatedProductionTon != null ? `${numberFormatter.format(item.estimatedProductionTon)} ton` : 'Veri yok'}</strong></span>
                                             </div>
                                             <div className="suggestion-body">
                                                 <p className="reason-label">{'Neden bu ürün?'}</p>
@@ -391,7 +444,8 @@ const AiRecommendations = () => {
                         </div>
 
                         <div className="recommendations-right">
-                            <h2 className="section-title">{'Türkiye Üretim ve Tüketim Görünümü'}</h2>
+                            <h2 className="section-title">{'Piyasa Grafiği (Türkiye Geneli)'}</h2>
+                            <p className="section-subtitle">{`${focusCrop} için ülke geneli toplam üretim ve tüketim serisi; ${localPlanScope} hasat tahmini değildir.`}</p>
                             <div className="chart-card card">
                                 {chartData.length > 0 ? (
                                     <>
@@ -417,7 +471,7 @@ const AiRecommendations = () => {
                                                         backdropFilter: 'blur(8px)',
                                                         padding: '16px',
                                                     }}
-                                                    formatter={(value, name) => [formatTon(value), seriesLabels[name] || name]}
+                                                    formatter={(value, name) => [formatMarketTon(value), seriesLabels[name] || name]}
                                                 />
                                                 <Legend wrapperStyle={{ paddingTop: '20px', fontWeight: 600, fontSize: '14px' }} iconType="circle" />
                                                 <Bar name={seriesLabels.historicalProduction} dataKey="historicalProduction" fill="var(--color-primary)" radius={[4, 4, 0, 0]} barSize={28} />
@@ -425,7 +479,7 @@ const AiRecommendations = () => {
                                                 <Line type="monotone" name={seriesLabels.predictedDemand} dataKey="predictedDemand" stroke="#1d4ed8" strokeWidth={3} strokeDasharray="7 5" dot={{ r: 4, fill: 'white', stroke: '#1d4ed8', strokeWidth: 2 }} activeDot={{ r: 7, fill: '#1d4ed8', stroke: 'white', strokeWidth: 2 }} />
                                             </ComposedChart>
                                         </ResponsiveContainer>
-                                        <p className="text-muted confidence-note chart-note">{'Geçmiş üretim serisi ulusal gerçekleşen toplamı, tahmini üretim ve tüketim serileri ise Türkiye geneli projeksiyonunu gösterir.'}</p>
+                                        <p className="text-muted confidence-note chart-note">{'Grafikteki milyon ton değerleri Türkiye geneli toplam piyasa ölçeğidir. Yerel plan hasat hesabı üstteki Yerel Plan Çıktısı kartında gösterilir.'}</p>
                                     </>
                                 ) : (
                                     <div className="empty-chart-state">

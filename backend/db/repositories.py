@@ -5,6 +5,7 @@ from datetime import date
 from psycopg.rows import dict_row
 
 from .connection import get_connection
+from .product_mapping import get_consumption_mapping_candidates
 
 SESSION_DURATION_SQL = {
     False: "now() + interval '1 day'",
@@ -96,6 +97,9 @@ def _product_lookup_candidates(value: str | None) -> list[str]:
         if not seed:
             return
 
+        for mapped_candidate in get_consumption_mapping_candidates(seed):
+            add(mapped_candidate)
+
         variants = [seed]
         stripped_parentheses = re.sub(r"\s*\(.*?\)", "", seed).strip()
         if stripped_parentheses:
@@ -126,17 +130,24 @@ def _resolve_consumption_product_name(product_name: str | None) -> str | None:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT DISTINCT product_name
+                SELECT DISTINCT product_name,
+                       btrim(product_name) AS trimmed_product_name
                 FROM analytics.consumption_history
                 WHERE product_name = ANY(%(candidates)s)
+                   OR btrim(product_name) = ANY(%(candidates)s)
                 """,
                 {"candidates": candidates},
             )
-            available = {row["product_name"] for row in cursor.fetchall()}
+            rows = cursor.fetchall()
+            available = {row["product_name"] for row in rows}
+            available_by_trim = {row["trimmed_product_name"]: row["product_name"] for row in rows}
 
     for candidate in candidates:
         if candidate in available:
             return candidate
+        trimmed_candidate = candidate.strip()
+        if trimmed_candidate in available_by_trim:
+            return available_by_trim[trimmed_candidate]
     return None
 
 
@@ -844,7 +855,7 @@ def get_candidate_forecasts(city_name: str | None, forecast_year: int | None = N
                 LEFT JOIN LATERAL (
                     SELECT p.year AS latest_year,
                            SUM(p.production_ton) AS latest_production_ton,
-                           AVG(NULLIF(p.yield_kg_decare, 0)) AS latest_yield_kg_decare
+                           COALESCE(AVG(NULLIF(p.yield_kg_decare, 0)), (SUM(p.production_ton) * 1000 / NULLIF(SUM(p.area_decare), 0))) AS latest_yield_kg_decare
                     FROM analytics.production_history AS p
                     WHERE {' AND '.join(history_where)}
                     GROUP BY p.year
@@ -877,7 +888,7 @@ def get_crop_history_rows(city_name: str | None, product_name: str, years: int =
                 f"""
                 SELECT year,
                        SUM(production_ton) AS production_ton,
-                       AVG(NULLIF(yield_kg_decare, 0)) AS yield_kg_decare
+                       COALESCE(AVG(NULLIF(yield_kg_decare, 0)), (SUM(production_ton) * 1000 / NULLIF(SUM(area_decare), 0))) AS yield_kg_decare
                 FROM analytics.production_history
                 WHERE {' AND '.join(where_clauses)}
                 GROUP BY year
@@ -912,14 +923,26 @@ def get_product_yield_context(city_name: str | None, product_name: str, years: i
                     WHERE product_name = %(product_name)s
                     ORDER BY year DESC
                     LIMIT %(years)s
-                ), city_yields AS (
+                ), city_year_yields AS (
                     SELECT city_name,
-                           AVG(NULLIF(yield_kg_decare, 0)) AS avg_yield
+                           year,
+                           COALESCE(
+                               AVG(NULLIF(yield_kg_decare, 0)),
+                               SUM(production_ton) * 1000 / NULLIF(SUM(area_decare), 0)
+                           ) AS year_yield
                     FROM analytics.production_history
                     WHERE product_name = %(product_name)s
                       AND year IN (SELECT year FROM recent_years)
+                    GROUP BY city_name, year
+                    HAVING COALESCE(
+                        AVG(NULLIF(yield_kg_decare, 0)),
+                        SUM(production_ton) * 1000 / NULLIF(SUM(area_decare), 0)
+                    ) IS NOT NULL
+                ), city_yields AS (
+                    SELECT city_name,
+                           AVG(year_yield) AS avg_yield
+                    FROM city_year_yields
                     GROUP BY city_name
-                    HAVING AVG(NULLIF(yield_kg_decare, 0)) IS NOT NULL
                 ), target AS (
                     SELECT AVG(avg_yield) AS city_avg_yield
                     FROM city_yields

@@ -487,6 +487,10 @@ def _build_supply_demand_payload(balance_row: dict | None) -> dict[str, object]:
             "predictedDemandTon": None,
             "demandGrowthPct": None,
             "scope": "Türkiye ürün dengesi",
+            "scopeTitle": "Türkiye geneli piyasa dengesi",
+            "supplyScope": "Türkiye geneli model üretim tahmini",
+            "demandScope": "Türkiye geneli tüketim tahmini",
+            "planScope": "Seçilen il ve dönüm hesabından ayrıdır.",
         }
 
     supply = _safe_float(balance_row.get("predicted_supply_ton"), None)
@@ -507,6 +511,10 @@ def _build_supply_demand_payload(balance_row: dict | None) -> dict[str, object]:
             "predictedDemandTon": demand,
             "demandGrowthPct": demand_growth_pct,
             "scope": "Türkiye ürün dengesi",
+            "scopeTitle": "Türkiye geneli piyasa dengesi",
+            "supplyScope": "Türkiye geneli model üretim tahmini",
+            "demandScope": "Türkiye geneli tüketim tahmini",
+            "planScope": "Seçilen il ve dönüm hesabından ayrıdır.",
         }
 
     coverage_ratio = supply / demand
@@ -551,6 +559,10 @@ def _build_supply_demand_payload(balance_row: dict | None) -> dict[str, object]:
         "predictedDemandTon": round(demand, 1),
         "demandGrowthPct": round(demand_growth_pct, 1) if demand_growth_pct is not None else None,
         "scope": "Türkiye ürün dengesi",
+        "scopeTitle": "Türkiye geneli piyasa dengesi",
+        "supplyScope": "Türkiye geneli model üretim tahmini",
+        "demandScope": "Türkiye geneli tüketim tahmini",
+        "planScope": "Seçilen il ve dönüm hesabından ayrıdır.",
         "tone": tone,
         "consumptionProductName": balance_row.get("consumption_product_name"),
     }
@@ -841,6 +853,10 @@ def _analysis_is_current(plan: dict, analysis: dict | None) -> bool:
     breakdown = _parse_score_breakdown(analysis.get("score_breakdown"))
     demand_item = next((item for item in breakdown if item.get("key") == "demand"), None)
     if demand_item and demand_item.get("label") != _score_breakdown_label("demand"):
+        return False
+
+    planned_area = _safe_float(plan.get("planned_area_decare"), 0) or 0
+    if planned_area > 0 and analysis.get("expected_production_ton") is None:
         return False
 
     return analyzed_at >= updated_at

@@ -98,9 +98,11 @@ const AiRecommendations = () => {
     const analysisId = searchParams.get('analysisId');
     const legacyPlan = location.state || null;
     const [analysis, setAnalysis] = useState(emptyAnalysis);
+    const [planItems, setPlanItems] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [emptyState, setEmptyState] = useState(false);
+    const isSelectionMode = !analysisId && !planId && !legacyPlan;
 
     useEffect(() => {
         let active = true;
@@ -113,6 +115,15 @@ const AiRecommendations = () => {
             try {
                 let payload;
 
+                if (isSelectionMode) {
+                    const overview = await apiFetch('/api/plan-analyses');
+                    if (active) {
+                        setPlanItems(overview.items || []);
+                        setAnalysis(emptyAnalysis);
+                    }
+                    return;
+                }
+
                 if (analysisId) {
                     payload = await apiFetch(`/api/analyses/${analysisId}`);
                 } else if (planId || legacyPlan) {
@@ -121,24 +132,11 @@ const AiRecommendations = () => {
                         body: planId
                             ? { planId }
                             : {
-                                region: legacyPlan?.city || 'Manisa',
+                                region: legacyPlan?.city || '',
                                 size: Number(legacyPlan?.size || 100),
                                 crop: legacyPlan?.crop || '',
                             },
                     });
-                } else {
-                    const reportsPayload = await apiFetch('/api/analyses');
-                    const latestReport = reportsPayload.reports?.[0];
-
-                    if (!latestReport?.id) {
-                        if (active) {
-                            setAnalysis(emptyAnalysis);
-                            setEmptyState(true);
-                        }
-                        return;
-                    }
-
-                    payload = await apiFetch(`/api/analyses/${latestReport.id}`);
                 }
 
                 if (shouldRefreshStalePlanAnalysis(payload)) {
@@ -155,7 +153,7 @@ const AiRecommendations = () => {
                 if (active) {
                     setAnalysis(emptyAnalysis);
                     setError(err.message || 'AI analizi alınamadı.');
-                    if (!analysisId && !planId && !legacyPlan) {
+                    if (isSelectionMode) {
                         setEmptyState(true);
                     }
                 }
@@ -170,7 +168,7 @@ const AiRecommendations = () => {
         return () => {
             active = false;
         };
-    }, [analysisId, legacyPlan, planId]);
+    }, [analysisId, isSelectionMode, legacyPlan, planId]);
 
     const score = analysis.score || 0;
     const confidence = analysis.confidence || { score: 0, label: '' };
@@ -189,6 +187,104 @@ const AiRecommendations = () => {
         { name: 'Score', value: shouldShowEmptyState ? 0 : score },
         { name: 'Rest', value: shouldShowEmptyState ? 100 : Math.max(0, 100 - score) },
     ];
+
+    const handlePlanItemOpen = (item) => {
+        if (item.analysisId) {
+            navigate(`/ai-recommendations?analysisId=${item.analysisId}`);
+            return;
+        }
+        navigate(`/ai-recommendations?planId=${item.planId}`);
+    };
+
+    if (isSelectionMode) {
+        return (
+            <div className="recommendations-container animate-fade-in">
+                <div className="recommendations-header">
+                    <div className="header-text-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: 1 }}>
+                        <button className="back-btn" onClick={() => navigate(-1)}>
+                            <ChevronLeft size={20} />
+                            {'Geri Dön'}
+                        </button>
+                        <div className="header-text">
+                            <h1>{'Yapay Zeka Önerileri'}</h1>
+                            <p className="text-muted">{'Önceki üretim planlarından birini seçerek rapor ve önerileri açın'}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="analysis-picker card">
+                    <div className="analysis-picker-header">
+                        <div>
+                            <h2>{'Önceki Planlar'}</h2>
+                            <p>{'En yeni planlar üstte listelenir.'}</p>
+                        </div>
+                        <button type="button" className="primary-analysis-action" onClick={() => navigate('/plan-wizard')}>
+                            {'Yeni Plan Oluştur'}
+                        </button>
+                    </div>
+
+                    {loading ? (
+                        <div className="analysis-picker-empty">
+                            {'Planlar yükleniyor...'}
+                        </div>
+                    ) : planItems.length > 0 ? (
+                        <div className="analysis-picker-list">
+                            {planItems.map((item) => {
+                                const locationLabel = [item.city, item.district].filter(Boolean).join(' / ') || 'Konum bilgisi yok';
+                                return (
+                                    <button
+                                        type="button"
+                                        key={item.id}
+                                        className="analysis-picker-item"
+                                        onClick={() => handlePlanItemOpen(item)}
+                                    >
+                                        <div className="analysis-picker-main">
+                                            <div className="analysis-picker-title-row">
+                                                <h3>{item.selectedCropName || 'Ürün seçilmemiş plan'}</h3>
+                                                <span className={`analysis-status-pill ${item.hasAnalysis ? 'ready' : 'pending'}`}>
+                                                    {item.hasAnalysis ? 'Analiz hazır' : 'Analiz bekliyor'}
+                                                </span>
+                                            </div>
+                                            <div className="analysis-picker-meta">
+                                                <span><MapPin size={15} />{locationLabel}</span>
+                                                <span><Scaling size={15} />{numberFormatter.format(Number(item.plannedAreaDecare || 0))} dönüm</span>
+                                                <span><Leaf size={15} />{item.fieldName || `${item.seasonYear || 'Sezon'} planı`}</span>
+                                            </div>
+                                            <p className="analysis-picker-date">
+                                                {item.hasAnalysis
+                                                    ? `Analiz tarihi: ${item.analyzedDate || '-'}`
+                                                    : `Plan tarihi: ${item.createdDate || '-'}`}
+                                            </p>
+                                        </div>
+                                        <div className="analysis-picker-score">
+                                            {item.hasAnalysis ? (
+                                                <>
+                                                    <strong>%{Math.round(item.score || 0)}</strong>
+                                                    <span>{item.confidenceLabel || 'Güven skoru'}</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <strong>Yeni</strong>
+                                                    <span>Analiz oluştur</span>
+                                                </>
+                                            )}
+                                            <em>{item.actionLabel}</em>
+                                        </div>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    ) : (
+                        <div className="analysis-picker-empty">
+                            <h3>{'Henüz üretim planı yok'}</h3>
+                            <p>{'Yeni plan oluşturduğunuzda analizleri burada seçip açabilirsiniz.'}</p>
+                        </div>
+                    )}
+                    {error && <p style={{ color: '#b91c1c', marginTop: '1rem' }}>{error}</p>}
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="recommendations-container animate-fade-in">
@@ -278,7 +374,7 @@ const AiRecommendations = () => {
                     </div>
                     {shouldShowEmptyState ? (
                         <>
-                            <p>{'Bu sayfa artık son kayıtlı analiz raporunu otomatik açıyor. Henüz kayıtlı bir rapor olmadığı için önce yeni bir üretim planı oluşturup analizi başlatmanız gerekiyor.'}</p>
+                            <p>{'Bu rapor için kayıtlı analiz bulunamadı. Önce yeni bir üretim planı oluşturup analizi başlatmanız gerekiyor.'}</p>
                             <p className="text-muted">{'Plan oluşturduktan sonra seçtiğiniz il, dönüm ve ürün için geçmiş üretim ile model projeksiyonlarına dayalı değerlendirmeyi burada görebileceksiniz.'}</p>
                             <div className="empty-analysis-actions">
                                 <button type="button" className="primary-analysis-action" onClick={() => navigate('/plan-wizard')}>

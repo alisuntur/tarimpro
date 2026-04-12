@@ -50,6 +50,7 @@ from db.repositories import (
     get_walk_forward_summary,
     list_ai_analyses_for_user,
     list_location_options,
+    list_plan_analysis_overview,
     revoke_user_session,
     update_field,
     update_plan_analysis_result,
@@ -812,6 +813,42 @@ def _serialize_analysis_report(analysis: dict) -> dict[str, object]:
     }
 
 
+def _serialize_plan_analysis_item(item: dict) -> dict[str, object]:
+    analysis_score = _safe_float(item.get("analysis_score"), None)
+    confidence_score = _safe_float(item.get("analysis_confidence_score"), None)
+    selected_crop = (
+        item.get("analysis_selected_crop_name")
+        or item.get("analysis_focus_crop_name")
+        or item.get("selected_crop_name")
+    )
+    city = item.get("city") or item.get("field_city")
+    district = item.get("district") or item.get("field_district")
+    has_analysis = bool(item.get("analysis_id"))
+    created_at = item.get("created_at")
+    analyzed_at = item.get("analyzed_at")
+    return {
+        "id": str(item["id"]),
+        "planId": str(item["id"]),
+        "analysisId": str(item["analysis_id"]) if item.get("analysis_id") else None,
+        "fieldName": item.get("field_name"),
+        "city": city,
+        "district": district,
+        "selectedCropName": selected_crop,
+        "plannedAreaDecare": float(item.get("planned_area_decare") or item.get("field_area_decare") or 0),
+        "seasonYear": item.get("season_year"),
+        "status": _display_status(item.get("status")),
+        "createdAt": created_at.isoformat() if created_at else None,
+        "createdDate": _format_date(created_at),
+        "analyzedAt": analyzed_at.isoformat() if analyzed_at else None,
+        "analyzedDate": _format_date(analyzed_at) if analyzed_at else None,
+        "score": round(analysis_score, 1) if analysis_score is not None else None,
+        "confidenceScore": round(confidence_score, 1) if confidence_score is not None else None,
+        "confidenceLabel": _confidence_label(confidence_score) if confidence_score is not None else None,
+        "hasAnalysis": has_analysis,
+        "actionLabel": "Raporu Aç" if has_analysis else "Analizi Başlat",
+    }
+
+
 
 def _serialize_saved_recommendation(item: dict) -> dict[str, object]:
     expected_return = _safe_float(item.get("expected_return_percent"), None)
@@ -1543,6 +1580,15 @@ def list_saved_analyses(user=Depends(require_current_user)):
     }
 
 
+@app.get("/api/plan-analyses")
+def list_plan_analyses(user=Depends(require_current_user)):
+    items = list_plan_analysis_overview(user["id"], limit=50)
+    return {
+        "items": [_serialize_plan_analysis_item(item) for item in items],
+        "count": len(items),
+    }
+
+
 @app.get("/api/analyses/{analysis_id}")
 def get_saved_analysis(analysis_id: str, user=Depends(require_current_user)):
     analysis = get_ai_analysis_for_user(user["id"], analysis_id)
@@ -1685,6 +1731,11 @@ def get_climate_data(period: str = "1Y", city: str | None = None, user=Depends(r
 @app.get("/api/profile/me")
 def get_profile_me(user=Depends(require_current_user)):
     return _build_profile_response(user)
+
+
+@app.get("/api/profile/summary")
+def get_profile_summary(user=Depends(require_current_user)):
+    return {"user": _serialize_profile_user(user)}
 
 
 @app.put("/api/profile/me")

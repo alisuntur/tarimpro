@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     User,
@@ -46,7 +46,11 @@ const Profile = () => {
     const [activeTab, setActiveTab] = useState('personal');
     const [showLogoutModal, setShowLogoutModal] = useState(false);
     const [profile, setProfile] = useState(null);
-    const [loading, setLoading] = useState(true);
+    const [profileLoading, setProfileLoading] = useState(true);
+    const [fieldsLoading, setFieldsLoading] = useState(false);
+    const [reportsLoading, setReportsLoading] = useState(false);
+    const [fieldsLoaded, setFieldsLoaded] = useState(false);
+    const [reportsLoaded, setReportsLoaded] = useState(false);
     const [error, setError] = useState('');
     const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', email: '', city: '', district: '' });
     const [savingProfile, setSavingProfile] = useState(false);
@@ -56,44 +60,71 @@ const Profile = () => {
     const [fieldError, setFieldError] = useState('');
     const navigate = useNavigate();
     const location = useLocation();
-    const { logout, refreshSession } = useAuth();
+    const { user: authUser, logout, refreshSession } = useAuth();
 
     useEffect(() => {
         if (location.state?.onboarding) {
             setActiveTab('fields');
         }
     }, [location.state]);
-    const loadProfile = async () => {
-        const payload = await apiFetch('/api/profile/me');
-        setProfile(payload);
+    const applyProfileUser = useCallback((userPayload) => {
+        setProfile((prev) => ({
+            ...(prev || {}),
+            user: userPayload,
+            fields: prev?.fields || [],
+            reports: prev?.reports || [],
+        }));
         setProfileForm({
-            fullName: payload.user?.name || '',
-            phone: payload.user?.phone || '',
-            email: payload.user?.email || '',
-            city: payload.user?.city || '',
-            district: payload.user?.district || '',
+            fullName: userPayload?.name || '',
+            phone: userPayload?.phone || '',
+            email: userPayload?.email || '',
+            city: userPayload?.city || '',
+            district: userPayload?.district || '',
         });
-    };
+    }, []);
+
+    const loadFields = useCallback(async () => {
+        setFieldsLoading(true);
+        setFieldError('');
+        try {
+            const payload = await apiFetch('/api/fields');
+            setProfile((prev) => ({ ...(prev || {}), fields: payload || [] }));
+            setFieldsLoaded(true);
+        } catch (err) {
+            setFieldError(err.message || 'Tarlalar yüklenemedi.');
+            setFieldsLoaded(true);
+        } finally {
+            setFieldsLoading(false);
+        }
+    }, []);
+
+    const loadReports = useCallback(async () => {
+        setReportsLoading(true);
+        setError('');
+        try {
+            const payload = await apiFetch('/api/analyses');
+            setProfile((prev) => ({ ...(prev || {}), reports: payload.reports || [] }));
+            setReportsLoaded(true);
+        } catch (err) {
+            setError(err.message || 'Analiz raporları yüklenemedi.');
+            setReportsLoaded(true);
+        } finally {
+            setReportsLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         let active = true;
 
         const run = async () => {
             try {
-                const payload = await apiFetch('/api/profile/me');
+                const payload = await apiFetch('/api/profile/summary');
                 if (!active) return;
-                setProfile(payload);
-                setProfileForm({
-                    fullName: payload.user?.name || '',
-                    phone: payload.user?.phone || '',
-                    email: payload.user?.email || '',
-                    city: payload.user?.city || '',
-                    district: payload.user?.district || '',
-                });
+                applyProfileUser(payload.user);
             } catch (err) {
                 if (active) setError(err.message || 'Profil verileri alınamadı.');
             } finally {
-                if (active) setLoading(false);
+                if (active) setProfileLoading(false);
             }
         };
 
@@ -101,7 +132,16 @@ const Profile = () => {
         return () => {
             active = false;
         };
-    }, []);
+    }, [applyProfileUser]);
+
+    useEffect(() => {
+        if (activeTab === 'fields' && !fieldsLoaded && !fieldsLoading) {
+            loadFields();
+        }
+        if (activeTab === 'reports' && !reportsLoaded && !reportsLoading) {
+            loadReports();
+        }
+    }, [activeTab, fieldsLoaded, fieldsLoading, loadFields, loadReports, reportsLoaded, reportsLoading]);
 
     const handleLogout = async () => {
         await logout();
@@ -113,11 +153,11 @@ const Profile = () => {
         setSavingProfile(true);
         setError('');
         try {
-            await apiFetch('/api/profile/me', {
+            const payload = await apiFetch('/api/profile/me', {
                 method: 'PUT',
                 body: profileForm,
             });
-            await loadProfile();
+            applyProfileUser(payload.user);
             await refreshSession();
         } catch (err) {
             setError(err.message || 'Profil güncellenemedi.');
@@ -157,7 +197,7 @@ const Profile = () => {
                 });
             }
 
-            await loadProfile();
+            await loadFields();
             resetFieldForm();
             setActiveTab('fields');
         } catch (err) {
@@ -189,7 +229,7 @@ const Profile = () => {
 
         try {
             await apiFetch(`/api/fields/${fieldId}`, { method: 'DELETE' });
-            await loadProfile();
+            await loadFields();
             if (editingFieldId === fieldId) {
                 resetFieldForm();
             }
@@ -198,16 +238,12 @@ const Profile = () => {
         }
     };
 
-    if (loading) {
-        return (
-            <div className="loading-state">
-                <div className="spinner"></div>
-                <p>Profil verileri veritabanından yükleniyor...</p>
-            </div>
-        );
-    }
-
-    const user = profile?.user;
+    const user = profile?.user || {
+        name: authUser?.name,
+        city: authUser?.city,
+        district: authUser?.district,
+        memberSince: '-',
+    };
     const fields = profile?.fields || [];
     const reports = profile?.reports || [];
 
@@ -262,6 +298,7 @@ const Profile = () => {
                 </div>
 
                 <div className="profile-main card">
+                    {profileLoading && <p className="profile-inline-loading">Profil bilgileri yükleniyor...</p>}
                     {error && <p style={{ color: '#b91c1c', marginBottom: '1rem' }}>{error}</p>}
 
                     {activeTab === 'personal' && (
@@ -322,7 +359,14 @@ const Profile = () => {
                             </form>
 
                             <div className="field-list">
-                                {fields.length === 0 ? (
+                                {fieldsLoading ? (
+                                    <div className="field-item">
+                                        <div className="field-info">
+                                            <h4>Tarlalar yükleniyor...</h4>
+                                            <p className="text-muted">Kayıtlı tarla bilgilerin getiriliyor.</p>
+                                        </div>
+                                    </div>
+                                ) : fields.length === 0 ? (
                                     <div className="field-item">
                                         <div className="field-info">
                                             <h4>Henüz kayıtlı tarla yok</h4>
@@ -356,7 +400,14 @@ const Profile = () => {
                         <div className="tab-pane animate-fade-in">
                             <h2 className="tab-title">Geçmiş Analiz Raporları</h2>
                             <div className="field-list">
-                                {reports.length > 0 ? reports.map((report) => (
+                                {reportsLoading ? (
+                                    <div className="field-item">
+                                        <div className="field-info">
+                                            <h4>Raporlar yükleniyor...</h4>
+                                            <p className="text-muted">Geçmiş analiz kayıtların getiriliyor.</p>
+                                        </div>
+                                    </div>
+                                ) : reports.length > 0 ? reports.map((report) => (
                                     <div className="field-item" key={report.id} style={{ justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
                                         <div className="field-info">
                                             <h4>{report.type}</h4>

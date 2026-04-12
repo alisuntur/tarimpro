@@ -177,6 +177,12 @@
     min-height: 400px;
 }
 
+.profile-inline-loading {
+    margin: 0 0 1rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
+}
+
 .tab-title {
     font-size: 1.25rem;
     color: var(--color-primary-dark);

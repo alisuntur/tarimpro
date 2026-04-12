@@ -23,6 +23,12 @@
     color: var(--color-primary-dark);
 }
 
+.climate-error {
+    margin-top: 0.75rem;
+    color: #b91c1c;
+    font-weight: 600;
+}
+
 .header-actions {
     display: flex;
     align-items: center;
@@ -111,6 +117,18 @@
 
 .chart-card {
     padding: 1.5rem;
+}
+
+.empty-chart-state {
+    min-height: 240px;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: var(--color-text-muted);
+    background-color: #f8fafc;
+    border: 1px dashed rgba(15, 23, 42, 0.16);
+    border-radius: 8px;
+    padding: 1rem;
 }
 
 .chart-header {

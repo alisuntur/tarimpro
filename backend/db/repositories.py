@@ -533,6 +533,57 @@ def get_plan_history(user_id: str, limit: int | None = None):
     return get_production_plans_for_user(user_id, limit=limit)
 
 
+def list_plan_analysis_overview(user_id: str, limit: int = 50):
+    sql = """
+        SELECT p.id,
+               p.user_id,
+               p.field_id,
+               p.selected_crop_name,
+               p.region_code,
+               p.season_year,
+               p.status,
+               p.target_yield_percent,
+               p.planned_area_decare,
+               p.planned_sowing_date,
+               p.planned_harvest_date,
+               p.city,
+               p.district,
+               p.created_at,
+               p.updated_at,
+               f.name AS field_name,
+               f.city AS field_city,
+               f.district AS field_district,
+               f.area_decare AS field_area_decare,
+               latest.id AS analysis_id,
+               latest.score AS analysis_score,
+               latest.confidence_score AS analysis_confidence_score,
+               latest.selected_crop_name AS analysis_selected_crop_name,
+               latest.focus_crop_name AS analysis_focus_crop_name,
+               latest.analyzed_at AS analyzed_at
+        FROM app.production_plans AS p
+        LEFT JOIN app.fields AS f ON f.id = p.field_id
+        LEFT JOIN LATERAL (
+            SELECT a.id,
+                   a.score,
+                   a.confidence_score,
+                   a.selected_crop_name,
+                   a.focus_crop_name,
+                   a.analyzed_at
+            FROM app.ai_analyses AS a
+            WHERE a.plan_id = p.id
+            ORDER BY a.analyzed_at DESC
+            LIMIT 1
+        ) AS latest ON true
+        WHERE p.user_id = %(user_id)s
+        ORDER BY p.created_at DESC
+        LIMIT %(limit)s
+    """
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(sql, {"user_id": user_id, "limit": limit})
+            return cursor.fetchall()
+
+
 def get_dashboard_alerts(user_id: str):
     with get_connection(row_factory=dict_row) as connection:
         with connection.cursor() as cursor:

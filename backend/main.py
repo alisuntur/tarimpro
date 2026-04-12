@@ -1,9 +1,12 @@
+import asyncio
 import json
+import os
 import re
-from contextlib import asynccontextmanager
-from datetime import date, datetime
+from contextlib import asynccontextmanager, suppress
+from datetime import date, datetime, time, timedelta
 from math import sqrt
 from statistics import mean, pstdev
+from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -55,6 +58,7 @@ from db.repositories import (
 from dependencies import require_current_user, security
 from scoring import compute_weighted_score, get_scoring_profile
 from security import generate_session_token, hash_password, hash_session_token, verify_password
+from weather_service import TURKEY_TIMEZONE, get_daily_weather, refresh_known_weather_cache, weather_code_label
 
 
 TURKISH_ASCII_TRANSLATION = str.maketrans({"\u00e7": "c", "\u00c7": "C", "\u011f": "g", "\u011e": "G", "\u0131": "i", "\u0130": "I", "\u00f6": "o", "\u00d6": "O", "\u015f": "s", "\u015e": "S", "\u00fc": "u", "\u00dc": "U"})
@@ -84,12 +88,61 @@ CROP_LABELS = {
     "apple": "Elma",
 }
 MONTH_LABELS = ["Oca", "\u015eub", "Mar", "Nis", "May", "Haz", "Tem", "A\u011fu", "Eyl", "Eki", "Kas", "Ara"]
+WEATHER_CACHE_REFRESH_HOUR = int(os.getenv("WEATHER_CACHE_REFRESH_HOUR", "9"))
+WEATHER_CACHE_REFRESH_MINUTE = int(os.getenv("WEATHER_CACHE_REFRESH_MINUTE", "0"))
+WEATHER_CACHE_BATCH_SIZE = int(os.getenv("WEATHER_CACHE_BATCH_SIZE", "50"))
+WEATHER_CACHE_SCHEDULER_ENABLED = os.getenv("WEATHER_CACHE_SCHEDULER_ENABLED", "true").lower() not in {"0", "false", "no"}
+WEATHER_CACHE_STARTUP_REFRESH_ENABLED = os.getenv("WEATHER_CACHE_STARTUP_REFRESH_ENABLED", "true").lower() not in {"0", "false", "no"}
+
+
+def _seconds_until_next_weather_cache_run() -> float:
+    timezone = ZoneInfo(TURKEY_TIMEZONE)
+    now = datetime.now(timezone)
+    run_at = datetime.combine(
+        now.date(),
+        time(hour=WEATHER_CACHE_REFRESH_HOUR, minute=WEATHER_CACHE_REFRESH_MINUTE),
+        tzinfo=timezone,
+    )
+    if run_at <= now:
+        run_at += timedelta(days=1)
+    return (run_at - now).total_seconds()
+
+
+async def _weather_cache_scheduler() -> None:
+    while True:
+        await asyncio.sleep(_seconds_until_next_weather_cache_run())
+        try:
+            result = await asyncio.to_thread(refresh_known_weather_cache, batch_size=WEATHER_CACHE_BATCH_SIZE)
+            print(f"weather_cache_scheduler: {result}")
+        except Exception as exc:
+            print(f"weather_cache_scheduler_error: {exc}")
+
+
+async def _weather_cache_startup_refresh() -> None:
+    try:
+        result = await asyncio.to_thread(refresh_known_weather_cache, batch_size=WEATHER_CACHE_BATCH_SIZE)
+        print(f"weather_cache_startup_refresh: {result}")
+    except Exception as exc:
+        print(f"weather_cache_startup_refresh_error: {exc}")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     bootstrap_database()
-    yield
+    scheduler_task = None
+    startup_refresh_task = None
+    if WEATHER_CACHE_SCHEDULER_ENABLED:
+        scheduler_task = asyncio.create_task(_weather_cache_scheduler())
+    if WEATHER_CACHE_STARTUP_REFRESH_ENABLED:
+        startup_refresh_task = asyncio.create_task(_weather_cache_startup_refresh())
+    try:
+        yield
+    finally:
+        for task in (scheduler_task, startup_refresh_task):
+            if task:
+                task.cancel()
+                with suppress(asyncio.CancelledError):
+                    await task
 
 
 app = FastAPI(title="Tarım Yapay Zeka API", lifespan=lifespan)
@@ -1051,15 +1104,37 @@ def auth_me(user=Depends(require_current_user)):
 
 
 @app.get("/api/dashboard/summary")
-def get_dashboard_summary(city: str | None = None, user=Depends(require_current_user)):
+def get_dashboard_summary(city: str | None = None, district: str | None = None, user=Depends(require_current_user)):
     city_name = _dashboard_city(user, city)
+    use_user_district = not city or (user.get("city") and city.strip() == user.get("city"))
+    district_name = (district or (user.get("district") if use_user_district else None) or "").strip() or None
+    weather = get_daily_weather(city_name, district_name)
     climate = get_latest_climate(city_name) or get_latest_climate(user.get("city") or "Manisa")
     market_rows = get_market_projection(city_name) or get_market_projection(None)
 
-    temp = round(float(climate["temperature_avg_c"])) if climate and climate["temperature_avg_c"] is not None else 24
-    rainfall = float(climate["rainfall_mm"]) if climate and climate["rainfall_mm"] is not None else 35
-    soil_moisture = round(float(climate["soil_moisture_pct"])) if climate and climate["soil_moisture_pct"] is not None else 42
-    humidity = max(35, min(95, round(soil_moisture + min(rainfall, 50) * 0.35)))
+    if weather:
+        temp = round(float(weather["temperature_c"])) if weather.get("temperature_c") is not None else 24
+        rainfall = float(weather["precipitation_mm"]) if weather.get("precipitation_mm") is not None else 0.0
+        humidity = round(float(weather["relative_humidity_pct"])) if weather.get("relative_humidity_pct") is not None else 55
+        if weather.get("soil_moisture_0_to_1cm") is not None:
+            soil_moisture = round(float(weather["soil_moisture_0_to_1cm"]) * 100)
+        elif climate and climate.get("soil_moisture_pct") is not None:
+            soil_moisture = round(float(climate["soil_moisture_pct"]))
+        else:
+            soil_moisture = 42
+        condition = weather_code_label(weather.get("weather_code"), temp, rainfall)
+        weather_source = "Open-Meteo günlük cache"
+        weather_date = weather["forecast_date"].isoformat() if weather.get("forecast_date") else None
+        weather_updated_at = weather["fetched_at"].isoformat() if weather.get("fetched_at") else None
+    else:
+        temp = round(float(climate["temperature_avg_c"])) if climate and climate["temperature_avg_c"] is not None else 24
+        rainfall = float(climate["rainfall_mm"]) if climate and climate["rainfall_mm"] is not None else 35
+        soil_moisture = round(float(climate["soil_moisture_pct"])) if climate and climate["soil_moisture_pct"] is not None else 42
+        humidity = max(35, min(95, round(soil_moisture + min(rainfall, 50) * 0.35)))
+        condition = _condition_from_climate(temp, rainfall)
+        weather_source = "Tarihsel iklim verisi"
+        weather_date = climate["observation_date"].isoformat() if climate else None
+        weather_updated_at = None
 
     market_delta = 0.0
     if len(market_rows) >= 2 and market_rows[0]["total_production"]:
@@ -1077,13 +1152,18 @@ def get_dashboard_summary(city: str | None = None, user=Depends(require_current_
     return {
         "weather": {
             "temp": f"{temp}°C",
-            "condition": _condition_from_climate(temp, rainfall),
+            "condition": condition,
             "humidity": f"%{humidity}",
             "city": city_name,
+            "district": district_name,
+            "source": weather_source,
+            "date": weather_date,
+            "updatedAt": weather_updated_at,
         },
         "soilMoisture": {
             "level": f"%{soil_moisture}",
             "status": _soil_status(soil_moisture),
+            "source": weather_source,
         },
         "marketTrend": {
             "status": market_status,

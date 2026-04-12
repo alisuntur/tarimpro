@@ -27,13 +27,6 @@ const formatPercent = (value) => (value == null ? '-' : `%${percentFormatter.for
 const formatCount = (value) => (value == null ? '-' : numberFormatter.format(value));
 const formatTon = (value) => (value == null ? '-' : `${tonFormatter.format(value)} ton`);
 const formatCompactTon = (value) => (value == null ? '-' : compactTonFormatter.format(value));
-const formatSignedTon = (value) => {
-    if (value == null) {
-        return '-';
-    }
-    const sign = value > 0 ? '+' : '';
-    return `${sign}${tonFormatter.format(value)} ton`;
-};
 
 const formatMarketTon = (value) => {
     if (value == null) {

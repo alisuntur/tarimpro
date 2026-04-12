@@ -24,8 +24,8 @@ const cities = [
 ].sort((a, b) => a.localeCompare(b, 'tr'));
 
 const initialSummary = {
-    weather: { temp: '—', condition: 'Yükleniyor...', humidity: '—', city: 'Manisa' },
-    soilMoisture: { level: '—', status: 'Yükleniyor...' },
+    weather: { temp: '—', condition: 'Yükleniyor...', humidity: '—', city: 'Manisa', district: null, source: '', date: null },
+    soilMoisture: { level: '—', status: 'Yükleniyor...', source: '' },
     marketTrend: { status: 'Yükleniyor...', indicator: '0.0%' },
 };
 
@@ -92,6 +92,11 @@ const Dashboard = () => {
         );
     }
 
+    const weatherLocation = summary.weather.district
+        ? `${summary.weather.city} / ${summary.weather.district}`
+        : summary.weather.city;
+    const weatherSource = [summary.weather.source, summary.weather.date].filter(Boolean).join(' • ');
+
     return (
         <div className="dashboard-wrapper animate-fade-in">
             <div className="dashboard-header-text">
@@ -121,6 +126,7 @@ const Dashboard = () => {
                                 </div>
                                 <h3 className="card-value">{summary.weather.temp}</h3>
                                 <p className="card-meta">{summary.weather.condition} • Nem: {summary.weather.humidity}</p>
+                                <p className="card-meta">{weatherLocation}{weatherSource ? ` • ${weatherSource}` : ''}</p>
                             </div>
                         </div>
 
@@ -132,6 +138,7 @@ const Dashboard = () => {
                                 <p className="card-label">Toprak Nemi</p>
                                 <h3 className="card-value">{summary.soilMoisture.level}</h3>
                                 <p className="card-meta text-success">{summary.soilMoisture.status} Seviyede</p>
+                                {summary.soilMoisture.source && <p className="card-meta">{summary.soilMoisture.source}</p>}
                             </div>
                         </div>
 

@@ -3,6 +3,7 @@ import re
 from datetime import date
 
 from psycopg.rows import dict_row
+from psycopg.types.json import Jsonb
 
 from .connection import get_connection
 from .product_mapping import get_consumption_mapping_candidates
@@ -79,6 +80,13 @@ def _lookup_candidates(value: str | None) -> list[str]:
         if item and item not in candidates:
             candidates.append(item)
     return candidates
+
+
+def _clean_text(value: object | None) -> str | None:
+    if value is None:
+        return None
+    cleaned = " ".join(str(value).strip().split())
+    return cleaned or None
 
 
 def _product_lookup_candidates(value: str | None) -> list[str]:
@@ -578,6 +586,234 @@ def get_climate_series(city_name: str, limit: int = 12):
                 {"city_candidates": city_candidates, "limit": limit},
             )
             return cursor.fetchall()
+
+
+def get_geo_location(city_name: str | None, district_name: str | None = None):
+    city_candidates = _lookup_candidates(city_name)
+    if not city_candidates:
+        return None
+
+    district_candidates = _lookup_candidates(district_name)
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            if district_candidates:
+                cursor.execute(
+                    """
+                    SELECT id, city_name, district_name, latitude, longitude, elevation_m,
+                           timezone, country_code, provider, provider_location_id,
+                           feature_code, admin1, admin2, source_name, fetched_at, updated_at
+                    FROM analytics.geo_locations
+                    WHERE city_name = ANY(%(city_candidates)s)
+                      AND district_name = ANY(%(district_candidates)s)
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                    """,
+                    {"city_candidates": city_candidates, "district_candidates": district_candidates},
+                )
+            else:
+                cursor.execute(
+                    """
+                    SELECT id, city_name, district_name, latitude, longitude, elevation_m,
+                           timezone, country_code, provider, provider_location_id,
+                           feature_code, admin1, admin2, source_name, fetched_at, updated_at
+                    FROM analytics.geo_locations
+                    WHERE city_name = ANY(%(city_candidates)s)
+                      AND district_name IS NULL
+                    ORDER BY updated_at DESC
+                    LIMIT 1
+                    """,
+                    {"city_candidates": city_candidates},
+                )
+            return cursor.fetchone()
+
+
+def upsert_geo_location(payload: dict[str, object]):
+    row = {
+        "city_name": _clean_text(payload.get("city_name")),
+        "district_name": _clean_text(payload.get("district_name")),
+        "latitude": payload.get("latitude"),
+        "longitude": payload.get("longitude"),
+        "elevation_m": payload.get("elevation_m"),
+        "timezone": _clean_text(payload.get("timezone")) or "Europe/Istanbul",
+        "country_code": (_clean_text(payload.get("country_code")) or "TR")[:2],
+        "provider": _clean_text(payload.get("provider")) or "open-meteo",
+        "provider_location_id": payload.get("provider_location_id"),
+        "feature_code": _clean_text(payload.get("feature_code")),
+        "admin1": _clean_text(payload.get("admin1")),
+        "admin2": _clean_text(payload.get("admin2")),
+        "source_name": _clean_text(payload.get("source_name")) or "Open-Meteo Geocoding API",
+        "fetched_at": payload.get("fetched_at"),
+    }
+    if not row["city_name"] or row["latitude"] is None or row["longitude"] is None:
+        return None
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO analytics.geo_locations (
+                    city_name, district_name, latitude, longitude, elevation_m,
+                    timezone, country_code, provider, provider_location_id,
+                    feature_code, admin1, admin2, source_name, fetched_at
+                )
+                VALUES (
+                    %(city_name)s, %(district_name)s, %(latitude)s, %(longitude)s, %(elevation_m)s,
+                    %(timezone)s, %(country_code)s, %(provider)s, %(provider_location_id)s,
+                    %(feature_code)s, %(admin1)s, %(admin2)s, %(source_name)s, %(fetched_at)s
+                )
+                ON CONFLICT (city_name, district_name) DO UPDATE SET
+                    latitude = EXCLUDED.latitude,
+                    longitude = EXCLUDED.longitude,
+                    elevation_m = EXCLUDED.elevation_m,
+                    timezone = EXCLUDED.timezone,
+                    country_code = EXCLUDED.country_code,
+                    provider = EXCLUDED.provider,
+                    provider_location_id = EXCLUDED.provider_location_id,
+                    feature_code = EXCLUDED.feature_code,
+                    admin1 = EXCLUDED.admin1,
+                    admin2 = EXCLUDED.admin2,
+                    source_name = EXCLUDED.source_name,
+                    fetched_at = EXCLUDED.fetched_at,
+                    updated_at = now()
+                RETURNING id, city_name, district_name, latitude, longitude, elevation_m,
+                          timezone, country_code, provider, provider_location_id,
+                          feature_code, admin1, admin2, source_name, fetched_at, updated_at
+                """,
+                row,
+            )
+            location = cursor.fetchone()
+        connection.commit()
+    return location
+
+
+def list_geo_locations(limit: int | None = None):
+    sql = """
+        SELECT id, city_name, district_name, latitude, longitude, elevation_m,
+               timezone, country_code, provider, provider_location_id,
+               feature_code, admin1, admin2, source_name, fetched_at, updated_at
+        FROM analytics.geo_locations
+        ORDER BY city_name ASC, district_name ASC NULLS FIRST
+    """
+    params: dict[str, object] = {}
+    if limit:
+        sql += " LIMIT %(limit)s"
+        params["limit"] = limit
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            return cursor.fetchall()
+
+
+def list_weather_location_candidates(limit: int | None = None):
+    sql = """
+        WITH candidates AS (
+            SELECT city_name::varchar(100) AS city_name,
+                   NULL::varchar(100) AS district_name
+            FROM analytics.cities
+            UNION
+            SELECT city::varchar(100) AS city_name,
+                   district::varchar(100) AS district_name
+            FROM app.users
+            WHERE city IS NOT NULL
+            UNION
+            SELECT city::varchar(100) AS city_name,
+                   district::varchar(100) AS district_name
+            FROM app.fields
+            WHERE city IS NOT NULL
+            UNION
+            SELECT city_name, district_name
+            FROM analytics.geo_locations
+        )
+        SELECT DISTINCT btrim(city_name) AS city_name,
+               NULLIF(btrim(district_name), '') AS district_name
+        FROM candidates
+        WHERE city_name IS NOT NULL
+          AND btrim(city_name) <> ''
+        ORDER BY city_name ASC, district_name ASC NULLS FIRST
+    """
+    params: dict[str, object] = {}
+    if limit:
+        sql += " LIMIT %(limit)s"
+        params["limit"] = limit
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            return cursor.fetchall()
+
+
+def get_weather_daily_cache(location_id: int, forecast_date: date):
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT cache.id, cache.location_id, cache.forecast_date,
+                       cache.temperature_c, cache.relative_humidity_pct,
+                       cache.precipitation_mm, cache.wind_speed_kmh,
+                       cache.soil_moisture_0_to_1cm, cache.weather_code,
+                       cache.provider, cache.fetched_at, cache.raw_payload,
+                       geo.city_name, geo.district_name, geo.latitude, geo.longitude
+                FROM analytics.weather_daily_cache AS cache
+                JOIN analytics.geo_locations AS geo ON geo.id = cache.location_id
+                WHERE cache.location_id = %(location_id)s
+                  AND cache.forecast_date = %(forecast_date)s
+                LIMIT 1
+                """,
+                {"location_id": location_id, "forecast_date": forecast_date},
+            )
+            return cursor.fetchone()
+
+
+def upsert_weather_daily_cache(payload: dict[str, object]):
+    row = {
+        "location_id": payload.get("location_id"),
+        "forecast_date": payload.get("forecast_date"),
+        "temperature_c": payload.get("temperature_c"),
+        "relative_humidity_pct": payload.get("relative_humidity_pct"),
+        "precipitation_mm": payload.get("precipitation_mm"),
+        "wind_speed_kmh": payload.get("wind_speed_kmh"),
+        "soil_moisture_0_to_1cm": payload.get("soil_moisture_0_to_1cm"),
+        "weather_code": payload.get("weather_code"),
+        "provider": _clean_text(payload.get("provider")) or "open-meteo",
+        "raw_payload": Jsonb(payload.get("raw_payload")) if payload.get("raw_payload") is not None else None,
+    }
+    if not row["location_id"] or not row["forecast_date"]:
+        return None
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO analytics.weather_daily_cache (
+                    location_id, forecast_date, temperature_c, relative_humidity_pct,
+                    precipitation_mm, wind_speed_kmh, soil_moisture_0_to_1cm,
+                    weather_code, provider, raw_payload
+                )
+                VALUES (
+                    %(location_id)s, %(forecast_date)s, %(temperature_c)s, %(relative_humidity_pct)s,
+                    %(precipitation_mm)s, %(wind_speed_kmh)s, %(soil_moisture_0_to_1cm)s,
+                    %(weather_code)s, %(provider)s, %(raw_payload)s
+                )
+                ON CONFLICT (location_id, forecast_date) DO UPDATE SET
+                    temperature_c = EXCLUDED.temperature_c,
+                    relative_humidity_pct = EXCLUDED.relative_humidity_pct,
+                    precipitation_mm = EXCLUDED.precipitation_mm,
+                    wind_speed_kmh = EXCLUDED.wind_speed_kmh,
+                    soil_moisture_0_to_1cm = EXCLUDED.soil_moisture_0_to_1cm,
+                    weather_code = EXCLUDED.weather_code,
+                    provider = EXCLUDED.provider,
+                    fetched_at = now(),
+                    raw_payload = EXCLUDED.raw_payload
+                RETURNING id, location_id, forecast_date, temperature_c, relative_humidity_pct,
+                          precipitation_mm, wind_speed_kmh, soil_moisture_0_to_1cm,
+                          weather_code, provider, fetched_at, raw_payload
+                """,
+                row,
+            )
+            cache = cursor.fetchone()
+        connection.commit()
+    return cache
 
 
 def get_market_projection(city_name: str | None = None):

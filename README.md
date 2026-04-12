@@ -85,10 +85,51 @@ Onemli tablolar:
 - `app.ai_recommendations`
 - `analytics.production_history`
 - `analytics.climate_history`
+- `analytics.geo_locations`
+- `analytics.weather_daily_cache`
 - `analytics.consumption_history`
 - `analytics.model_predictions`
 - `analytics.walk_forward_metrics`
 - `analytics.walk_forward_predictions`
+
+Open-Meteo entegrasyonu iki cache tablosu kullanir:
+
+- `analytics.geo_locations`: il/ilce koordinatlarini tutar. Koordinat yoksa Open-Meteo Geocoding API ile cozulup cache'lenir.
+- `analytics.weather_daily_cache`: konum bazli gunluk hava/tarim verisini tutar. Bugunun kaydi varsa dashboard DB'den okur; yoksa Open-Meteo'dan cekip upsert eder.
+
+Gunluk toplu yenileme komutu:
+
+```powershell
+.\.venv\Scripts\python.exe tools\refresh_weather_cache.py --batch-size 50
+```
+
+Backend calisirken ayni is otomatik olarak her gun `09:00`'da tetiklenir. Local testte server 09:00'da kapaliysa, backend sonraki acilista bugunun eksik cache kayitlarini arka planda bir kez tamamlar. Saat ve batch boyutu icin ortam degiskenleri:
+
+```powershell
+$env:WEATHER_CACHE_REFRESH_HOUR="9"
+$env:WEATHER_CACHE_REFRESH_MINUTE="0"
+$env:WEATHER_CACHE_BATCH_SIZE="50"
+```
+
+Gerekirse otomatik backend scheduler kapatilabilir:
+
+```powershell
+$env:WEATHER_CACHE_SCHEDULER_ENABLED="false"
+```
+
+Acilista eksik cache tamamlama davranisi da ayri kapatilabilir:
+
+```powershell
+$env:WEATHER_CACHE_STARTUP_REFRESH_ENABLED="false"
+```
+
+Elimizde il/ilce koordinat CSV'si varsa once koordinatlari seed edip sonra gunluk cache'i yenilemek icin:
+
+```powershell
+.\.venv\Scripts\python.exe tools\refresh_weather_cache.py --locations-csv veri\il_ilce_koordinat_utf8_bom.csv --batch-size 50 --force
+```
+
+Sadece koordinat seed etmek icin `--skip-weather-refresh` eklenebilir.
 
 ## Skorlama ve AHP
 

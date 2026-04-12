@@ -158,6 +158,48 @@ CREATE TABLE IF NOT EXISTS analytics.cities (
     plate_code integer
 );
 
+CREATE TABLE IF NOT EXISTS analytics.geo_locations (
+    id bigserial PRIMARY KEY,
+    city_name varchar(100) NOT NULL,
+    district_name varchar(100),
+    latitude numeric(9, 6) NOT NULL,
+    longitude numeric(9, 6) NOT NULL,
+    elevation_m numeric(10, 2),
+    timezone varchar(64) NOT NULL DEFAULT 'Europe/Istanbul',
+    country_code char(2) NOT NULL DEFAULT 'TR',
+    provider varchar(50) NOT NULL DEFAULT 'open-meteo',
+    provider_location_id bigint,
+    feature_code varchar(20),
+    admin1 varchar(100),
+    admin2 varchar(100),
+    source_name varchar(150) NOT NULL DEFAULT 'Open-Meteo Geocoding API',
+    fetched_at timestamptz,
+    updated_at timestamptz NOT NULL DEFAULT now(),
+    UNIQUE NULLS NOT DISTINCT (city_name, district_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_geo_locations_city_district
+    ON analytics.geo_locations (city_name, district_name);
+
+CREATE TABLE IF NOT EXISTS analytics.weather_daily_cache (
+    id bigserial PRIMARY KEY,
+    location_id bigint NOT NULL REFERENCES analytics.geo_locations(id) ON DELETE CASCADE,
+    forecast_date date NOT NULL,
+    temperature_c numeric(10, 4),
+    relative_humidity_pct numeric(10, 4),
+    precipitation_mm numeric(12, 4),
+    wind_speed_kmh numeric(12, 4),
+    soil_moisture_0_to_1cm numeric(12, 6),
+    weather_code integer,
+    provider varchar(50) NOT NULL DEFAULT 'open-meteo',
+    fetched_at timestamptz NOT NULL DEFAULT now(),
+    raw_payload jsonb,
+    UNIQUE (location_id, forecast_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_weather_daily_cache_date_location
+    ON analytics.weather_daily_cache (forecast_date, location_id);
+
 CREATE TABLE IF NOT EXISTS analytics.crop_catalog (
     id bigserial PRIMARY KEY,
     category_name varchar(50),

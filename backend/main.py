@@ -38,6 +38,7 @@ from db.repositories import (
     get_product_yield_context,
     get_field_for_user,
     get_fields_for_user,
+    get_geo_location,
     get_latest_ai_analysis_for_plan,
     get_latest_climate,
     get_latest_forecast_year,
@@ -409,9 +410,9 @@ def _normalize_range(value: float | None, minimum: float | None, maximum: float 
 
 def _score_breakdown_label(key: str | None) -> str:
     labels = {
-        "yield": "Geçmiş verim",
-        "forecast": "Model projeksiyonu",
-        "demand": "Arz-talep dengesi",
+        "yield": "Yerel verim",
+        "forecast": "Model üretim tahmini",
+        "demand": "Türkiye piyasa sinyali",
         "climate": "İklim dayanıklılığı",
     }
     return labels.get(key or "", key or "Skor")
@@ -454,7 +455,89 @@ def _confidence_label(score: float) -> str:
 
 def _format_horizon_label(horizon: int | None) -> str:
     effective_horizon = max(1, int(horizon or 1))
-    return f"{effective_horizon} yıllık tahmin ufku"
+    return f"{effective_horizon} yıllık tahmin süresi"
+
+
+def _format_tr_number(value: float | int | None, decimals: int = 1) -> str:
+    if value is None:
+        return "-"
+    return f"{value:,.{decimals}f}".replace(",", "_").replace(".", ",").replace("_", ".")
+
+
+def _plan_score_message(score: float | int | None) -> str:
+    score_value = _safe_float(score, 0) or 0
+    if score_value >= 70:
+        return "güçlü bir başlangıç sinyali veriyor"
+    if score_value >= 50:
+        return "orta seviyede bir sinyal veriyor"
+    return "temkinli ilerlenmesi gerektiğini gösteriyor"
+
+
+def _build_farmer_plan_summary(
+    crop_name: str | None,
+    city_name: str | None,
+    forecast_year: int | None,
+    score: float | int | None,
+    planned_area: float | int | None = None,
+    estimated_production_ton: float | int | None = None,
+    fallback: str | None = None,
+) -> str:
+    if not crop_name or not city_name or score is None:
+        return fallback or "Plan özeti için yeterli veri bulunamadı."
+
+    score_value = _safe_float(score, 0) or 0
+    year_text = f"{forecast_year} tahminine göre " if forecast_year else ""
+    area_value = _safe_float(planned_area, None)
+    area_text = f"{_format_tr_number(area_value, 0)} dönüm " if area_value else ""
+    production_value = _safe_float(estimated_production_ton, None)
+    production_text = (
+        f"Bu alanda beklenen üretim yaklaşık {_format_tr_number(production_value, 1)} ton. "
+        if production_value is not None
+        else ""
+    )
+
+    return (
+        f"{year_text}{city_name} için {area_text}{crop_name} plan notu %{_format_tr_number(score_value, 1)}; "
+        f"bu not {_plan_score_message(score_value)}. "
+        "Bu yüzde başarı ihtimali değil, yerel verim, model üretim tahmini, Türkiye piyasa sinyali ve iklim bilgisinin birlikte okunmasıdır. "
+        f"{production_text}"
+        "Kararı verirken alıcı bağlantısı, sulama durumu, maliyet ve güncel fiyatı ayrıca kontrol edin."
+    )
+
+
+def _market_note_for_status(status: str) -> str:
+    if status == "Arz açığı":
+        return (
+            "Bu, ülke genelinde talebin üretime göre daha güçlü görünebileceğini anlatır. "
+            "Kesin fiyat artışı anlamına gelmez; ithalat, stok ve bölgesel alım koşulları sonucu değiştirebilir."
+        )
+    if status == "Dengeli":
+        return (
+            "Bu, ülke genelinde üretim ve tüketimin birbirine yakın göründüğünü anlatır. "
+            "Yine de bölgesel fiyat, stok ve alıcı koşulları ayrıca kontrol edilmelidir."
+        )
+    if status == "Üretim fazlası":
+        return (
+            "Bu, ülke genelinde arzın talebe göre yüksek görünebileceğini anlatır. "
+            "Kesin fiyat düşüşü anlamına gelmez; satış kanalı, depolama ve hasat zamanı özellikle kontrol edilmelidir."
+        )
+    return "Üretim veya tüketim tahmini eksik olduğu için piyasa sinyali temkinli okunmalıdır."
+
+
+def _build_market_summary(forecast_year: int | None, supply: float, demand: float, coverage_ratio_pct: float, balance_ton: float) -> str:
+    year_text = f"{forecast_year} Türkiye tahmininde" if forecast_year else "Türkiye tahmininde"
+    if balance_ton > 0:
+        balance_text = f"üretim tüketimden yaklaşık {_format_tr_number(abs(balance_ton), 0)} ton yüksek görünüyor"
+    elif balance_ton < 0:
+        balance_text = f"tüketim üretimden yaklaşık {_format_tr_number(abs(balance_ton), 0)} ton yüksek görünüyor"
+    else:
+        balance_text = "üretim ve tüketim birbirine çok yakın görünüyor"
+
+    return (
+        f"{year_text} üretim {_format_tr_number(supply, 0)} ton, tüketim {_format_tr_number(demand, 0)} ton. "
+        f"Üretim/tüketim oranı %{_format_tr_number(coverage_ratio_pct, 1)}; {balance_text}. "
+        "Bu kesin fiyat yorumu değil, ülke geneli arz-talep sinyalidir."
+    )
 
 
 
@@ -537,8 +620,8 @@ def _build_supply_demand_payload(balance_row: dict | None) -> dict[str, object]:
         return {
             "score": 50.0,
             "status": "Veri sınırlı",
-            "summary": "Arz-talep dengesi için yeterli üretim ve tüketim verisi bulunamadı.",
-            "note": "Tüketim veya üretim tahmini eksik olduğu için denge yorumu oluşturulamadı.",
+            "summary": "Türkiye geneli üretim-tüketim sinyali için yeterli veri bulunamadı.",
+            "note": _market_note_for_status("Veri sınırlı"),
             "coverageRatioPct": None,
             "balanceTon": None,
             "balancePct": None,
@@ -561,8 +644,8 @@ def _build_supply_demand_payload(balance_row: dict | None) -> dict[str, object]:
         return {
             "score": 50.0,
             "status": "Veri sınırlı",
-            "summary": "Arz-talep dengesi için yeterli üretim ve tüketim verisi bulunamadı.",
-            "note": "Tüketim veya üretim tahmini eksik olduğu için denge yorumu oluşturulamadı.",
+            "summary": "Türkiye geneli üretim-tüketim sinyali için yeterli veri bulunamadı.",
+            "note": _market_note_for_status("Veri sınırlı"),
             "coverageRatioPct": None,
             "balanceTon": None,
             "balancePct": None,
@@ -583,28 +666,24 @@ def _build_supply_demand_payload(balance_row: dict | None) -> dict[str, object]:
 
     if coverage_ratio < 0.95:
         status = "Arz açığı"
-        note = "Talep üretimi aşıyor; iç piyasada açık ve ithalat baskısı görülebilir."
+        note = _market_note_for_status(status)
         tone = "warning"
         base_score = 100 - ((1 - coverage_ratio) * 95)
     elif coverage_ratio <= 1.05:
         status = "Dengeli"
-        note = "Üretim ve tüketim birbirine yakın; aşırı arz kaynaklı fiyat baskısı daha sınırlı olabilir."
+        note = _market_note_for_status(status)
         tone = "balanced"
         base_score = 96 - (abs(coverage_ratio - 1) * 40)
     else:
         status = "Üretim fazlası"
-        note = "Üretim talebi aşıyor; fiyat baskısı, stok yükü ve fazla arz riski oluşabilir."
+        note = _market_note_for_status(status)
         tone = "risk"
         base_score = 100 - ((coverage_ratio - 1) * 150)
 
     growth_bonus = _clamp((demand_growth_pct or 0) * 0.18, -6, 6) if demand_growth_pct is not None else 0
     score = round(_clamp(base_score + growth_bonus, 5, 100), 1)
 
-    year_prefix = f"{forecast_year} Türkiye görünümünde" if forecast_year else "Türkiye görünümünde"
-    summary = (
-        f"{year_prefix} tahmini üretim {supply:,.0f} ton, tahmini tüketim {demand:,.0f} ton. "
-        f"Karşılama oranı %{coverage_ratio_pct:.1f}; ürün {status.lower()} görünümünde."
-    )
+    summary = _build_market_summary(forecast_year, supply, demand, coverage_ratio_pct, balance_ton)
 
     return {
         "score": score,
@@ -643,13 +722,13 @@ def _build_confidence_payload(city_name: str | None, product_name: str | None, h
     local_success = _safe_int(local_stats.get("success_count"), 0) or 0
 
     prior_stats = global_stats
-    prior_level = "Ürün + tahmin ufku"
+    prior_level = "Seçilen ürün kayıtları"
     prior_sample = global_sample
     prior_rate = global_rate if global_rate is not None else 0.45
 
     if product_sample >= 20 and product_rate is not None:
         prior_stats = product_stats
-        prior_level = "Ürün + tahmin ufku"
+        prior_level = "Seçilen ürün kayıtları"
         prior_sample = product_sample
         prior_rate = product_rate
 
@@ -661,13 +740,13 @@ def _build_confidence_payload(city_name: str | None, product_name: str | None, h
     label = _confidence_label(score)
 
     if local_sample >= 3:
-        calibration_level = "Şehir + ürün + tahmin ufku"
+        calibration_level = "Seçilen şehir ve ürün kayıtları"
     elif local_sample > 0 and prior_sample:
-        calibration_level = "Şehir örneklemi sınırlı, üst düzey seri ile kalibre edildi"
+        calibration_level = "Yerel kayıt az, daha geniş ürün kayıtlarıyla desteklendi"
     elif product_sample >= 20:
-        calibration_level = "Ürün + tahmin ufku"
+        calibration_level = "Seçilen ürün kayıtları"
     else:
-        calibration_level = "Tahmin ufku geneli"
+        calibration_level = "Genel test kayıtları"
 
     observed_source = local_stats if local_sample > 0 else (product_stats if product_sample > 0 else global_stats)
     observed_coverage_pct = _safe_float(observed_source.get("success_rate"), posterior_rate)
@@ -697,26 +776,26 @@ def _build_confidence_payload(city_name: str | None, product_name: str | None, h
     if local_sample > 0:
         if local_sample < 6 and prior_sample:
             summary = (
-                f"{_format_horizon_label(effective_horizon)} için şehir ve ürün kırılımında {local_sample} benzer senaryo bulundu. "
-                f"Örneklem sınırlı olduğu için sonuç, {prior_level.lower()} düzeyindeki {prior_sample} senaryonun walk-forward başarı oranı ile dengelenerek %{score:.1f} olarak kalibre edildi."
+                f"{_format_horizon_label(effective_horizon)} için {local_sample} benzer yerel kayıt bulundu. "
+                f"Yerel kayıt sınırlı olduğu için güven göstergesi, {prior_level.lower()} içindeki {prior_sample} geçmiş test kaydıyla desteklenerek %{score:.1f} hesaplandı."
             )
         else:
             summary = (
-                f"{_format_horizon_label(effective_horizon)} için şehir ve ürün kırılımındaki {local_sample} benzer walk-forward senaryosuna göre "
-                f"önerinin başarı olasılığı %{score:.1f} hesaplandı."
+                f"{_format_horizon_label(effective_horizon)} için {local_sample} benzer yerel kayıt incelendi. "
+                f"Modelin üretimi kendi beklenen aralığında yakalama göstergesi %{score:.1f} olarak hesaplandı."
             )
     elif product_sample >= 20:
         summary = (
-            f"Şehir kırılımında yeterli örnek bulunmadığı için {prior_level.lower()} düzeyindeki {product_sample} walk-forward senaryosu kullanılarak "
-            f"başarı olasılığı %{score:.1f} hesaplandı."
+            f"Seçilen şehir için yeterli yerel kayıt bulunmadığı için {prior_level.lower()} içindeki {product_sample} geçmiş test kaydı kullanıldı. "
+            f"Model güven göstergesi %{score:.1f} olarak hesaplandı."
         )
     elif global_sample:
         summary = (
-            f"Seçilen ürün için ayrıntılı kalibrasyon verisi sınırlı olduğu için {_format_horizon_label(effective_horizon)} genelindeki {global_sample} walk-forward senaryosu referans alındı. "
-            f"Öneri başarı olasılığı %{score:.1f} hesaplandı."
+            f"Seçilen ürün için ayrıntılı kayıt sınırlı olduğu için {_format_horizon_label(effective_horizon)} genelindeki {global_sample} geçmiş test kaydı referans alındı. "
+            f"Model güven göstergesi %{score:.1f} olarak hesaplandı."
         )
     else:
-        summary = "Walk-forward kalibrasyon verisi bulunamadığı için genel model görünümü kullanıldı."
+        summary = "Geçmiş test kaydı bulunamadığı için genel model görünümü kullanıldı."
 
     smape = _safe_float((metric_row or {}).get("avg_smape_pct"), None)
     wape = _safe_float((metric_row or {}).get("avg_wape_pct"), None)
@@ -725,8 +804,8 @@ def _build_confidence_payload(city_name: str | None, product_name: str | None, h
         "score": score,
         "label": label,
         "summary": summary,
-        "method": "Walk-forward doğrulama sonuçlarının ampirik Bayes kalibrasyonu",
-        "successDefinition": "Başarılı senaryo, gerçek üretimin modelin walk-forward kalibrasyon bandı içinde kalması olarak tanımlanır.",
+        "method": "Geçmiş tahmin testlerine göre güven göstergesi",
+        "successDefinition": "Buradaki başarı, gerçek üretimin modelin beklediği alt-üst aralık içinde kalmasıdır; gelir, fiyat veya kesin hasat garantisi değildir.",
         "calibrationLevel": calibration_level,
         "horizon": effective_horizon,
         "horizonLabel": _format_horizon_label(effective_horizon),
@@ -879,6 +958,15 @@ def _serialize_analysis_response(analysis: dict, recommendations: list[dict], tr
     supply_demand = analysis.get("supply_demand") or {}
     yield_context = analysis.get("yield_context") or {}
     score = _safe_float(analysis.get("score"), 0) or 0
+    summary = _build_farmer_plan_summary(
+        selected_crop_name,
+        analysis.get("city") or analysis.get("field_city"),
+        analysis.get("forecast_year"),
+        score,
+        _safe_float(analysis.get("planned_area_decare"), None),
+        _safe_float(analysis.get("expected_production_ton"), None),
+        fallback=analysis.get("summary"),
+    )
 
     default_confidence = {
         "score": round(_safe_float(analysis.get("confidence_score"), 0) or 0, 1),
@@ -892,7 +980,7 @@ def _serialize_analysis_response(analysis: dict, recommendations: list[dict], tr
         "analyzedAt": analysis.get("analyzed_at").isoformat() if analysis.get("analyzed_at") else None,
         "score": round(score, 1),
         "confidence": response_confidence,
-        "summary": analysis.get("summary"),
+        "summary": summary,
         "climateComment": analysis.get("climate_comment"),
         "marketComment": analysis.get("market_comment"),
         "scoreBreakdown": _parse_score_breakdown(analysis.get("score_breakdown")),
@@ -1020,15 +1108,27 @@ def _normalize_field_payload(payload: FieldUpsertRequest, user: dict) -> dict[st
         raise HTTPException(status_code=400, detail="Tarla adı boş bırakılamaz.")
     if payload.areaDecare <= 0:
         raise HTTPException(status_code=400, detail="Tarla büyüklüğü sıfırdan büyük olmalıdır.")
+
+    city = (payload.city or user.get("city") or "").strip() or None
+    district = (payload.district or user.get("district") or "").strip() or None
+    latitude = payload.latitude
+    longitude = payload.longitude
+
+    if city and (latitude is None or longitude is None):
+        location = get_geo_location(city, district) or (get_geo_location(city, None) if district else None)
+        if location:
+            latitude = latitude if latitude is not None else float(location["latitude"])
+            longitude = longitude if longitude is not None else float(location["longitude"])
+
     return {
         "name": payload.name.strip(),
-        "city": (payload.city or user.get("city") or "").strip() or None,
-        "district": (payload.district or user.get("district") or "").strip() or None,
+        "city": city,
+        "district": district,
         "region_code": (payload.regionCode or "").strip() or None,
         "area_decare": payload.areaDecare,
         "soil_type": (payload.soilType or "").strip() or None,
-        "latitude": payload.latitude,
-        "longitude": payload.longitude,
+        "latitude": latitude,
+        "longitude": longitude,
         "notes": (payload.notes or "").strip() or None,
     }
 
@@ -1176,14 +1276,28 @@ def get_location_options(user=Depends(require_current_user)):
             district_key_maps[city_value].add(district_key)
             districts_by_city[city_value].append(district_value)
 
+    coordinates_by_location: dict[str, dict[str, dict[str, float]]] = {}
+
+    def add_coordinates(row: dict) -> None:
+        city_value = add_city(row.get("city_name"))
+        if not city_value or row.get("latitude") is None or row.get("longitude") is None:
+            return
+        district_value = (row.get("district_name") or "").strip()
+        coordinates_by_location.setdefault(city_value, {})[district_value] = {
+            "latitude": float(row["latitude"]),
+            "longitude": float(row["longitude"]),
+        }
+
     for row in rows:
         add_district(row.get("city_name"), row.get("district_name"))
+        add_coordinates(row)
 
     add_district(user.get("city"), user.get("district"))
 
     return {
         "cities": cities,
         "districtsByCity": districts_by_city,
+        "coordinatesByLocation": coordinates_by_location,
         "profile": {
             "city": user.get("city"),
             "district": user.get("district"),
@@ -1452,9 +1566,9 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
                 reason_parts.append(
                     f"{city_name} için geçmiş ortalama verim {item['expected_yield_kg_decare']:.1f} kg/dekar"
                 )
-        reason_parts.append(f"{forecast_year} model projeksiyonu {item['predicted_production_ton']:,.0f} ton seviyesinde")
+        reason_parts.append(f"{forecast_year} model üretim tahmini {item['predicted_production_ton']:,.0f} ton seviyesinde")
         if supply_demand.get("status") and supply_demand.get("status") != "Veri sınırlı":
-            reason_parts.append(f"Türkiye arz-talep görünümü {supply_demand['status'].lower()} seviyesinde")
+            reason_parts.append(f"Türkiye piyasa sinyali {supply_demand['status'].lower()} olarak görünüyor")
 
         item.update(
             {
@@ -1486,11 +1600,13 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
         {"key": "climate", "label": _score_breakdown_label("climate"), "value": selected_item["climate_score"], "weight": score_weight_percents["climate"]},
     ]
 
-    summary = (
-        f"{focus_crop}, {city_name} için {forecast_year} projeksiyonunda %{int(round(selected_item['total_score']))} plan uygunluk skoru aldı. "
-        f"Seçilen {planned_area:.0f} dönüm alanda yaklaşık {selected_item['estimated_production_ton']:.1f} ton üretim potansiyeli öngörülüyor."
-        if selected_item.get("estimated_production_ton") is not None
-        else f"{focus_crop}, {city_name} için {forecast_year} projeksiyonunda %{int(round(selected_item['total_score']))} plan uygunluk skoru aldı."
+    summary = _build_farmer_plan_summary(
+        focus_crop,
+        city_name,
+        forecast_year,
+        selected_item["total_score"],
+        planned_area,
+        selected_item.get("estimated_production_ton"),
     )
     climate_comment = (
         f"Son 12 aylık iklim görünümünde ortalama sıcaklık {latest_temp:.1f}°C, yağış {latest_rainfall:.1f} mm ve toprak nemi %{latest_soil:.1f}. "
@@ -1540,7 +1656,7 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
                 "expected_yield_kg_decare": item.get("expected_yield_kg_decare"),
                 "expected_production_ton": item.get("estimated_production_ton"),
                 "reason": (
-                    f"{city_name} için geçmiş verim, iklim dayanıklılığı ve {forecast_year} model projeksiyonu birlikte değerlendirildiğinde güçlü bir alternatif görünüyor."
+                    f"{city_name} için geçmiş verim, iklim dayanıklılığı ve {forecast_year} model üretim tahmini birlikte değerlendirildiğinde dengeli bir alternatif görünüyor."
                 ),
             }
         )
@@ -1678,7 +1794,7 @@ def get_regional_analysis(city: str | None = None, historyRange: str = "5Y", use
                 "name": item["product_name"],
                 "forecastYear": item.get("forecast_year"),
                 "predictedProductionTon": round(float(item["predicted_production_ton"])) if item.get("predicted_production_ton") is not None else None,
-                "reason": f"{city_name} için {item.get('forecast_year')} projeksiyonunda yüksek üretim potansiyeli gösteriyor.",
+                "reason": f"{city_name} için {item.get('forecast_year')} tahmininde güçlü üretim potansiyeli gösteriyor.",
             }
             for item in recommended_crops
         ],

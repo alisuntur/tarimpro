@@ -191,6 +191,75 @@
     border-bottom: 1px solid rgba(0, 0, 0, 0.05);
 }
 
+.theme-settings-panel {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 8px;
+    background-color: var(--color-bg-soft);
+}
+
+.theme-settings-panel h3 {
+    margin: 0 0 0.25rem;
+    color: var(--color-text-main);
+    font-size: 1rem;
+}
+
+.theme-settings-panel p {
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.theme-choice-group {
+    display: inline-flex;
+    gap: 0.5rem;
+    padding: 0.35rem;
+    border: 1px solid var(--color-border-subtle);
+    border-radius: 8px;
+    background-color: var(--color-bg-card);
+}
+
+.theme-choice-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    padding: 0.6rem 0.85rem;
+    border-radius: 8px;
+    background-color: transparent;
+    color: var(--color-text-muted);
+    font-weight: 800;
+}
+
+.theme-choice-btn:hover {
+    background-color: var(--color-hover-surface);
+    color: var(--color-text-main);
+}
+
+.theme-choice-btn.active {
+    background-color: var(--color-accent);
+    color: var(--color-on-accent);
+}
+
+@media (max-width: 700px) {
+    .theme-settings-panel {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .theme-choice-group {
+        width: 100%;
+    }
+
+    .theme-choice-btn {
+        flex: 1;
+        justify-content: center;
+    }
+}
+
 /* Personal Info Grid */
 .info-grid {
     display: grid;
@@ -248,6 +317,64 @@
 .field-info p {
     margin: 0;
     font-size: 0.85rem;
+}
+
+.soil-type-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.soil-type-field input {
+    padding-right: 2.75rem !important;
+}
+
+.field-readonly-input {
+    background-color: var(--color-bg-soft) !important;
+    color: var(--color-text-muted) !important;
+    cursor: not-allowed;
+}
+
+.soil-info-button {
+    position: absolute;
+    right: 0.55rem;
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--color-hover-surface);
+    color: var(--color-accent);
+    border: 1px solid var(--color-border-subtle);
+}
+
+.soil-info-tooltip {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 0.6rem);
+    width: min(280px, 70vw);
+    padding: 0.75rem 0.85rem;
+    border-radius: 8px;
+    background-color: var(--color-bg-card);
+    color: var(--color-text-main);
+    border: 1px solid var(--color-border-strong);
+    box-shadow: var(--shadow-xl);
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.45;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px);
+    transition: opacity var(--transition-fast), transform var(--transition-fast);
+    z-index: 20;
+}
+
+.soil-info-button:hover .soil-info-tooltip,
+.soil-info-button:focus-visible .soil-info-tooltip {
+    opacity: 1;
+    transform: translateY(0);
 }
 
 /* Modal Overlay */

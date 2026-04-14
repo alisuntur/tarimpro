@@ -763,28 +763,39 @@ def list_location_options():
                 """
                 WITH candidates AS (
                     SELECT city_name::varchar(100) AS city_name,
-                           NULL::varchar(100) AS district_name
+                           NULL::varchar(100) AS district_name,
+                           NULL::numeric(9, 6) AS latitude,
+                           NULL::numeric(9, 6) AS longitude
                     FROM analytics.cities
-                    UNION
+                    UNION ALL
                     SELECT city_name::varchar(100) AS city_name,
-                           district_name::varchar(100) AS district_name
+                           district_name::varchar(100) AS district_name,
+                           latitude,
+                           longitude
                     FROM analytics.geo_locations
-                    UNION
+                    UNION ALL
                     SELECT city::varchar(100) AS city_name,
-                           district::varchar(100) AS district_name
+                           district::varchar(100) AS district_name,
+                           NULL::numeric(9, 6) AS latitude,
+                           NULL::numeric(9, 6) AS longitude
                     FROM app.users
                     WHERE city IS NOT NULL
-                    UNION
+                    UNION ALL
                     SELECT city::varchar(100) AS city_name,
-                           district::varchar(100) AS district_name
+                           district::varchar(100) AS district_name,
+                           latitude,
+                           longitude
                     FROM app.fields
                     WHERE city IS NOT NULL
                 )
                 SELECT DISTINCT btrim(city_name) AS city_name,
-                       NULLIF(btrim(district_name), '') AS district_name
+                       NULLIF(btrim(district_name), '') AS district_name,
+                       MAX(latitude) FILTER (WHERE latitude IS NOT NULL) AS latitude,
+                       MAX(longitude) FILTER (WHERE longitude IS NOT NULL) AS longitude
                 FROM candidates
                 WHERE city_name IS NOT NULL
                   AND btrim(city_name) <> ''
+                GROUP BY btrim(city_name), NULLIF(btrim(district_name), '')
                 ORDER BY city_name ASC, district_name ASC NULLS FIRST
                 """
             )

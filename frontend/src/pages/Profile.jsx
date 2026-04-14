@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
     User,
@@ -10,9 +10,13 @@ import {
     Pencil,
     Trash2,
     Plus,
+    Sun,
+    Moon,
+    Info,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import './Profile.css';
 import './Settings.css';
 
@@ -20,7 +24,6 @@ const emptyFieldForm = {
     name: '',
     city: '',
     district: '',
-    regionCode: '',
     areaDecare: '',
     soilType: '',
     latitude: '',
@@ -30,10 +33,36 @@ const emptyFieldForm = {
 
 const inputStyle = {
     width: '100%',
-    borderRadius: '12px',
-    border: '1px solid #d1d5db',
+    borderRadius: '8px',
+    border: '1px solid var(--color-border-strong)',
+    backgroundColor: 'var(--color-bg-card)',
+    color: 'var(--color-text-main)',
     padding: '0.75rem 0.9rem',
     fontSize: '0.95rem',
+};
+
+const emptyLocationOptions = {
+    cities: [],
+    districtsByCity: {},
+    coordinatesByLocation: {},
+};
+
+const locationOptionKey = (value) => (
+    String(value || '')
+        .trim()
+        .toLocaleLowerCase('tr-TR')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ı/g, 'i')
+        .replace(/\s+/g, ' ')
+);
+
+const addUnique = (items, value) => {
+    if (!value) return;
+    const valueKey = locationOptionKey(value);
+    if (!items.some((item) => locationOptionKey(item) === valueKey)) {
+        items.push(value);
+    }
 };
 
 const formGridStyle = {
@@ -51,6 +80,8 @@ const Profile = () => {
     const [reportsLoading, setReportsLoading] = useState(false);
     const [fieldsLoaded, setFieldsLoaded] = useState(false);
     const [reportsLoaded, setReportsLoaded] = useState(false);
+    const [locationsLoaded, setLocationsLoaded] = useState(false);
+    const [locationOptions, setLocationOptions] = useState(emptyLocationOptions);
     const [error, setError] = useState('');
     const [profileForm, setProfileForm] = useState({ fullName: '', phone: '', email: '', city: '', district: '' });
     const [savingProfile, setSavingProfile] = useState(false);
@@ -61,6 +92,7 @@ const Profile = () => {
     const navigate = useNavigate();
     const location = useLocation();
     const { user: authUser, logout, refreshSession } = useAuth();
+    const { theme, setTheme } = useTheme();
 
     useEffect(() => {
         if (location.state?.onboarding) {
@@ -95,6 +127,21 @@ const Profile = () => {
             setFieldsLoaded(true);
         } finally {
             setFieldsLoading(false);
+        }
+    }, []);
+
+    const loadLocationOptions = useCallback(async () => {
+        try {
+            const payload = await apiFetch('/api/locations/options');
+            setLocationOptions({
+                cities: payload.cities || [],
+                districtsByCity: payload.districtsByCity || {},
+                coordinatesByLocation: payload.coordinatesByLocation || {},
+            });
+        } catch (err) {
+            setFieldError(err.message || 'İl ve ilçe seçenekleri yüklenemedi.');
+        } finally {
+            setLocationsLoaded(true);
         }
     }, []);
 
@@ -138,10 +185,13 @@ const Profile = () => {
         if (activeTab === 'fields' && !fieldsLoaded && !fieldsLoading) {
             loadFields();
         }
+        if (activeTab === 'fields' && !locationsLoaded) {
+            loadLocationOptions();
+        }
         if (activeTab === 'reports' && !reportsLoaded && !reportsLoading) {
             loadReports();
         }
-    }, [activeTab, fieldsLoaded, fieldsLoading, loadFields, loadReports, reportsLoaded, reportsLoading]);
+    }, [activeTab, fieldsLoaded, fieldsLoading, loadFields, loadLocationOptions, loadReports, locationsLoaded, reportsLoaded, reportsLoading]);
 
     const handleLogout = async () => {
         await logout();
@@ -213,7 +263,6 @@ const Profile = () => {
             name: field.name || '',
             city: field.city || '',
             district: field.district || '',
-            regionCode: field.regionCode || '',
             areaDecare: field.size ?? '',
             soilType: field.soilType || '',
             latitude: field.latitude ?? '',
@@ -246,6 +295,48 @@ const Profile = () => {
     };
     const fields = profile?.fields || [];
     const reports = profile?.reports || [];
+    const cityOptions = useMemo(() => {
+        const options = [];
+        (locationOptions.cities || []).forEach((city) => addUnique(options, city));
+        addUnique(options, user?.city);
+        addUnique(options, fieldForm.city);
+        return options;
+    }, [fieldForm.city, locationOptions.cities, user?.city]);
+    const districtOptions = useMemo(() => {
+        const options = [];
+        (locationOptions.districtsByCity[fieldForm.city] || []).forEach((district) => addUnique(options, district));
+        addUnique(options, user?.city === fieldForm.city ? user?.district : '');
+        addUnique(options, fieldForm.district);
+        return options;
+    }, [fieldForm.city, fieldForm.district, locationOptions.districtsByCity, user?.city, user?.district]);
+    const getCoordinatesForLocation = useCallback((city, district) => {
+        const cityCoordinates = locationOptions.coordinatesByLocation?.[city] || {};
+        return cityCoordinates[district || ''] || cityCoordinates[''] || null;
+    }, [locationOptions.coordinatesByLocation]);
+    const resolveCoordinateFields = useCallback((city, district) => {
+        const coordinates = getCoordinatesForLocation(city, district);
+        return {
+            latitude: coordinates?.latitude ?? '',
+            longitude: coordinates?.longitude ?? '',
+        };
+    }, [getCoordinatesForLocation]);
+    const handleFieldCityChange = (event) => {
+        const city = event.target.value;
+        setFieldForm((prev) => ({
+            ...prev,
+            city,
+            district: '',
+            ...resolveCoordinateFields(city, ''),
+        }));
+    };
+    const handleFieldDistrictChange = (event) => {
+        const district = event.target.value;
+        setFieldForm((prev) => ({
+            ...prev,
+            district,
+            ...resolveCoordinateFields(prev.city, district),
+        }));
+    };
 
     return (
         <div className="profile-container animate-fade-in">
@@ -338,13 +429,30 @@ const Profile = () => {
                             <form onSubmit={handleFieldSubmit} style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem' }}>
                                 <div style={formGridStyle}>
                                     <input style={inputStyle} placeholder="Tarla adı" value={fieldForm.name} onChange={(e) => setFieldForm((prev) => ({ ...prev, name: e.target.value }))} />
-                                    <input style={inputStyle} placeholder="İl" value={fieldForm.city} onChange={(e) => setFieldForm((prev) => ({ ...prev, city: e.target.value }))} />
-                                    <input style={inputStyle} placeholder="İlçe" value={fieldForm.district} onChange={(e) => setFieldForm((prev) => ({ ...prev, district: e.target.value }))} />
-                                    <input style={inputStyle} placeholder="Bölge kodu" value={fieldForm.regionCode} onChange={(e) => setFieldForm((prev) => ({ ...prev, regionCode: e.target.value }))} />
+                                    <select style={inputStyle} value={fieldForm.city} onChange={handleFieldCityChange}>
+                                        <option value="">İl seçin</option>
+                                        {cityOptions.map((city) => (
+                                            <option key={city} value={city}>{city}</option>
+                                        ))}
+                                    </select>
+                                    <select style={inputStyle} value={fieldForm.district} onChange={handleFieldDistrictChange} disabled={!fieldForm.city || districtOptions.length === 0}>
+                                        <option value="">İlçe seçin</option>
+                                        {districtOptions.map((district) => (
+                                            <option key={district} value={district}>{district}</option>
+                                        ))}
+                                    </select>
                                     <input style={inputStyle} type="number" min="0.1" step="0.1" placeholder="Dönüm" value={fieldForm.areaDecare} onChange={(e) => setFieldForm((prev) => ({ ...prev, areaDecare: e.target.value }))} />
-                                    <input style={inputStyle} placeholder="Toprak tipi" value={fieldForm.soilType} onChange={(e) => setFieldForm((prev) => ({ ...prev, soilType: e.target.value }))} />
-                                    <input style={inputStyle} type="number" step="0.000001" placeholder="Enlem" value={fieldForm.latitude} onChange={(e) => setFieldForm((prev) => ({ ...prev, latitude: e.target.value }))} />
-                                    <input style={inputStyle} type="number" step="0.000001" placeholder="Boylam" value={fieldForm.longitude} onChange={(e) => setFieldForm((prev) => ({ ...prev, longitude: e.target.value }))} />
+                                    <div className="soil-type-field">
+                                        <input className="field-readonly-input" style={inputStyle} placeholder="Toprak tipi" value={fieldForm.soilType || ''} readOnly />
+                                        <button className="soil-info-button" type="button" aria-label="Toprak tipi bilgisi">
+                                            <Info size={16} />
+                                            <span className="soil-info-tooltip" role="tooltip">
+                                                Toprak tipi şu an modelde kullanılmıyor. Bu alan ileride eklenecek özellik için şimdilik değiştirilemez bırakıldı.
+                                            </span>
+                                        </button>
+                                    </div>
+                                    <input className="field-readonly-input" style={inputStyle} type="number" step="0.000001" placeholder="Enlem otomatik gelir" value={fieldForm.latitude} readOnly />
+                                    <input className="field-readonly-input" style={inputStyle} type="number" step="0.000001" placeholder="Boylam otomatik gelir" value={fieldForm.longitude} readOnly />
                                 </div>
                                 <textarea style={{ ...inputStyle, minHeight: '90px', resize: 'vertical' }} placeholder="Notlar" value={fieldForm.notes} onChange={(e) => setFieldForm((prev) => ({ ...prev, notes: e.target.value }))} />
                                 {fieldError && <p style={{ color: '#b91c1c', margin: 0 }}>{fieldError}</p>}
@@ -433,6 +541,32 @@ const Profile = () => {
                     {activeTab === 'settings' && (
                         <div className="tab-pane animate-fade-in">
                             <h2 className="tab-title">Sistem Ayarları</h2>
+                            <div className="theme-settings-panel">
+                                <div>
+                                    <h3>Tema</h3>
+                                    <p className="text-muted">Seçiminiz tüm ekranlarda uygulanır ve sonraki girişinizde korunur.</p>
+                                </div>
+                                <div className="theme-choice-group" role="radiogroup" aria-label="Tema seçimi">
+                                    <button
+                                        type="button"
+                                        className={`theme-choice-btn ${theme === 'light' ? 'active' : ''}`}
+                                        aria-pressed={theme === 'light'}
+                                        onClick={() => setTheme('light')}
+                                    >
+                                        <Sun size={18} />
+                                        <span>Aydınlık</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`theme-choice-btn ${theme === 'dark' ? 'active' : ''}`}
+                                        aria-pressed={theme === 'dark'}
+                                        onClick={() => setTheme('dark')}
+                                    >
+                                        <Moon size={18} />
+                                        <span>Karanlık</span>
+                                    </button>
+                                </div>
+                            </div>
                             <form onSubmit={handleProfileSave} style={{ display: 'grid', gap: '1rem' }}>
                                 <div style={formGridStyle}>
                                     <input style={inputStyle} placeholder="Ad Soyad" value={profileForm.fullName} onChange={(e) => setProfileForm((prev) => ({ ...prev, fullName: e.target.value }))} />

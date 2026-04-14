@@ -26,3 +26,5 @@ docs/haftalik_sunum_interaktif.html
 docs/SPRINTLER_DETAYLI_ANALIZ.md
 ~$*.xlsx
 .runlogs/
+docs/tarimzeka_proje_raporu.html
+tools/generate_academic_article_docx.py

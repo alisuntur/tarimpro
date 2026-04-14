@@ -1,891 +1,1187 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>TarımZeka – Proje İlerleme Raporu</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --yesil: #1d4a33;
-      --yesil-acik: #2e6b4a;
-      --yesil-soft: #eef4f0;
-      --yesil-cizgi: #c5ddd0;
-      --sari: #b8860b;
-      --sari-soft: #fdf8ee;
-      --metin: #1a1a1a;
-      --metin-ikincil: #4a4a4a;
-      --metin-uc: #717171;
-      --sayfa-bg: #f7f5f0;
-      --beyaz: #ffffff;
-      --cizgi: #ddd8d0;
-    }
+  <!DOCTYPE html>
+  <html lang="tr">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TarımZeka – Proje İlerleme Raporu</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+      :root {
+        --yesil: #1d4a33;
+        --yesil-acik: #2e6b4a;
+        --yesil-soft: #eef4f0;
+        --yesil-cizgi: #c5ddd0;
+        --sari: #b8860b;
+        --sari-soft: #fdf8ee;
+        --metin: #1a1a1a;
+        --metin-ikincil: #4a4a4a;
+        --metin-uc: #717171;
+        --sayfa-bg: #f7f5f0;
+        --beyaz: #ffffff;
+        --cizgi: #ddd8d0;
+      }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; }
+      * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    body {
-      background: var(--sayfa-bg);
-      color: var(--metin);
-      font-family: 'Source Sans 3', sans-serif;
-      font-weight: 400;
-      font-size: 10.5pt;
-      line-height: 1.7;
-    }
+      body {
+        background: var(--sayfa-bg);
+        color: var(--metin);
+        font-family: 'Source Sans 3', sans-serif;
+        font-weight: 400;
+        font-size: 10.5pt;
+        line-height: 1.7;
+      }
 
-    /* ── SAYFA KABI ── */
-    .sayfa {
-      width: 210mm;
-      min-height: 297mm;
-      margin: 0 auto 20px;
-      padding: 18mm 18mm 16mm;
-      background: var(--beyaz);
-      box-shadow: 0 2px 20px rgba(0,0,0,0.07);
-      page-break-after: always;
-    }
-    .sayfa:last-child { page-break-after: auto; }
+      /* ── SAYFA KABI ── */
+      .sayfa {
+        width: 210mm;
+        height: 297mm;
+        min-height: 297mm;
+        margin: 0 auto 20px;
+        padding: 18mm 18mm 16mm;
+        background: var(--beyaz);
+        box-shadow: 0 2px 20px rgba(0,0,0,0.07);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        break-after: page;
+        page-break-after: always;
+      }
+      .sayfa:last-child {
+        break-after: auto;
+        page-break-after: auto;
+      }
+      .sayfa-icerik {
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+      }
 
-    /* ── TİPOGRAFİ ── */
-    h1 {
-      font-family: 'Libre Baskerville', Georgia, serif;
-      font-size: 24pt;
-      font-weight: 700;
-      color: var(--yesil);
-      line-height: 1.2;
-      letter-spacing: -0.02em;
-    }
-    h2 {
-      font-family: 'Libre Baskerville', Georgia, serif;
-      font-size: 15pt;
-      font-weight: 700;
-      color: var(--yesil);
-      margin-top: 28px;
-      margin-bottom: 10px;
-      padding-bottom: 7px;
-      border-bottom: 1.5px solid var(--yesil-cizgi);
-    }
-    h3 {
-      font-family: 'Source Sans 3', sans-serif;
-      font-size: 11pt;
-      font-weight: 600;
-      color: var(--yesil);
-      margin-top: 18px;
-      margin-bottom: 7px;
-    }
-    h4 {
-      font-family: 'Source Sans 3', sans-serif;
-      font-size: 10pt;
-      font-weight: 600;
-      color: var(--metin);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-top: 14px;
-      margin-bottom: 5px;
-    }
-    p { margin-bottom: 10px; text-align: justify; }
-    ul, ol { padding-left: 20px; margin: 8px 0 12px; }
-    li { margin-bottom: 5px; }
-    code {
-      font-family: 'Courier New', monospace;
-      font-size: 9pt;
-      background: #f0efeb;
-      padding: 1px 5px;
-      border-radius: 3px;
-      color: var(--yesil);
-    }
+      /* ── TİPOGRAFİ ── */
+      h1 {
+        font-family: 'Libre Baskerville', Georgia, serif;
+        font-size: 24pt;
+        font-weight: 700;
+        color: var(--yesil);
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+      }
+      h2 {
+        font-family: 'Libre Baskerville', Georgia, serif;
+        font-size: 15pt;
+        font-weight: 700;
+        color: var(--yesil);
+        margin-top: 28px;
+        margin-bottom: 10px;
+        padding-bottom: 7px;
+        border-bottom: 1.5px solid var(--yesil-cizgi);
+      }
+      h3 {
+        font-family: 'Source Sans 3', sans-serif;
+        font-size: 11pt;
+        font-weight: 600;
+        color: var(--yesil);
+        margin-top: 18px;
+        margin-bottom: 7px;
+      }
+      h4 {
+        font-family: 'Source Sans 3', sans-serif;
+        font-size: 10pt;
+        font-weight: 600;
+        color: var(--metin);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-top: 14px;
+        margin-bottom: 5px;
+      }
+      p { margin-bottom: 10px; text-align: justify; }
+      ul, ol { padding-left: 20px; margin: 8px 0 12px; }
+      li { margin-bottom: 5px; }
+      code {
+        font-family: 'Courier New', monospace;
+        font-size: 9pt;
+        background: #f0efeb;
+        padding: 1px 5px;
+        border-radius: 3px;
+        color: var(--yesil);
+      }
 
-    /* ── KAPAK SAYFASI ── */
-    .kapak-ust {
-      display: flex;
-      align-items: flex-start;
-      justify-content: space-between;
-      margin-bottom: 30px;
-      padding-bottom: 20px;
-      border-bottom: 2px solid var(--yesil);
-    }
-    .kapak-baslik { flex: 1; }
-    .kapak-meta {
-      text-align: right;
-      font-size: 9pt;
-      color: var(--metin-uc);
-      line-height: 1.9;
-    }
-    .kapak-meta strong { color: var(--metin-ikincil); font-weight: 600; }
+      /* ── KAPAK SAYFASI ── */
+      .kapak-ust {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid var(--yesil);
+      }
+      .kapak-baslik { flex: 1; }
+      .kapak-meta {
+        text-align: right;
+        font-size: 9pt;
+        color: var(--metin-uc);
+        line-height: 1.9;
+      }
+      .kapak-meta strong { color: var(--metin-ikincil); font-weight: 600; }
 
-    .ozet-kutu {
-      background: var(--yesil-soft);
-      border-left: 3.5px solid var(--yesil);
-      padding: 16px 18px;
-      margin: 20px 0;
-      border-radius: 0 4px 4px 0;
-    }
-    .ozet-kutu p { margin-bottom: 0; text-align: left; font-size: 10.5pt; }
+      .ozet-kutu {
+        background: var(--yesil-soft);
+        border-left: 3.5px solid var(--yesil);
+        padding: 16px 18px;
+        margin: 20px 0;
+        border-radius: 0 4px 4px 0;
+      }
+      .ozet-kutu p { margin-bottom: 0; text-align: left; font-size: 10.5pt; }
 
-    /* ── METRİK KARTLAR ── */
-    .metrik-sira {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 10px;
-      margin: 16px 0;
-    }
-    .metrik-kart {
-      border: 1px solid var(--yesil-cizgi);
-      border-top: 3px solid var(--yesil);
-      padding: 12px 10px;
-      text-align: center;
-      background: var(--beyaz);
-    }
-    .metrik-kart .deger {
-      display: block;
-      font-family: 'Libre Baskerville', serif;
-      font-size: 18pt;
-      font-weight: 700;
-      color: var(--yesil);
-      line-height: 1.1;
-      margin-bottom: 4px;
-    }
-    .metrik-kart .etiket {
-      font-size: 8.5pt;
-      color: var(--metin-uc);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      line-height: 1.3;
-    }
+      /* ── METRİK KARTLAR ── */
+      .metrik-sira {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
+        margin: 16px 0;
+      }
+      .metrik-kart {
+        border: 1px solid var(--yesil-cizgi);
+        border-top: 3px solid var(--yesil);
+        padding: 12px 10px;
+        text-align: center;
+        background: var(--beyaz);
+      }
+      .metrik-kart .deger {
+        display: block;
+        font-family: 'Libre Baskerville', serif;
+        font-size: 18pt;
+        font-weight: 700;
+        color: var(--yesil);
+        line-height: 1.1;
+        margin-bottom: 4px;
+      }
+      .metrik-kart .etiket {
+        font-size: 8.5pt;
+        color: var(--metin-uc);
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        line-height: 1.3;
+      }
 
-    /* ── SPRINT BAŞLIĞI ── */
-    .sprint-baslik {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-      margin-bottom: 14px;
-    }
-    .sprint-no {
-      width: 36px;
-      height: 36px;
-      background: var(--yesil);
-      color: #fff;
-      font-family: 'Libre Baskerville', serif;
-      font-size: 16pt;
-      font-weight: 700;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      border-radius: 2px;
-    }
-    .sprint-baslik h2 {
-      margin: 0;
-      border-bottom: none;
-      padding-bottom: 0;
-      font-size: 14pt;
-    }
-    .sprint-baslik .sprint-altyazi {
-      font-size: 9.5pt;
-      color: var(--metin-uc);
-      font-style: italic;
-      display: block;
-      margin-top: 1px;
-    }
+      /* ── SPRINT BAŞLIĞI ── */
+      .sprint-baslik {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 14px;
+      }
+      .sprint-no {
+        width: 36px;
+        height: 36px;
+        background: var(--yesil);
+        color: #fff;
+        font-family: 'Libre Baskerville', serif;
+        font-size: 16pt;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        border-radius: 2px;
+      }
+      .sprint-baslik h2 {
+        margin: 0;
+        border-bottom: none;
+        padding-bottom: 0;
+        font-size: 14pt;
+      }
+      .sprint-baslik .sprint-altyazi {
+        font-size: 9.5pt;
+        color: var(--metin-uc);
+        font-style: italic;
+        display: block;
+        margin-top: 1px;
+      }
 
-    /* ── TABLOLAR ── */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 10px 0 16px;
-      font-size: 9.5pt;
-    }
-    thead { background: var(--yesil-soft); }
-    th {
-      border: 1px solid var(--yesil-cizgi);
-      padding: 8px 10px;
-      text-align: left;
-      font-weight: 600;
-      color: var(--yesil);
-      text-transform: uppercase;
-      font-size: 8.5pt;
-      letter-spacing: 0.04em;
-    }
-    td {
-      border: 1px solid var(--cizgi);
-      padding: 7px 10px;
-      vertical-align: top;
-    }
-    tbody tr:nth-child(even) td { background: #fafaf8; }
+      /* ── TABLOLAR ── */
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 10px 0 16px;
+        font-size: 9.5pt;
+      }
+      thead { background: var(--yesil-soft); }
+      th {
+        border: 1px solid var(--yesil-cizgi);
+        padding: 8px 10px;
+        text-align: left;
+        font-weight: 600;
+        color: var(--yesil);
+        text-transform: uppercase;
+        font-size: 8.5pt;
+        letter-spacing: 0.04em;
+      }
+      td {
+        border: 1px solid var(--cizgi);
+        padding: 7px 10px;
+        vertical-align: top;
+      }
+      tbody tr:nth-child(even) td { background: #fafaf8; }
 
-    /* ── NOT/CALLOUT KUTULARI ── */
-    .not {
-      margin: 12px 0;
-      padding: 11px 14px;
-      border-left: 3px solid var(--sari);
-      background: var(--sari-soft);
-      font-size: 10pt;
-      border-radius: 0 3px 3px 0;
-    }
-    .not.yesil {
-      border-left-color: var(--yesil);
-      background: var(--yesil-soft);
-    }
-    .not p { margin-bottom: 0; text-align: left; }
+      /* ── NOT/CALLOUT KUTULARI ── */
+      .not {
+        margin: 12px 0;
+        padding: 11px 14px;
+        border-left: 3px solid var(--sari);
+        background: var(--sari-soft);
+        font-size: 10pt;
+        border-radius: 0 3px 3px 0;
+      }
+      .not.yesil {
+        border-left-color: var(--yesil);
+        background: var(--yesil-soft);
+      }
+      .not p { margin-bottom: 0; text-align: left; }
 
-    /* ── İKİ KOLON ── */
-    .iki-kolon {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      margin: 12px 0;
-    }
-    .iki-kolon .kutu {
-      border: 1px solid var(--cizgi);
-      padding: 13px 14px;
-      background: #fafaf8;
-    }
-    .iki-kolon .kutu h4 { margin-top: 0; }
+      /* ── İKİ KOLON ── */
+      .iki-kolon {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin: 12px 0;
+      }
+      .iki-kolon .kutu {
+        border: 1px solid var(--cizgi);
+        padding: 13px 14px;
+        background: #fafaf8;
+      }
+      .iki-kolon .kutu h4 { margin-top: 0; }
 
-    /* ── DOSYA SATIRI ── */
-    .dosya-listesi td:first-child { font-family: 'Courier New', monospace; font-size: 8.5pt; color: var(--yesil); }
+      /* ── DOSYA SATIRI ── */
+      .dosya-listesi td:first-child { font-family: 'Courier New', monospace; font-size: 8.5pt; color: var(--yesil); }
 
-    /* ── FORMÜL BLOĞU ── */
-    .formul {
-      font-family: 'Courier New', monospace;
-      font-size: 9.5pt;
-      background: #0f1f17;
-      color: #a8d8b8;
-      padding: 13px 16px;
-      border-radius: 4px;
-      margin: 10px 0 14px;
-      white-space: pre;
-      line-height: 1.6;
-    }
+      /* ── FORMÜL BLOĞU ── */
+      .formul {
+        font-family: 'Courier New', monospace;
+        font-size: 9.5pt;
+        background: #0f1f17;
+        color: #a8d8b8;
+        padding: 13px 16px;
+        border-radius: 4px;
+        margin: 10px 0 14px;
+        white-space: pre;
+        line-height: 1.6;
+      }
 
-    /* ── AYRAÇ ── */
-    .bolum-ayrac {
-      border: none;
-      border-top: 1px solid var(--cizgi);
-      margin: 22px 0;
-    }
+      /* ── AYRAÇ ── */
+      .bolum-ayrac {
+        border: none;
+        border-top: 1px solid var(--cizgi);
+        margin: 22px 0;
+      }
 
-    /* ── ALT BİLGİ ── */
-    .alt-bilgi {
-      margin-top: 20px;
-      padding-top: 10px;
-      border-top: 1px solid var(--cizgi);
-      font-size: 8.5pt;
-      color: var(--metin-uc);
-      display: flex;
-      justify-content: space-between;
-    }
+      /* ── ALT BİLGİ ── */
+      .alt-bilgi {
+        margin-top: auto;
+        padding-top: 10px;
+        border-top: 1px solid var(--cizgi);
+        font-size: 8.5pt;
+        color: var(--metin-uc);
+        display: flex;
+        flex: 0 0 auto;
+        justify-content: space-between;
+      }
 
-    /* ── İÇİNDEKİLER ── */
-    .icerik-tablosu { margin: 16px 0 0; }
-    .icerik-tablosu .ic-satir {
-      display: flex;
-      align-items: baseline;
-      margin-bottom: 6px;
-      font-size: 10pt;
-    }
-    .icerik-tablosu .ic-no {
-      min-width: 28px;
-      font-weight: 600;
-      color: var(--yesil);
-    }
-    .icerik-tablosu .ic-baslik { flex: 1; }
-    .icerik-tablosu .ic-nokta {
-      flex: 1;
-      border-bottom: 1px dotted var(--cizgi);
-      margin: 0 6px 3px;
-    }
-    .icerik-tablosu .ic-sayfa {
-      font-size: 9pt;
-      color: var(--metin-uc);
-    }
-    .icerik-tablosu .ic-alt {
-      padding-left: 28px;
-      font-size: 9.5pt;
-      color: var(--metin-ikincil);
-      margin-bottom: 4px;
-    }
+      /* ── İÇİNDEKİLER ── */
+      .icerik-tablosu { margin: 16px 0 0; }
+      .icerik-tablosu .ic-satir {
+        display: flex;
+        align-items: baseline;
+        margin-bottom: 6px;
+        font-size: 10pt;
+      }
+      .icerik-tablosu .ic-no {
+        min-width: 28px;
+        font-weight: 600;
+        color: var(--yesil);
+      }
+      .icerik-tablosu .ic-baslik { flex: 1; }
+      .icerik-tablosu .ic-nokta {
+        flex: 1;
+        border-bottom: 1px dotted var(--cizgi);
+        margin: 0 6px 3px;
+      }
+      .icerik-tablosu .ic-sayfa {
+        font-size: 9pt;
+        color: var(--metin-uc);
+      }
+      .icerik-tablosu .ic-alt {
+        padding-left: 28px;
+        font-size: 9.5pt;
+        color: var(--metin-ikincil);
+        margin-bottom: 4px;
+      }
 
-    @media print {
-      body { background: white; }
-      .sayfa { box-shadow: none; margin: 0; }
-    }
-  </style>
-</head>
-<body>
+      @page {
+        size: A4;
+        margin: 0;
+      }
 
-<!-- ═══════════════ SAYFA 1: KAPAK ═══════════════ -->
-<div class="sayfa">
+      @media print {
+        body { background: white; }
+        .sayfa {
+          box-shadow: none;
+          margin: 0;
+          height: 297mm;
+          min-height: 297mm;
+          break-after: page;
+          page-break-after: always;
+        }
+        .sayfa:last-child {
+          break-after: auto;
+          page-break-after: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
 
-  <div class="kapak-ust">
-    <div class="kapak-baslik">
-      <div style="font-size:8.5pt; text-transform:uppercase; letter-spacing:0.1em; color:var(--metin-uc); margin-bottom:10px;">Lisans Bitirme Projesi &mdash; İlerleme Raporu</div>
-      <h1>TarımZeka</h1>
-      <div style="font-family:'Libre Baskerville',serif; font-size:12pt; font-style:italic; color:var(--metin-ikincil); margin-top:6px; line-height:1.4;">
-        Tarımsal Üretim Kararlarına Yönelik<br>Veri Tabanlı Karar Destek Sistemi
+  
+  <!-- SAYFA 1 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<div class="kapak-ust">
+      <div class="kapak-baslik">
+        <div style="font-size:8.5pt; text-transform:uppercase; letter-spacing:0.1em; color:var(--metin-uc); margin-bottom:10px;">Lisans Bitirme Projesi &mdash; İlerleme Raporu</div>
+        <h1>TarımZeka</h1>
+        <div style="font-family:'Libre Baskerville',serif; font-size:12pt; font-style:italic; color:var(--metin-ikincil); margin-top:6px; line-height:1.4;">
+          Tarımsal Üretim Kararlarına Yönelik<br>Veri Tabanlı Karar Destek Sistemi
+        </div>
+      </div>
+      <div class="kapak-meta">
+        <strong>Tarih:</strong> 12 Nisan 2026<br>
+        <strong>Kapsam:</strong> Sprint 1 – Sprint 5 ve 12 Nisan güncellemeleri<br>
+        <strong>Durum:</strong> İlerleme Özeti<br>
+        <strong>Belge Türü:</strong> Proje İlerleme Raporu
       </div>
     </div>
-    <div class="kapak-meta">
-      <strong>Tarih:</strong> 11 Nisan 2026<br>
-      <strong>Kapsam:</strong> Sprint 1 – Sprint 4<br>
-      <strong>Durum:</strong> İlerleme Özeti<br>
-      <strong>Belge Türü:</strong> Proje İlerleme Raporu
+
+    <div class="ozet-kutu">
+      <p>Bu rapor, TarımZeka projesinde Sprint 1'den Sprint 5'e kadar yapılan çalışmaları ve 12 Nisan sonrasında tamamlanan ek güncellemeleri özetlemek için hazırlanmıştır. Her sprintte hangi geliştirmelerin yapıldığı, hangi teknik kararların alındığı ve sistemde hangi bölümlerin güncellendiği toplu şekilde sunulmuştur. Amaç, danışmana bu haftaya kadar tamamlanan işleri düzenli bir şekilde aktarmaktır.</p>
+    </div>
+
+    <h2>Projenin Kısa Tanımı</h2>
+    <p>TarımZeka, çiftçilerin il ve tarla büyüklüğü bazında hangi ürünü ekeceklerine karar verirken destek alabilecekleri bir web tabanlı karar destek platformudur. Sistem; tarihsel verim verilerini, iklim dayanıklılığı göstergelerini, tüketim eğilimlerini ve üretim tahminlerini bir araya getirerek kullanıcıya sıralanmış ürün önerileri üretmektedir.</p>
+    <p>Projenin teknik yığını Python tabanlı bir FastAPI arka yüzü, PostgreSQL veritabanı ve React ön yüzünden oluşmaktadır. Tüm üretim, tüketim ve iklim verileri <code>analytics</code> şeması altındaki tablolarda saklanmakta; kullanıcı, tarla ve plan verileri ise <code>app</code> şemasında yönetilmektedir.</p>
+
+    <h2>Başlangıç Durumu</h2>
+    <p>03.04.2026 saat 12:18'deki <code>a5063e2</code> commit'i, sprint geliştirmelerinin üzerine inşa edildiği mevcut TarımZeka/TarimPro prototipini repoya alma adımıdır. Bu commit bir sprint çıktısı değil, projenin o anki frontend ve backend dosyalarının başlangıç tabanı olarak kaydedilmesidir.</p>
+    <p>Bu aşamada React tabanlı kullanıcı arayüzü, FastAPI backend iskeleti, dashboard, plan sihirbazı, AI önerileri, iklim/pazar ve bölgesel analiz ekranları bulunuyordu. Ancak sistem henüz gerçek kullanıcı oturumu, kalıcı plan akışı, rapor geçmişi ve metodolojik olarak açıklanabilir skor motoru açısından tamamlanmış değildi. Bu nedenle sonraki sprintler, mevcut prototipi kullanıcıya özel, veritabanı merkezli ve akademik olarak savunulabilir bir MVP'ye dönüştürmek amacıyla yürütüldü.</p>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 1 / 21</span>
     </div>
   </div>
 
-  <div class="ozet-kutu">
-    <p>Bu rapor, TarımZeka projesinde Sprint 1'den Sprint 4'e kadar yapılan çalışmaları özetlemek için hazırlanmıştır. Her sprintte hangi geliştirmelerin yapıldığı, hangi teknik kararların alındığı ve sistemde hangi bölümlerin güncellendiği toplu şekilde sunulmuştur. Amaç, danışmana bu haftaya kadar tamamlanan işleri düzenli bir şekilde aktarmaktır.</p>
-  </div>
+  <!-- SAYFA 2 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h2>Genel Sprint Özeti</h2>
+    <table>
+      <thead>
+        <tr><th>Sprint</th><th>Odak Alanı</th><th>Temel Çıktı</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Sprint 1</strong></td>
+          <td>Kimlik doğrulama ve kullanıcı altyapısı</td>
+          <td>Oturum yönetimi ve kullanıcıya özel veri ayrımı</td>
+        </tr>
+        <tr>
+          <td><strong>Sprint 2</strong></td>
+          <td>Üretim planı ve bölgesel analiz</td>
+          <td>Plan akışının veritabanına bağlanması ve mock verilerin kaldırılması</td>
+        </tr>
+        <tr>
+          <td><strong>Sprint 3</strong></td>
+          <td>Yapay zeka önerileri ve analiz geçmişi</td>
+          <td>Gerçek veriye bağlı öneri akışı ve rapor kaydı</td>
+        </tr>
+        <tr>
+          <td><strong>Sprint 4</strong></td>
+          <td>Ağırlıklandırma, test ve piyasa analizi</td>
+          <td>AHP tabanlı ağırlıklandırma, backtest doğrulaması, olasılıksal güven skoru, arz-talep dengesi</td>
+        </tr>
+        <tr>
+          <td><strong>Sprint 5</strong></td>
+          <td>Kayıt olma, onboarding ve kullanıcıya özel konum akışı</td>
+          <td>Register ekranı, profil il / ilçe bilgisi, lokasyon tabanlı Dashboard ve İklim akışları</td>
+        </tr>
+      </tbody>
+    </table>
 
-  <h2>Projenin Kısa Tanımı</h2>
-  <p>TarımZeka, çiftçilerin il ve tarla büyüklüğü bazında hangi ürünü ekeceklerine karar verirken destek alabilecekleri bir web tabanlı karar destek platformudur. Sistem; tarihsel verim verilerini, iklim dayanıklılığı göstergelerini, tüketim eğilimlerini ve üretim tahminlerini bir araya getirerek kullanıcıya sıralanmış ürün önerileri üretmektedir.</p>
-  <p>Projenin teknik yığını Python tabanlı bir FastAPI arka yüzü, PostgreSQL veritabanı ve React ön yüzünden oluşmaktadır. Tüm üretim, tüketim ve iklim verileri <code>analytics</code> şeması altındaki tablolarda saklanmakta; kullanıcı, tarla ve plan verileri ise <code>app</code> şemasında yönetilmektedir.</p>
-
-  <h2>Başlangıç Durumu</h2>
-  <p>03.04.2026 saat 12:18'deki <code>a5063e2</code> commit'i, sprint geliştirmelerinin üzerine inşa edildiği mevcut TarımZeka/TarimPro prototipini repoya alma adımıdır. Bu commit bir sprint çıktısı değil, projenin o anki frontend ve backend dosyalarının başlangıç tabanı olarak kaydedilmesidir.</p>
-  <p>Bu aşamada React tabanlı kullanıcı arayüzü, FastAPI backend iskeleti, dashboard, plan sihirbazı, AI önerileri, iklim/pazar ve bölgesel analiz ekranları bulunuyordu. Ancak sistem henüz gerçek kullanıcı oturumu, kalıcı plan akışı, rapor geçmişi ve metodolojik olarak açıklanabilir skor motoru açısından tamamlanmış değildi. Bu nedenle sonraki sprintler, mevcut prototipi kullanıcıya özel, veritabanı merkezli ve akademik olarak savunulabilir bir MVP'ye dönüştürmek amacıyla yürütüldü.</p>
-
-  <h2>Genel Sprint Özeti</h2>
-  <table>
-    <thead>
-      <tr><th>Sprint</th><th>Odak Alanı</th><th>Temel Çıktı</th></tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><strong>Sprint 1</strong></td>
-        <td>Kimlik doğrulama ve kullanıcı altyapısı</td>
-        <td>Oturum yönetimi ve kullanıcıya özel veri ayrımı</td>
-      </tr>
-      <tr>
-        <td><strong>Sprint 2</strong></td>
-        <td>Üretim planı ve bölgesel analiz</td>
-        <td>Plan akışının veritabanına bağlanması ve mock verilerin kaldırılması</td>
-      </tr>
-      <tr>
-        <td><strong>Sprint 3</strong></td>
-        <td>Yapay zeka önerileri ve analiz geçmişi</td>
-        <td>Gerçek veriye bağlı öneri akışı ve rapor kaydı</td>
-      </tr>
-      <tr>
-        <td><strong>Sprint 4</strong></td>
-        <td>Ağırlıklandırma, test ve piyasa analizi</td>
-        <td>AHP tabanlı ağırlıklandırma, backtest doğrulaması, olasılıksal güven skoru, arz-talep dengesi</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <div class="metrik-sira">
-    <div class="metrik-kart">
-      <span class="deger">4</span>
-      <span class="etiket">Tamamlanan Sprint</span>
+    <div class="metrik-sira">
+      <div class="metrik-kart">
+        <span class="deger">5</span>
+        <span class="etiket">Tamamlanan Sprint</span>
+      </div>
+      <div class="metrik-kart">
+        <span class="deger">405</span>
+        <span class="etiket">Backtest Senaryosu</span>
+      </div>
+      <div class="metrik-kart">
+        <span class="deger">%74.6</span>
+        <span class="etiket">Top-3 Hit Rate</span>
+      </div>
+      <div class="metrik-kart">
+        <span class="deger">0.384%</span>
+        <span class="etiket">AHP Tutarlılık Oranı</span>
+      </div>
     </div>
-    <div class="metrik-kart">
-      <span class="deger">405</span>
-      <span class="etiket">Backtest Senaryosu</span>
+
+
+    <h2>İçindekiler</h2>
+    <div class="icerik-tablosu">
+      <div class="ic-satir"><span class="ic-no">1</span><span class="ic-baslik">Sprint 1 – Kimlik Doğrulama ve Kullanıcı Altyapısı</span><span class="ic-nokta"></span><span class="ic-sayfa">2</span></div>
+      <div class="ic-satir"><span class="ic-no">2</span><span class="ic-baslik">Sprint 2 – Üretim Planı ve Bölgesel Analiz</span><span class="ic-nokta"></span><span class="ic-sayfa">3</span></div>
+      <div class="ic-satir"><span class="ic-no">3</span><span class="ic-baslik">Sprint 3 – Yapay Zeka Önerileri ve Rapor Geçmişi</span><span class="ic-nokta"></span><span class="ic-sayfa">4</span></div>
+      <div class="ic-satir"><span class="ic-no">4</span><span class="ic-baslik">Sprint 4 – Metodolojik Kalibrasyon ve Piyasa Dengesi</span><span class="ic-nokta"></span><span class="ic-sayfa">5</span></div>
+      <div class="ic-alt">4.1 AHP ile Ağırlıklandırma</div>
+      <div class="ic-alt">4.2 Walk-Forward Backtest</div>
+      <div class="ic-alt">4.3 Model Güveninin Yeniden Tasarımı</div>
+      <div class="ic-alt">4.4 Arz-Talep Dengesi Katmanı</div>
+      <div class="ic-satir"><span class="ic-no">5</span><span class="ic-baslik">Veritabanı Mimarisi</span><span class="ic-nokta"></span><span class="ic-sayfa">7</span></div>
+      <div class="ic-satir"><span class="ic-no">6</span><span class="ic-baslik">Sonuç, Sınırlılıklar ve Tez Öncesi Değerlendirme</span><span class="ic-nokta"></span><span class="ic-sayfa">8</span></div>
+      <div class="ic-satir"><span class="ic-no">7</span><span class="ic-baslik">12 Nisan Güncelleme Dönemi</span><span class="ic-nokta"></span><span class="ic-sayfa">9</span></div>
+      <div class="ic-satir"><span class="ic-no">8</span><span class="ic-baslik">Model, Veri ve Konum Altyapısı Güncellemeleri</span><span class="ic-nokta"></span><span class="ic-sayfa">10</span></div>
+      <div class="ic-satir"><span class="ic-no">9</span><span class="ic-baslik">UI/UX ve Mantık Akışı İyileştirmeleri</span><span class="ic-nokta"></span><span class="ic-sayfa">11</span></div>
     </div>
-    <div class="metrik-kart">
-      <span class="deger">%74.6</span>
-      <span class="etiket">Top-3 Hit Rate</span>
     </div>
-    <div class="metrik-kart">
-      <span class="deger">0.384%</span>
-      <span class="etiket">AHP Tutarlılık Oranı</span>
-    </div>
-  </div>
 
-  <hr class="bolum-ayrac">
-
-  <h2>İçindekiler</h2>
-  <div class="icerik-tablosu">
-    <div class="ic-satir"><span class="ic-no">1</span><span class="ic-baslik">Sprint 1 – Kimlik Doğrulama ve Kullanıcı Altyapısı</span><span class="ic-nokta"></span><span class="ic-sayfa">2</span></div>
-    <div class="ic-satir"><span class="ic-no">2</span><span class="ic-baslik">Sprint 2 – Üretim Planı ve Bölgesel Analiz</span><span class="ic-nokta"></span><span class="ic-sayfa">3</span></div>
-    <div class="ic-satir"><span class="ic-no">3</span><span class="ic-baslik">Sprint 3 – Yapay Zeka Önerileri ve Rapor Geçmişi</span><span class="ic-nokta"></span><span class="ic-sayfa">4</span></div>
-    <div class="ic-satir"><span class="ic-no">4</span><span class="ic-baslik">Sprint 4 – Metodolojik Kalibrasyon ve Piyasa Dengesi</span><span class="ic-nokta"></span><span class="ic-sayfa">5</span></div>
-    <div class="ic-alt">4.1 AHP ile Ağırlıklandırma</div>
-    <div class="ic-alt">4.2 Walk-Forward Backtest</div>
-    <div class="ic-alt">4.3 Model Güveninin Yeniden Tasarımı</div>
-    <div class="ic-alt">4.4 Arz-Talep Dengesi Katmanı</div>
-    <div class="ic-satir"><span class="ic-no">5</span><span class="ic-baslik">Veritabanı Mimarisi</span><span class="ic-nokta"></span><span class="ic-sayfa">7</span></div>
-    <div class="ic-satir"><span class="ic-no">6</span><span class="ic-baslik">Sonuç, Sınırlılıklar ve Tez Öncesi Değerlendirme</span><span class="ic-nokta"></span><span class="ic-sayfa">8</span></div>
-  </div>
-
-  <div class="alt-bilgi">
-    <span>TarımZeka &mdash; Proje İlerleme Raporu</span>
-    <span>Sayfa 1</span>
-  </div>
-</div>
-
-
-<!-- ═══════════════ SAYFA 2: SPRİNT 1 ═══════════════ -->
-<div class="sayfa">
-
-  <div class="sprint-baslik">
-    <div class="sprint-no">1</div>
-    <div>
-      <h2>Kimlik Doğrulama ve Kullanıcı Altyapısı</h2>
-      <span class="sprint-altyazi">Temel kullanıcı ve giriş altyapısının kurulduğu sprint</span>
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 2 / 21</span>
     </div>
   </div>
 
-  <h3>Neden Bu Sprintten Başlandı?</h3>
-  <p>Sprint 1'e girildiğinde sistemde veritabanı şeması kurulmuş, bazı dashboard bileşenleri hazırlanmış durumdaydı. Ancak temel bir sorun vardı: sistemde gerçek bir kimlik doğrulama mekanizması yoktu. Kullanıcı kimliği kod içinde sabit tanımlanmış, tarla ve plan verileri bütün kullanıcılar arasında karışmaktaydı. Böyle bir yapı üzerine anlamlı bir kullanıcı akışı inşa etmek mümkün değildi. Bu nedenle Sprint 1'de önce kullanıcı altyapısı ve veri ayrımı ele alındı.</p>
+  <!-- SAYFA 3 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<div class="sprint-baslik">
+      <div class="sprint-no">1</div>
+      <div>
+        <h2>Kimlik Doğrulama ve Kullanıcı Altyapısı</h2>
+        <span class="sprint-altyazi">Temel kullanıcı ve giriş altyapısının kurulduğu sprint</span>
+      </div>
+    </div>
 
-  <h3>Yapılanlar</h3>
-  <p>Bu sprintte şifre doğrulama, session token üretimi ve token hashleme işlevlerini barındıran <code>backend/security.py</code> modülü sıfırdan yazıldı. FastAPI'nin dependency injection mekanizması kullanılarak her korumalı endpoint'e otomatik kullanıcı bağlamı sağlayan <code>backend/dependencies.py</code> katmanı oluşturuldu. Ön yüzde React Router'a route guard yapısı entegre edildi; böylece oturum açmamış kullanıcılar korumalı sayfalara erişemez hale geldi. Kullanıcıya özgü okuma ve yazma işlemlerini yönetecek repository fonksiyonları <code>backend/db/repositories.py</code> içine eklendi.</p>
-  <p>Tüm bu değişikliklerin yanı sıra, biriken demo ve sabit veri fallback'leri temizlendi. Layout bileşenindeki hard-coded kullanıcı adı ve bildirim alanları gerçek API yanıtına bağlandı.</p>
+    <h3>Neden Bu Sprintten Başlandı?</h3>
+    <p>Sprint 1'e girildiğinde sistemde veritabanı şeması kurulmuş, bazı dashboard bileşenleri hazırlanmış durumdaydı. Ancak temel bir sorun vardı: sistemde gerçek bir kimlik doğrulama mekanizması yoktu. Kullanıcı kimliği kod içinde sabit tanımlanmış, tarla ve plan verileri bütün kullanıcılar arasında karışmaktaydı. Böyle bir yapı üzerine anlamlı bir kullanıcı akışı inşa etmek mümkün değildi. Bu nedenle Sprint 1'de önce kullanıcı altyapısı ve veri ayrımı ele alındı.</p>
 
-  <h3>Değiştirilen / Oluşturulan Dosyalar</h3>
-  <table class="dosya-listesi">
-    <thead><tr><th>Dosya</th><th>İşlem</th><th>İçerik</th></tr></thead>
-    <tbody>
-      <tr><td>backend/security.py</td><td>Yeni</td><td>Şifre doğrulama, session token üretimi ve token hashleme</td></tr>
-      <tr><td>backend/dependencies.py</td><td>Yeni</td><td>Current-user dependency katmanı</td></tr>
-      <tr><td>backend/main.py</td><td>Güncellendi</td><td>Auth route'ları ve korumalı endpoint yapısı</td></tr>
-      <tr><td>backend/db/schema.sql</td><td>Güncellendi</td><td><code>app.user_sessions</code> tablosu ve auth destek alanları</td></tr>
-      <tr><td>backend/db/repositories.py</td><td>Güncellendi</td><td>Kullanıcıya özel CRUD fonksiyonları</td></tr>
-      <tr><td>backend/db/bootstrap.py</td><td>Güncellendi</td><td>Demo fallback davranışının runtime'dan ayrılması</td></tr>
-      <tr><td>frontend/src/App.jsx</td><td>Güncellendi</td><td>Route guard ve auth yönlendirmesi</td></tr>
-      <tr><td>frontend/src/lib/api.js</td><td>Güncellendi</td><td>Authorization header ve merkezi hata yönetimi</td></tr>
-      <tr><td>frontend/src/pages/Profile.jsx</td><td>Güncellendi</td><td>Profil güncelleme ve tarla CRUD arayüzü</td></tr>
-      <tr><td>frontend/src/components/Layout.jsx</td><td>Güncellendi</td><td>Hard-coded bilgiler gerçek API yanıtına bağlandı</td></tr>
-    </tbody>
-  </table>
+    <h3>Yapılanlar</h3>
+    <p>Bu sprintte şifre doğrulama, session token üretimi ve token hashleme işlevlerini barındıran <code>backend/security.py</code> modülü sıfırdan yazıldı. FastAPI'nin dependency injection mekanizması kullanılarak her korumalı endpoint'e otomatik kullanıcı bağlamı sağlayan <code>backend/dependencies.py</code> katmanı oluşturuldu. Ön yüzde React Router'a route guard yapısı entegre edildi; böylece oturum açmamış kullanıcılar korumalı sayfalara erişemez hale geldi. Kullanıcıya özgü okuma ve yazma işlemlerini yönetecek repository fonksiyonları <code>backend/db/repositories.py</code> içine eklendi.</p>
+    <p>Tüm bu değişikliklerin yanı sıra, biriken demo ve sabit veri fallback'leri temizlendi. Layout bileşenindeki hard-coded kullanıcı adı ve bildirim alanları gerçek API yanıtına bağlandı.</p>
+    </div>
 
-  <h3>Sprint Sonu Durumu</h3>
-  <p>Sprint 1 sonunda sistem gerçek kullanıcı bilgisiyle çalışır hale geldi. Her kullanıcı yalnızca kendi tarlalarını, planlarını ve analizlerini görmeye başladı. Bu haftaki değişiklikle birlikte sonraki geliştirmelerin kullanıcı bazlı ilerlemesi mümkün oldu.</p>
-
-  <div class="not">
-    <p><strong>Teknik not:</strong> Oturum yönetiminde Bearer token ile taşınan veritabanı tabanlı session token yaklaşımı kullanıldı. Backend rastgele bir session token üretir, bu token'ın hash değerini <code>app.user_sessions</code> tablosuna yazar ve sonraki isteklerde gelen Bearer token hash'i üzerinden kullanıcıyı doğrular.</p>
-  </div>
-
-  <div class="alt-bilgi">
-    <span>TarımZeka &mdash; Proje İlerleme Raporu</span>
-    <span>Sayfa 2</span>
-  </div>
-</div>
-
-
-<!-- ═══════════════ SAYFA 3: SPRİNT 2 & 3 ═══════════════ -->
-<div class="sayfa">
-
-  <div class="sprint-baslik">
-    <div class="sprint-no">2</div>
-    <div>
-      <h2>Üretim Planı ve Bölgesel Analiz</h2>
-      <span class="sprint-altyazi">Kullanıcının plan oluşturabildiği ilk sprint</span>
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 3 / 21</span>
     </div>
   </div>
 
-  <h3>Yapılanlar</h3>
-  <p>Bu sprintte kullanıcı altyapısının üzerine üretim planı oluşturma ve kaydetme akışı eklendi. Kullanıcı artık il seçimi, tarla büyüklüğü ve ürün tercihi girerek kalıcı bir plan oluşturabilmekte; bu plan <code>app.production_plans</code> tablosuna kaydedilmektedir.</p>
-  <p>Bu sprintte bölgesel analiz ekranı veritabanına bağlandı. Daha önce rastgele ya da sabit değerlerden üretilen bölgesel göstergeler, artık <code>analytics.production_history</code> ve <code>analytics.climate_history</code> tablolarından gerçek verilerle beslenmektedir.</p>
+  <!-- SAYFA 4 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h3>Değiştirilen / Oluşturulan Dosyalar</h3>
+    <table class="dosya-listesi">
+      <thead><tr><th>Dosya</th><th>İşlem</th><th>İçerik</th></tr></thead>
+      <tbody>
+        <tr><td>backend/security.py</td><td>Yeni</td><td>Şifre doğrulama, session token üretimi ve token hashleme</td></tr>
+        <tr><td>backend/dependencies.py</td><td>Yeni</td><td>Current-user dependency katmanı</td></tr>
+        <tr><td>backend/main.py</td><td>Güncellendi</td><td>Auth route'ları ve korumalı endpoint yapısı</td></tr>
+        <tr><td>backend/db/schema.sql</td><td>Güncellendi</td><td><code>app.user_sessions</code> tablosu ve auth destek alanları</td></tr>
+        <tr><td>backend/db/repositories.py</td><td>Güncellendi</td><td>Kullanıcıya özel CRUD fonksiyonları</td></tr>
+        <tr><td>backend/db/bootstrap.py</td><td>Güncellendi</td><td>Demo fallback davranışının runtime'dan ayrılması</td></tr>
+        <tr><td>frontend/src/App.jsx</td><td>Güncellendi</td><td>Route guard ve auth yönlendirmesi</td></tr>
+        <tr><td>frontend/src/lib/api.js</td><td>Güncellendi</td><td>Authorization header ve merkezi hata yönetimi</td></tr>
+        <tr><td>frontend/src/pages/Profile.jsx</td><td>Güncellendi</td><td>Profil güncelleme ve tarla CRUD arayüzü</td></tr>
+        <tr><td>frontend/src/components/Layout.jsx</td><td>Güncellendi</td><td>Hard-coded bilgiler gerçek API yanıtına bağlandı</td></tr>
+      </tbody>
+    </table>
 
-  <h3>Değiştirilen / Oluşturulan Dosyalar</h3>
-  <table class="dosya-listesi">
-    <thead><tr><th>Dosya</th><th>Katkı</th></tr></thead>
-    <tbody>
-      <tr><td>backend/main.py</td><td>Plan oluşturma, listeleme ve güncelleme endpoint'leri eklendi</td></tr>
-      <tr><td>backend/db/repositories.py</td><td>Plana ait veri sorguları ve bölgesel analiz sorguları eklendi</td></tr>
-      <tr><td>frontend/src/pages/PlanWizard.jsx</td><td>Plan formu ve kayıt akışı DB'ye bağlandı</td></tr>
-      <tr><td>frontend/src/pages/RegionalAnalysis.jsx</td><td>Rastgele veri üretimi kaldırıldı, gerçek analitik verisine geçildi</td></tr>
-    </tbody>
-  </table>
+    <h3>Sprint Sonu Durumu</h3>
+    <p>Sprint 1 sonunda sistem gerçek kullanıcı bilgisiyle çalışır hale geldi. Her kullanıcı yalnızca kendi tarlalarını, planlarını ve analizlerini görmeye başladı. Bu haftaki değişiklikle birlikte sonraki geliştirmelerin kullanıcı bazlı ilerlemesi mümkün oldu.</p>
 
-  <hr class="bolum-ayrac">
+    <div class="not">
+      <p><strong>Teknik not:</strong> Oturum yönetiminde Bearer token ile taşınan veritabanı tabanlı session token yaklaşımı kullanıldı. Backend rastgele bir session token üretir, bu token'ın hash değerini <code>app.user_sessions</code> tablosuna yazar ve sonraki isteklerde gelen Bearer token hash'i üzerinden kullanıcıyı doğrular.</p>
+    </div>
+    </div>
 
-  <div class="sprint-baslik">
-    <div class="sprint-no">3</div>
-    <div>
-      <h2>Yapay Zeka Önerileri ve Rapor Geçmişi</h2>
-      <span class="sprint-altyazi">Öneri sisteminin gerçek veriye bağlandığı sprint</span>
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 4 / 21</span>
     </div>
   </div>
 
-  <h3>Yapılanlar</h3>
-  <p>Sprint 2 sonunda plan akışı çalışıyordu; ancak öneriler hâlâ statik veya türetilmiş veriden üretiliyordu ve sisteme kaydedilmiyordu. Sprint 3'te bu iki konu ele alındı.</p>
-  <p>Yapay zeka analizi artık kullanıcının planından (il, ürün, alan) yola çıkarak veritabanındaki dört bileşeni (geçmiş verim, model projeksiyonu, tüketim eğilimi, iklim dayanıklılığı) sorgulayıp bir skor hesaplamaktadır. Hesaplanan skor ve öneriler <code>app.ai_analyses</code> ve <code>app.ai_recommendations</code> tablolarına yazılmakta; kullanıcı daha sonra aynı analizi rapor geçmişi üzerinden yeniden görüntüleyebilmektedir.</p>
-  <p>Bu sprintte ayrıca skor bileşenlerinin dökümleri (<code>score_breakdown</code>) JSON formatında veritabanına kaydedilmeye başlandı. Böylece hangi skorun hangi bileşenden geldiği daha açık biçimde izlenebilir hale geldi.</p>
+  <!-- SAYFA 5 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<div class="sprint-baslik">
+      <div class="sprint-no">2</div>
+      <div>
+        <h2>Üretim Planı ve Bölgesel Analiz</h2>
+        <span class="sprint-altyazi">Kullanıcının plan oluşturabildiği ilk sprint</span>
+      </div>
+    </div>
 
-  <h3>Değiştirilen / Oluşturulan Dosyalar</h3>
-  <table class="dosya-listesi">
-    <thead><tr><th>Dosya</th><th>Katkı</th></tr></thead>
-    <tbody>
-      <tr><td>backend/main.py</td><td>Dört bileşenli skor hesabı, AI analiz endpoint'i ve rapor listeleme endpoint'i eklendi</td></tr>
-      <tr><td>backend/db/schema.sql</td><td><code>app.ai_analyses</code> ve <code>app.ai_recommendations</code> tabloları analiz snapshot'ı için genişletildi</td></tr>
-      <tr><td>backend/db/repositories.py</td><td>Analiz ve öneri yazma/okuma sorguları eklendi</td></tr>
-      <tr><td>frontend/src/pages/AiRecommendations.jsx</td><td>Öneriler ve skor dökümleri gerçek API'den çekiliyor</td></tr>
-      <tr><td>frontend/src/pages/Profile.jsx</td><td>Geçmiş analizlerin listelenmesi ve detay görüntüleme bağlantısı</td></tr>
-    </tbody>
-  </table>
+    <h3>Yapılanlar</h3>
+    <p>Bu sprintte kullanıcı altyapısının üzerine üretim planı oluşturma ve kaydetme akışı eklendi. Kullanıcı artık il seçimi, tarla büyüklüğü ve ürün tercihi girerek kalıcı bir plan oluşturabilmekte; bu plan <code>app.production_plans</code> tablosuna kaydedilmektedir.</p>
+    <p>Bu sprintte bölgesel analiz ekranı veritabanına bağlandı. Daha önce rastgele ya da sabit değerlerden üretilen bölgesel göstergeler, artık <code>analytics.production_history</code> ve <code>analytics.climate_history</code> tablolarından gerçek verilerle beslenmektedir.</p>
 
-  <h3>Sprint Sonu Durumu</h3>
-  <p>Sprint 3 sonunda sistemde kullanıcı girişi, plan oluşturma, AI analizi alma ve geçmiş analizleri görüntüleme akışları çalışıyordu. Ancak skor hesabındaki ağırlıklar (<code>0.32, 0.33, 0.17, 0.18</code>) kod içinde sabit tanımlanmıştı ve bu değerlerin dayanağı açıklanmamıştı. Sprint 4'te bu konu üzerinde çalışıldı.</p>
+    <h3>Değiştirilen / Oluşturulan Dosyalar</h3>
+    <table class="dosya-listesi">
+      <thead><tr><th>Dosya</th><th>Katkı</th></tr></thead>
+      <tbody>
+        <tr><td>backend/main.py</td><td>Plan oluşturma, listeleme ve güncelleme endpoint'leri eklendi</td></tr>
+        <tr><td>backend/db/repositories.py</td><td>Plana ait veri sorguları ve bölgesel analiz sorguları eklendi</td></tr>
+        <tr><td>frontend/src/pages/PlanWizard.jsx</td><td>Plan formu ve kayıt akışı DB'ye bağlandı</td></tr>
+        <tr><td>frontend/src/pages/RegionalAnalysis.jsx</td><td>Rastgele veri üretimi kaldırıldı, gerçek analitik verisine geçildi</td></tr>
+      </tbody>
+    </table>
 
-  <h3>Sprint 3 Sonrası Ara Düzeltmeler</h3>
-  <p>Sprint 3 tamamlandıktan sonra, ana analiz akışı çalışır hale gelmiş olsa da kullanıcı deneyiminde ve veri akışında kalan bazı küçük ama önemli boşluklar tespit edildi. Bu nedenle 03.04.2026 saat 21:13'teki <code>be809f2</code> commit'i ile analiz akışındaki mock benzeri son boşluklar temizlendi.</p>
-  <p>Bu düzeltmede AI üretim projeksiyonu serisindeki 2025 boşluğu giderildi, plan sihirbazında şehir bazlı tüm geçerli ürünlerin gösterilmesi sağlandı, bölgesel analiz ekranına 5Y / 10Y / Tüm Veri aralığı eklendi ve analiz ekranında son raporun otomatik açılması veya rapor yoksa kullanıcıyı plan oluşturmaya yönlendirme davranışı iyileştirildi. Ayrıca iklim ekranındaki dönem ve yağış etiketleri Türkçeleştirildi ve backend tarafında <code>history_range</code> kaynaklı gizli endpoint hataları temizlendi.</p>
-  <p>Ardından 03.04.2026 saat 21:35'teki <code>eb7cb38</code> commit'i ile bölgesel analiz ekranının renk paleti ve görsel kontrastı güncellendi. Bu commit doğrudan yeni bir analitik özellik eklemekten çok, veriye dayalı bölgesel analiz ekranının sunum kalitesini artırmaya yönelik bir arayüz iyileştirmesidir.</p>
+    <hr class="bolum-ayrac">
 
-  <div class="alt-bilgi">
-    <span>TarımZeka &mdash; Proje İlerleme Raporu</span>
-    <span>Sayfa 3</span>
+    <div class="sprint-baslik">
+      <div class="sprint-no">3</div>
+      <div>
+        <h2>Yapay Zeka Önerileri ve Rapor Geçmişi</h2>
+        <span class="sprint-altyazi">Öneri sisteminin gerçek veriye bağlandığı sprint</span>
+      </div>
+    </div>
+
+    <h3>Yapılanlar</h3>
+    <p>Sprint 2 sonunda plan akışı çalışıyordu; ancak öneriler hâlâ statik veya türetilmiş veriden üretiliyordu ve sisteme kaydedilmiyordu. Sprint 3'te bu iki konu ele alındı.</p>
+    <p>Yapay zeka analizi artık kullanıcının planından (il, ürün, alan) yola çıkarak veritabanındaki dört bileşeni (geçmiş verim, model projeksiyonu, tüketim eğilimi, iklim dayanıklılığı) sorgulayıp bir skor hesaplamaktadır. Hesaplanan skor ve öneriler <code>app.ai_analyses</code> ve <code>app.ai_recommendations</code> tablolarına yazılmakta; kullanıcı daha sonra aynı analizi rapor geçmişi üzerinden yeniden görüntüleyebilmektedir.</p>
+    <p>Bu sprintte ayrıca skor bileşenlerinin dökümleri (<code>score_breakdown</code>) JSON formatında veritabanına kaydedilmeye başlandı. Böylece hangi skorun hangi bileşenden geldiği daha açık biçimde izlenebilir hale geldi.</p>
+
+   
+
+  <!-- SAYFA 6 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+       <h3>Değiştirilen / Oluşturulan Dosyalar</h3>
+    <table class="dosya-listesi">
+      <thead><tr><th>Dosya</th><th>Katkı</th></tr></thead>
+      <tbody>
+        <tr><td>backend/main.py</td><td>Dört bileşenli skor hesabı, AI analiz endpoint'i ve rapor listeleme endpoint'i eklendi</td></tr>
+        <tr><td>backend/db/schema.sql</td><td><code>app.ai_analyses</code> ve <code>app.ai_recommendations</code> tabloları analiz snapshot'ı için genişletildi</td></tr>
+        <tr><td>backend/db/repositories.py</td><td>Analiz ve öneri yazma/okuma sorguları eklendi</td></tr>
+        <tr><td>frontend/src/pages/AiRecommendations.jsx</td><td>Öneriler ve skor dökümleri gerçek API'den çekiliyor</td></tr>
+        <tr><td>frontend/src/pages/Profile.jsx</td><td>Geçmiş analizlerin listelenmesi ve detay görüntüleme bağlantısı</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 5 / 21</span>
+    </div>
   </div>
-</div>
+<h3>Sprint Sonu Durumu</h3>
+    <p>Sprint 3 sonunda sistemde kullanıcı girişi, plan oluşturma, AI analizi alma ve geçmiş analizleri görüntüleme akışları çalışıyordu. Ancak skor hesabındaki ağırlıklar (<code>0.32, 0.33, 0.17, 0.18</code>) kod içinde sabit tanımlanmıştı ve bu değerlerin dayanağı açıklanmamıştı. Sprint 4'te bu konu üzerinde çalışıldı.</p>
 
+    <h3>Sprint 3 Sonrası Ara Düzeltmeler</h3>
+    <p>Sprint 3 tamamlandıktan sonra, ana analiz akışı çalışır hale gelmiş olsa da kullanıcı deneyiminde ve veri akışında kalan bazı küçük ama önemli boşluklar tespit edildi. Bu nedenle 03.04.2026 saat 21:13'teki <code>be809f2</code> commit'i ile analiz akışındaki mock benzeri son boşluklar temizlendi.</p>
+    <p>Bu düzeltmede AI üretim projeksiyonu serisindeki 2025 boşluğu giderildi, plan sihirbazında şehir bazlı tüm geçerli ürünlerin gösterilmesi sağlandı, bölgesel analiz ekranına 5Y / 10Y / Tüm Veri aralığı eklendi ve analiz ekranında son raporun otomatik açılması veya rapor yoksa kullanıcıyı plan oluşturmaya yönlendirme davranışı iyileştirildi. Ayrıca iklim ekranındaki dönem ve yağış etiketleri Türkçeleştirildi ve backend tarafında <code>history_range</code> kaynaklı gizli endpoint hataları temizlendi.</p>
+    <p>Ardından 03.04.2026 saat 21:35'teki <code>eb7cb38</code> commit'i ile bölgesel analiz ekranının renk paleti ve görsel kontrastı güncellendi. Bu commit doğrudan yeni bir analitik özellik eklemekten çok, veriye dayalı bölgesel analiz ekranının sunum kalitesini artırmaya yönelik bir arayüz iyileştirmesidir.</p>
+    </div>
 
-<!-- ═══════════════ SAYFA 4: SPRİNT 4 – AHP ═══════════════ -->
-<div class="sayfa">
-
-  <div class="sprint-baslik">
-    <div class="sprint-no">4</div>
-    <div>
-      <h2>Metodolojik Kalibrasyon ve Piyasa Dengesi</h2>
-      <span class="sprint-altyazi">Skor yapısının ve değerlendirme kısmının düzenlendiği sprint</span>
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 6 / 21</span>
     </div>
   </div>
 
-  <p>Bu sprintte çalışan sistemin skor yapısı ve değerlendirme kısmı yeniden gözden geçirildi. Dört ana çalışma yapıldı: AHP ile ağırlık üretimi, walk-forward backtest, model güveninin yeniden düzenlenmesi ve arz-talep dengesi katmanı.</p>
-
-  <h2>4.1 AHP ile Kriter Ağırlıklandırması</h2>
-
-  <h3>Motivasyon</h3>
-  <p>Sprint 3 sonunda ürün uygunluk skoru şu formülle hesaplanıyordu:</p>
-  <div class="formul">skor = 0.32 × geçmiş_verim + 0.33 × model_projeksiyonu
-       + 0.17 × tüketim_eğilimi + 0.18 × iklim_dayanıklılığı</div>
-  <p>Bu katsayıların dayanağı net değildi. Bu nedenle ağırlıkların daha düzenli belirlenebilmesi için Analitik Hiyerarşi Süreci (AHP) kullanıldı.</p>
-
-  <h3>Kullanılan Kriterler</h3>
-  <table>
-    <thead><tr><th>Kriter</th><th>Temsil Ettiği Boyut</th><th>Veri Kaynağı</th></tr></thead>
-    <tbody>
-      <tr><td>Geçmiş Verim</td><td>İlin aynı üründeki tarihsel agronomik performansı</td><td><code>analytics.production_history</code></td></tr>
-      <tr><td>Model Projeksiyonu</td><td>XGBoost tabanlı gelecek dönem üretim potansiyeli</td><td><code>analytics.model_predictions</code> / <code>analytics.walk_forward_predictions</code></td></tr>
-      <tr><td>Tüketim Eğilimi</td><td>Ulusal düzeyde ürüne yönelik talep yönü</td><td><code>analytics.consumption_history</code></td></tr>
-      <tr><td>İklim Dayanıklılığı</td><td>Bölgenin iklim riski ve tarihsel stabilitesi</td><td><code>analytics.climate_history</code></td></tr>
-    </tbody>
-  </table>
-
-  <div class="not">
-    <p><strong>Model projeksiyonu kaynağı:</strong> Üretim tahmini tarafında kullanılan ana model çıktısı <code>Dengeli_XGBoost_DirectHorizon</code> adıyla sistemde tutulmaktadır. Uygulama içindeki güncel analizlerde bu modelden gelen tahminler <code>analytics.model_predictions</code> tablosundan okunur; backtest senaryolarında ise geçmiş tahmin-gerçekleşen karşılaştırmaları <code>analytics.walk_forward_predictions</code> tablosu üzerinden değerlendirilir.</p>
-  </div>
-
-  <h3>İkili Karşılaştırma Matrisi ve Ağırlıklar</h3>
-  <p>Saaty ölçeği kullanılarak dört kriter için ikili karşılaştırma matrisi oluşturuldu. Matris normalize edilerek aşağıdaki ağırlıklar elde edildi:</p>
-
-  <table>
-    <thead><tr><th>Kriter</th><th>AHP Ağırlığı</th><th>Sprint 3 Değeri</th><th>Değişim</th></tr></thead>
-    <tbody>
-      <tr><td>Geçmiş Verim</td><td><strong>0.2270</strong></td><td>0.32</td><td>−0.093</td></tr>
-      <tr><td>Model Projeksiyonu</td><td><strong>0.4236</strong></td><td>0.33</td><td>+0.094</td></tr>
-      <tr><td>Tüketim Eğilimi</td><td><strong>0.1223</strong></td><td>0.17</td><td>−0.048</td></tr>
-      <tr><td>İklim Dayanıklılığı</td><td><strong>0.2270</strong></td><td>0.18</td><td>+0.047</td></tr>
-    </tbody>
-  </table>
-
-  <h3>Tutarlılık Kontrolü</h3>
-  <p>AHP'de ikili karşılaştırmaların iç tutarlılığı Consistency Ratio (CR) değeriyle ölçülür. CR'nin 0.10 altında olması beklenir.</p>
-
-  <div class="iki-kolon">
-    <div class="kutu">
-      <h4>Hesaplanan Değerler</h4>
-      <ul>
-        <li>λ<sub>max</sub> = 4.0104 &nbsp;(ideal: 4.0)</li>
-        <li>CI = (4.0104 − 4) / 3 = <strong>0.00345</strong></li>
-        <li>RI = 0.90 &nbsp;(4×4 matris referansı)</li>
-        <li>CR = 0.00345 / 0.90 = <strong>0.00384</strong></li>
-      </ul>
+  <!-- SAYFA 7 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<div class="sprint-baslik">
+      <div class="sprint-no">4</div>
+      <div>
+        <h2>Metodolojik Kalibrasyon ve Piyasa Dengesi</h2>
+        <span class="sprint-altyazi">Skor yapısının ve değerlendirme kısmının düzenlendiği sprint</span>
+      </div>
     </div>
-    <div class="kutu">
-      <h4>Değerlendirme</h4>
-      <p style="margin-bottom:6px;">CR değeri <strong>%0.38</strong> olarak hesaplandı. Bu değer %10 sınırının altında kaldığı için matris tutarlı kabul edildi ve ağırlıklar <code>backend/scoring_profile.json</code> dosyasına aktarıldı.</p>
-      <p style="margin-bottom:0; font-size:9.5pt; color:var(--metin-uc);">Profil adı: <em>ahp_v1_expert_seed</em> — 03.04.2026</p>
+
+    <p>Bu sprintte çalışan sistemin skor yapısı ve değerlendirme kısmı yeniden gözden geçirildi. Dört ana çalışma yapıldı: AHP ile ağırlık üretimi, walk-forward backtest, model güveninin yeniden düzenlenmesi ve arz-talep dengesi katmanı.</p>
+
+    <h2>4.1 AHP ile Kriter Ağırlıklandırması</h2>
+
+    <h3>Motivasyon</h3>
+    <p>Sprint 3 sonunda ürün uygunluk skoru şu formülle hesaplanıyordu:</p>
+    <div class="formul">skor = 0.32 × geçmiş_verim + 0.33 × model_projeksiyonu
+        + 0.17 × tüketim_eğilimi + 0.18 × iklim_dayanıklılığı</div>
+    <p>Bu katsayıların dayanağı net değildi. Bu nedenle ağırlıkların daha düzenli belirlenebilmesi için Analitik Hiyerarşi Süreci (AHP) kullanıldı.</p>
+
+    <h3>Kullanılan Kriterler</h3>
+    <table>
+      <thead><tr><th>Kriter</th><th>Temsil Ettiği Boyut</th><th>Veri Kaynağı</th></tr></thead>
+      <tbody>
+        <tr><td>Geçmiş Verim</td><td>İlin aynı üründeki tarihsel agronomik performansı</td><td><code>analytics.production_history</code></td></tr>
+        <tr><td>Model Projeksiyonu</td><td>XGBoost tabanlı gelecek dönem üretim potansiyeli</td><td><code>analytics.model_predictions</code> / <code>analytics.walk_forward_predictions</code></td></tr>
+        <tr><td>Tüketim Eğilimi</td><td>Ulusal düzeyde ürüne yönelik talep yönü</td><td><code>analytics.consumption_history</code></td></tr>
+        <tr><td>İklim Dayanıklılığı</td><td>Bölgenin iklim riski ve tarihsel stabilitesi</td><td><code>analytics.climate_history</code></td></tr>
+      </tbody>
+    </table>
+
+    <div class="not">
+      <p><strong>Model projeksiyonu kaynağı:</strong> Üretim tahmini tarafında kullanılan ana model çıktısı <code>Dengeli_XGBoost_DirectHorizon</code> adıyla sistemde tutulmaktadır. Uygulama içindeki güncel analizlerde bu modelden gelen tahminler <code>analytics.model_predictions</code> tablosundan okunur; backtest senaryolarında ise geçmiş tahmin-gerçekleşen karşılaştırmaları <code>analytics.walk_forward_predictions</code> tablosu üzerinden değerlendirilir.</p>
+    </div>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 7 / 21</span>
     </div>
   </div>
 
-  <div class="not yesil">
-    <p>Bu çalışmayla ağırlıklar kod içinden çıkarılıp ayrı bir JSON profiline taşındı. Böylece ağırlıkların tek bir yerde tutulması ve gerektiğinde güncellenmesi kolaylaştı.</p>
-  </div>
+  <!-- SAYFA 8 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h3>İkili Karşılaştırma Matrisi ve Ağırlıklar</h3>
+    <p>Saaty ölçeği kullanılarak dört kriter için ikili karşılaştırma matrisi oluşturuldu. Matris normalize edilerek aşağıdaki ağırlıklar elde edildi:</p>
 
-  <div class="alt-bilgi">
-    <span>TarımZeka &mdash; Proje İlerleme Raporu</span>
-    <span>Sayfa 4</span>
-  </div>
-</div>
+    <table>
+      <thead><tr><th>Kriter</th><th>AHP Ağırlığı</th><th>Sprint 3 Değeri</th><th>Değişim</th></tr></thead>
+      <tbody>
+        <tr><td>Geçmiş Verim</td><td><strong>0.2270</strong></td><td>0.32</td><td>−0.093</td></tr>
+        <tr><td>Model Projeksiyonu</td><td><strong>0.4236</strong></td><td>0.33</td><td>+0.094</td></tr>
+        <tr><td>Tüketim Eğilimi</td><td><strong>0.1223</strong></td><td>0.17</td><td>−0.048</td></tr>
+        <tr><td>İklim Dayanıklılığı</td><td><strong>0.2270</strong></td><td>0.18</td><td>+0.047</td></tr>
+      </tbody>
+    </table>
 
+    <h3>Tutarlılık Kontrolü</h3>
+    <p>AHP'de ikili karşılaştırmaların iç tutarlılığı Consistency Ratio (CR) değeriyle ölçülür. CR'nin 0.10 altında olması beklenir.</p>
 
-<!-- ═══════════════ SAYFA 5: BACKTEST + GÜVEN ═══════════════ -->
-<div class="sayfa">
-
-  <h2>4.2 Walk-Forward Backtest</h2>
-
-  <h3>Amaç ve Tasarım</h3>
-  <p>AHP ile bulunan ağırlıkların geçmiş veriler üzerinde nasıl sonuç verdiğini görmek için <code>backend/devtools/ahp_backtest.py</code> betiği yazıldı. Walk-forward yaklaşımında her tahmin yalnızca o döneme kadar bulunan verilerle yapıldığı için test yapısı daha gerçekçi hale geldi.</p>
-  <p><strong>Teknik netleştirme:</strong> <code>backend/devtools/ahp_backtest.py</code> betiği modeli yeniden eğitmez. Betiğin görevi, daha önce oluşturulmuş <code>analytics.walk_forward_predictions</code> tablosundaki hazır tahmin-gerçekleşen kayıtlarını okumak ve AHP ile hesaplanan ağırlıkların bu geçmiş senaryolarda nasıl bir ürün sıralaması ürettiğini test etmektir.</p>
-  <p>Yani backtest sürecinde odak, XGBoost modelini tekrar kurmak veya eğitmek değil; mevcut walk-forward tahmin seti üzerinde AHP tabanlı skor motorunun sıralama performansını ölçmektir. Bu nedenle Top-1, Top-3, Spearman ve nDCG@3 metrikleri model eğitim başarısından çok, AHP ağırlıklı öneri sıralamasının tarihsel karar destek kalitesini göstermektedir.</p>
-
-  <p>Her senaryo bir <strong>il + tahmin yılı</strong> kombinasyonu olarak tanımlandı. 2020-2024 aralığındaki walk-forward tahminleri kullanılarak 405 senaryo oluşturuldu ve her senaryoda sistem sıralaması gerçek üretim sıralamasıyla karşılaştırıldı.</p>
-
-  <table>
-    <thead><tr><th>Backtest Parametresi</th><th>Değer</th></tr></thead>
-    <tbody>
-      <tr><td>Veri dönemi</td><td>2020 – 2024 (5 yıl)</td></tr>
-      <tr><td>Senaryo tanımı</td><td>İl + Tahmin Yılı</td></tr>
-      <tr><td>Minimum ürün sayısı / senaryo</td><td>4</td></tr>
-      <tr><td>Toplam senaryo</td><td>405</td></tr>
-      <tr><td>Toplam aday kayıt</td><td>60.820</td></tr>
-    </tbody>
-  </table>
-
-  <h3>Performans Metrikleri ve Sonuçlar</h3>
-  <table>
-    <thead><tr><th>Metrik</th><th>Sonuç</th><th>Açıklama</th></tr></thead>
-    <tbody>
-      <tr><td>Top-1 Exact Rate</td><td><strong>%15.31</strong></td><td>Sistemin birinci sıradaki önerisi gerçekte de birinci ürün</td></tr>
-      <tr><td>Top-3 Hit Rate</td><td><strong>%74.57</strong></td><td>Gerçek birinci ürünün sistemin ilk üç önerisi arasında yer alma oranı</td></tr>
-      <tr><td>Mean Spearman Korelasyonu</td><td><strong>0.4142</strong></td><td>Sistem sıralaması ile gerçek sıralama arasındaki korelasyon</td></tr>
-      <tr><td>Mean nDCG@3</td><td><strong>0.9175</strong></td><td>İlk üç önerinin sıra-duyarlı kalite skoru</td></tr>
-    </tbody>
-  </table>
-
-  <div class="not">
-    <p><strong>Yorum:</strong> Top-1 exact rate değeri düşük görünse de sistemin amacı tek bir ürünü kesin olarak seçmekten çok kullanıcıya güçlü adaylar sunmaktır. Bu açıdan bakıldığında %74.57 Top-3 hit rate ve 0.92 nDCG@3 değerleri yararlı bir sonuç vermektedir.</p>
-  </div>
-
-  <h3>Örnek Senaryolar</h3>
-  <table>
-    <thead><tr><th>İl</th><th>Yıl</th><th>Sistemin 1. Önerisi</th><th>Gerçek Sıra</th><th>Sonuç</th></tr></thead>
-    <tbody>
-      <tr><td>Adıyaman</td><td>2020</td><td>Buğday</td><td>1</td><td>İlk tercihte tam isabet</td></tr>
-      <tr><td>Adıyaman</td><td>2024</td><td>Buğday</td><td>3</td><td>İlk 3 kapsamı korundu</td></tr>
-      <tr><td>Afyonkarahisar</td><td>2020</td><td>Patates</td><td>1</td><td>İlk tercihte tam isabet</td></tr>
-      <tr><td>Adana</td><td>2023</td><td>Mısır</td><td>6</td><td>Kapsam dışında kaldı</td></tr>
-    </tbody>
-  </table>
-
-  <hr class="bolum-ayrac">
-
-  <h2>4.3 Model Güveninin Yeniden Tasarımı</h2>
-
-  <h3>Önceki Yapının Sorunu</h3>
-  <p>Sprint 3'e kadar model güveni, SMAPE/WAPE gibi hata metriklerinden türetilen heuristik katsayılı tek bir sayı olarak kullanılıyordu. Bu değer kullanıcıya önerinin benzer geçmiş durumlarda ne kadar başarılı olduğunu açık biçimde göstermiyordu.</p>
-
-  <h3>Yeni Yaklaşım: Olasılıksal Kalibrasyon</h3>
-  <p>Bu sprintte model güveni, walk-forward doğrulama sonuçlarına dayalı bir <em>başarı olasılığı</em> olarak yeniden tanımlandı. Kalibrasyon üç aşamada çalışmaktadır:</p>
-  <ol>
-    <li>İl + ürün + tahmin ufku üçlüsüne karşılık gelen benzer geçmiş senaryolar sorgulanır.</li>
-    <li>Yerel senaryo sayısı sınırlı kalırsa ürün + tahmin ufku veya genel tahmin ufku düzeyindeki daha geniş referans setleri kullanılır.</li>
-    <li>Küçük örneklem kaynaklı aşırı oynakl ığı gidermek için ampirik Bayes shrinkage uygulanır.</li>
-  </ol>
-
-  <div class="formul">Posterior Başarı Oranı =
-  (yerel_başarı + α_prior) / (yerel_toplam + α_prior + β_prior)
-
-α = β = 2   (standart Beta dağılımı priorı)</div>
-
-  <p>Arayüz tarafında başarı olasılığı, kalibrasyonun hangi veri seviyesinden üretildiği, referans senaryo sayısı ve fallback kullanımı gibi bilgiler gösterilmeye başlandı.</p>
-
-  <div class="alt-bilgi">
-    <span>TarımZeka &mdash; Proje İlerleme Raporu</span>
-    <span>Sayfa 5</span>
-  </div>
-</div>
-
-
-<!-- ═══════════════ SAYFA 6: ARZ-TALEP + TEKNİK ═══════════════ -->
-<div class="sayfa">
-
-  <h2>4.4 Arz-Talep Dengesi Katmanı</h2>
-
-  <p>Bu sprintte tüketim verisinin sisteme eklenme biçimi güncellendi. Önceki yapıda bu veri yalnızca genel bir "tüketim trendi skoru" üretirken, yeni yapıda ulusal düzeyde tahmini üretim ile tahmini tüketim karşılaştırılmaya başlandı.</p>
-
-  <table>
-    <thead><tr><th>Gösterge</th><th>Hesap Mantığı</th><th>Çıktı</th></tr></thead>
-    <tbody>
-      <tr><td>Karşılama Oranı</td><td>Tahmini üretim / tahmini tüketim</td><td>Üretim talebi yüzde olarak karşılıyor mu?</td></tr>
-      <tr><td>Denge Farkı</td><td>Tahmini üretim − tahmini tüketim</td><td>Ton bazında arz açığı veya fazla üretim</td></tr>
-      <tr><td>Durum Etiketi</td><td>&lt;%95 → arz açığı, %95–105 → dengeli, &gt;%105 → üretim fazlası</td><td>Piyasa baskısı ve stok/ithalat riski yorumu</td></tr>
-    </tbody>
-  </table>
-
-  <h3>Örnek: Konya / Buğday Senaryosu</h3>
-  <p>Bu senaryo üzerinden sistemin ürettiği çıktılar şöyledir:</p>
-  <table>
-    <thead><tr><th>Gösterge</th><th>Değer</th></tr></thead>
-    <tbody>
-      <tr><td>Plan uygunluk skoru (AHP)</td><td>%66.0</td></tr>
-      <tr><td>Geçmiş verim skoru</td><td>%72.2</td></tr>
-      <tr><td>Ulusal verim endeksi (şehir / ulusal ort.)</td><td>%119.1</td></tr>
-      <tr><td>Şehir persentili</td><td>%75.9</td></tr>
-      <tr><td>Tahmini ulusal üretim</td><td>~20.8 milyon ton</td></tr>
-      <tr><td>Tahmini ulusal tüketim</td><td>~19.3 milyon ton</td></tr>
-      <tr><td>Karşılama oranı</td><td>%108.2 — Üretim fazlası</td></tr>
-      <tr><td>Denge farkı</td><td>+1.122.673 ton</td></tr>
-    </tbody>
-  </table>
-
-  <div class="not yesil">
-    <p><strong>Sistem yorumu:</strong> Konya için buğday teknik olarak uygun görünmektedir ve geçmiş performansı yüksektir. Ancak ulusal düzeyde buğday üretimi talebin üzerine çıktığı için sonuç ekranında olası fiyat baskısı bilgisi de gösterilmektedir.</p>
-  </div>
-
-  <div class="not">
-    <p><strong>Veri sınırlılığı:</strong> Mevcut tüketim verisi Türkiye geneli ürün seviyesindedir. Bu nedenle arz-talep analizi il bazında değil, ulusal ürün düzeyinde yapılmıştır.</p>
-  </div>
-
-  <hr class="bolum-ayrac">
-
-  <h2>Sprint 4'te Değiştirilen / Oluşturulan Dosyalar</h2>
-  <table class="dosya-listesi">
-    <thead><tr><th>Dosya</th><th>İşlem</th><th>Katkı</th></tr></thead>
-    <tbody>
-      <tr><td>backend/scoring_profile.json</td><td>Yeni</td><td>AHP ağırlıkları ve tutarlılık metrikleri (dışa alındı)</td></tr>
-      <tr><td>backend/scoring.py</td><td>Yeni</td><td>Ağırlıklar JSON profilinden okunuyor</td></tr>
-      <tr><td>backend/devtools/ahp_backtest.py</td><td>Yeni</td><td>Walk-forward backtest betiği</td></tr>
-      <tr><td>backend/db/repositories.py</td><td>Güncellendi</td><td>Kalibrasyon ve arz-talep sorguları eklendi</td></tr>
-      <tr><td>frontend/src/pages/AiRecommendations.jsx</td><td>Güncellendi</td><td>Arz-talep kartı ve güven detayları eklendi</td></tr>
-      <tr><td>docs/ahp_backtest_report.json</td><td>Yeni (otomatik)</td><td>Backtest çıktısı, betik çalıştıkça güncelleniyor</td></tr>
-      <tr><td>docs/ahp_metodoloji.md</td><td>Yeni</td><td>Matris, ağırlıklar ve tutarlılık hesabının belgelenmesi</td></tr>
-    </tbody>
-  </table>
-
-  <div class="alt-bilgi">
-    <span>TarımZeka &mdash; Proje İlerleme Raporu</span>
-    <span>Sayfa 6</span>
-  </div>
-</div>
-
-
-<!-- ═══════════════ SAYFA 7: VERİTABANI ═══════════════ -->
-<div class="sayfa">
-
-  <h2>5. Veritabanı Mimarisi</h2>
-
-  <p>Sistem iki şema üzerine kurulmuştur. <code>app</code> şeması kullanıcı, tarla ve plan yönetimini; <code>analytics</code> şeması ise tarihsel veri ve analiz tablolarını içermektedir. Sprintler boyunca ihtiyaç oldukça yeni tablolar ve alanlar eklenmiştir.</p>
-
-  <div class="iki-kolon">
-    <div class="kutu">
-      <h4>app şeması</h4>
-      <ul>
-        <li><code>users</code> — Kullanıcı hesapları</li>
-        <li><code>user_sessions</code> — Oturum yönetimi (Sprint 1)</li>
-        <li><code>fields</code> — Tarla tanımları</li>
-        <li><code>production_plans</code> — Üretim planları (Sprint 2)</li>
-        <li><code>ai_analyses</code> — Hesaplanan skorlar ve JSON döküm (Sprint 3)</li>
-        <li><code>ai_recommendations</code> — Önerilen ürün listesi (Sprint 3)</li>
-      </ul>
+    <div class="iki-kolon">
+      <div class="kutu">
+        <h4>Hesaplanan Değerler</h4>
+        <ul>
+          <li>λ<sub>max</sub> = 4.0104 &nbsp;(ideal: 4.0)</li>
+          <li>CI = (4.0104 − 4) / 3 = <strong>0.00345</strong></li>
+          <li>RI = 0.90 &nbsp;(4×4 matris referansı)</li>
+          <li>CR = 0.00345 / 0.90 = <strong>0.00384</strong></li>
+        </ul>
+      </div>
+      <div class="kutu">
+        <h4>Değerlendirme</h4>
+        <p style="margin-bottom:6px;">CR değeri <strong>%0.38</strong> olarak hesaplandı. Bu değer %10 sınırının altında kaldığı için matris tutarlı kabul edildi ve ağırlıklar <code>backend/scoring_profile.json</code> dosyasına aktarıldı.</p>
+        <p style="margin-bottom:0; font-size:9.5pt; color:var(--metin-uc);">Profil adı: <em>ahp_v1_expert_seed</em> — 03.04.2026</p>
+      </div>
     </div>
-    <div class="kutu">
-      <h4>analytics şeması</h4>
-      <ul>
-        <li><code>production_history</code> — İl × ürün × yıl verimi</li>
-        <li><code>model_predictions</code> — Gelecek dönem üretim tahminleri</li>
-        <li><code>consumption_history</code> — Ulusal tüketim verisi</li>
-        <li><code>climate_history</code> — İklim metrikleri</li>
-        <li><code>walk_forward_predictions</code> — Tahmin / gerçekleşen karşılaştırması</li>
-        <li><code>walk_forward_metrics</code> — Model hata metrikleri</li>
-      </ul>
+
+    <div class="not yesil">
+      <p>Bu çalışmayla ağırlıklar kod içinden çıkarılıp ayrı bir JSON profiline taşındı. Böylece ağırlıkların tek bir yerde tutulması ve gerektiğinde güncellenmesi kolaylaştı.</p>
+    </div>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 8 / 21</span>
     </div>
   </div>
 
-  <h3>Örnek Veri Akışı: Konya / Buğday Analizi</h3>
-  <p>Kullanıcı "Konya'da 50 dönüme buğday ekecek" planı oluşturduğunda sistem aşağıdaki sorgu adımlarını çalıştırır:</p>
+  <!-- SAYFA 9 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h2>4.2 Walk-Forward Backtest</h2>
 
-  <table>
-    <thead><tr><th>Adım</th><th>Sorgulanan Tablo</th><th>Üretilen Alt Skor</th></tr></thead>
-    <tbody>
-      <tr><td>1</td><td><code>analytics.production_history</code></td><td>Geçmiş Verim Skoru (%72.2)</td></tr>
-      <tr><td>2</td><td><code>analytics.walk_forward_predictions</code></td><td>Model Projeksiyonu Skoru</td></tr>
-      <tr><td>3</td><td><code>analytics.climate_history</code></td><td>İklim Dayanıklılığı Skoru</td></tr>
-      <tr><td>4</td><td><code>analytics.consumption_history</code></td><td>Tüketim Eğilimi + Arz-Talep Dengesi</td></tr>
-      <tr><td>5</td><td>—</td><td>AHP ağırlıklarıyla toplam skor: <strong>%66</strong></td></tr>
-      <tr><td>6</td><td><code>analytics.walk_forward_predictions</code></td><td>Kalibrasyon sorgusu → Güven Skoru</td></tr>
-    </tbody>
-  </table>
+    <h3>Amaç ve Tasarım</h3>
+    <p>AHP ile bulunan ağırlıkların geçmiş veriler üzerinde nasıl sonuç verdiğini görmek için <code>backend/devtools/ahp_backtest.py</code> betiği yazıldı. Walk-forward yaklaşımında her tahmin yalnızca o döneme kadar bulunan verilerle yapıldığı için test yapısı daha gerçekçi hale geldi.</p>
+    <p><strong>Teknik netleştirme:</strong> <code>backend/devtools/ahp_backtest.py</code> betiği modeli yeniden eğitmez. Betiğin görevi, daha önce oluşturulmuş <code>analytics.walk_forward_predictions</code> tablosundaki hazır tahmin-gerçekleşen kayıtlarını okumak ve AHP ile hesaplanan ağırlıkların bu geçmiş senaryolarda nasıl bir ürün sıralaması ürettiğini test etmektir.</p>
+    <p>Yani backtest sürecinde odak, XGBoost modelini tekrar kurmak veya eğitmek değil; mevcut walk-forward tahmin seti üzerinde AHP tabanlı skor motorunun sıralama performansını ölçmektir. Bu nedenle Top-1, Top-3, Spearman ve nDCG@3 metrikleri model eğitim başarısından çok, AHP ağırlıklı öneri sıralamasının tarihsel karar destek kalitesini göstermektedir.</p>
 
-  <p>Hesaplama tamamlandığında skor, skor dökümleri ve öneriler sırasıyla <code>app.ai_analyses</code> ve <code>app.ai_recommendations</code> tablolarına yazılır. Arayüz tarafı da bu verileri okuyarak analiz ekranını ve rapor geçmişini oluşturur.</p>
+    <p>Her senaryo bir <strong>il + tahmin yılı</strong> kombinasyonu olarak tanımlandı. 2020-2024 aralığındaki walk-forward tahminleri kullanılarak 405 senaryo oluşturuldu ve her senaryoda sistem sıralaması gerçek üretim sıralamasıyla karşılaştırıldı.</p>
 
-  <h3>Tasarım Kararları</h3>
-  <ul>
-    <li><strong>JSON veri tipi:</strong> <code>ai_analyses.score_breakdown</code> alanı JSON olarak saklanmaktadır; böylece skor bileşenlerinin dökümleri şema değişikliği gerektirmeden genişletilebilir.</li>
-    <li><strong>Sayısal hassasiyet:</strong> Üretim verileri <code>NUMERIC(18,6)</code>, verim değerleri <code>NUMERIC(14,2)</code> tipinde tanımlandı.</li>
-    <li><strong>İndeksleme:</strong> Sıkça filtrelenen <code>year</code>, <code>city_name</code> ve <code>product_name</code> sütunlarına performans indeksi eklendi.</li>
-    <li><strong>CASCADE silme:</strong> Bir kullanıcı silindiğinde tüm bağlı verilerin tutarlı biçimde temizlenebilmesi için foreign key ilişkileri CASCADE davranışıyla kuruldu.</li>
-  </ul>
+    <table>
+      <thead><tr><th>Backtest Parametresi</th><th>Değer</th></tr></thead>
+      <tbody>
+        <tr><td>Veri dönemi</td><td>2020 – 2024 (5 yıl)</td></tr>
+        <tr><td>Senaryo tanımı</td><td>İl + Tahmin Yılı</td></tr>
+        <tr><td>Minimum ürün sayısı / senaryo</td><td>4</td></tr>
+        <tr><td>Toplam senaryo</td><td>405</td></tr>
+        <tr><td>Toplam aday kayıt</td><td>60.820</td></tr>
+      </tbody>
+    </table>
+    <h3>Performans Metrikleri ve Sonuçlar</h3>
+    <table>
+      <thead><tr><th>Metrik</th><th>Sonuç</th><th>Açıklama</th></tr></thead>
+      <tbody>
+        <tr><td>Top-1 Exact Rate</td><td><strong>%15.31</strong></td><td>Sistemin birinci sıradaki önerisi gerçekte de birinci ürün</td></tr>
+        <tr><td>Top-3 Hit Rate</td><td><strong>%74.57</strong></td><td>Gerçek birinci ürünün sistemin ilk üç önerisi arasında yer alma oranı</td></tr>
+        <tr><td>Mean Spearman Korelasyonu</td><td><strong>0.4142</strong></td><td>Sistem sıralaması ile gerçek sıralama arasındaki korelasyon</td></tr>
+        <tr><td>Mean nDCG@3</td><td><strong>0.9175</strong></td><td>İlk üç önerinin sıra-duyarlı kalite skoru</td></tr>
+      </tbody>
+    </table>
 
-  <div class="alt-bilgi">
-    <span>TarımZeka &mdash; Proje İlerleme Raporu</span>
-    <span>Sayfa 7</span>
-  </div>
-</div>
+    <div class="not">
+      <p><strong>Yorum:</strong> Top-1 exact rate değeri düşük görünse de sistemin amacı tek bir ürünü kesin olarak seçmekten çok kullanıcıya güçlü adaylar sunmaktır. Bu açıdan bakıldığında %74.57 Top-3 hit rate ve 0.92 nDCG@3 değerleri yararlı bir sonuç vermektedir.</p>
+    </div>
+    </div>
 
-
-<!-- ═══════════════ SAYFA 8: SONUÇ ═══════════════ -->
-<div class="sayfa">
-
-  <h2>6. Genel Durum ve Notlar</h2>
-
-  <h3>Bu Haftaya Kadar Tamamlanan Başlıca Çalışmalar</h3>
-  <p>Bu raporda anlatılan sprintler sonunda sistemde aşağıdaki çalışmalar tamamlandı:</p>
-  <ul>
-    <li>Gerçek kimlik doğrulama ve kullanıcıya özel veri izolasyonu</li>
-    <li>Veritabanına kalıcı olarak kaydedilen plan ve analiz geçmişi</li>
-    <li>Mock veriden arındırılmış, gerçek analitik tablolara dayalı bölgesel analiz</li>
-    <li>AHP ile belirlenen kriter ağırlıkları</li>
-    <li>Walk-forward backtest ile test edilen sıralama performansı</li>
-    <li>Olasılıksal kalibrasyon tabanlı model güven skoru</li>
-    <li>Tüketim verisine dayalı arz-talep dengesi katmanı</li>
-  </ul>
-
-  <h3>Mevcut Sınırlılıklar</h3>
-  <table>
-    <thead><tr><th>Sınırlılık</th><th>Açıklama</th><th>Not</th></tr></thead>
-    <tbody>
-      <tr>
-        <td>AHP matrisinin tek uzman tohumu niteliği taşıması</td>
-        <td>Ağırlıklar şu aşamada tek bir bakış açısını yansıtıyor</td>
-        <td>İleride farklı uzman görüşleriyle tekrar güncellenebilir</td>
-      </tr>
-      <tr>
-        <td>Top-1 exact rate'in düşüklüğü (%15.31)</td>
-        <td>Sistem her zaman en yüksek verimli ürünü birinci sıraya yerleştiremiyor</td>
-        <td>Bu nedenle Top-3 metriği de ayrıca takip edilmiştir</td>
-      </tr>
-      <tr>
-        <td>Tüketim verisinin ulusal düzeyde kalması</td>
-        <td>Arz-talep analizi il bazında yapılamamaktadır</td>
-        <td>Şu an yorum ulusal ürün düzeyinde yapılmaktadır</td>
-      </tr>
-      <tr>
-        <td>Bazı durumlarda fallback kalibrasyonu</td>
-        <td>Yerel senaryo sayısı azsa üst düzey referansa geçiliyor</td>
-        <td>Bu durumda üst düzey referans verisi kullanılmaktadır</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h3>Not</h3>
-  <p>Bu çalışmada kullanılan AHP, çok kriterli karar verme problemlerinde kullanılan bir yöntemdir. Walk-forward backtest ise tahmin performansını dönemsel olarak görmek için kullanılmıştır.</p>
-  <p>Bu projede bu yöntemler aynı sistem içinde bir araya getirilmiş ve kullanıcıya doğrudan öneri sunan yapı üzerinde uygulanmıştır.</p>
-
-  <h3>Sonraki Çalışmalar İçin Notlar</h3>
-  <ol>
-    <li>AHP matrisinin uzman paneli ile genişletilmesi ve farklı ağırlık profillerinin karşılaştırılması</li>
-    <li>Şehir × ürün kombinasyonları için ayrı kalibrasyon profilleri ve yerel başarı oranlarının analizi</li>
-    <li>Backtest sonuçlarına göre ağırlık profilinin sürümlenmesi ve zamansal karşılaştırma</li>
-    <li>Dış ticaret verisi entegrasyonuyla arz-talep analizinin il düzeyine taşınması</li>
-    <li>Model projeksiyonu bileşenine belirsizlik bantlarının eklenmesi</li>
-  </ol>
-
-  <hr class="bolum-ayrac">
-
-  <div class="not yesil" style="margin-top:0;">
-    <p style="font-size:10.5pt;"><strong>Özet:</strong> Bu rapor döneminde kullanıcı altyapısı, plan oluşturma akışı, gerçek veriye bağlı öneri sistemi, AHP ile ağırlıklandırma, backtest, güven skoru düzenlemesi ve arz-talep analizi üzerinde çalışıldı. Son durumda sistemin temel akışları çalışır hale getirilmiş ve raporlanan bölümler güncellenmiştir.</p>
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 9 / 21</span>
+    </div>
   </div>
 
-  <div class="alt-bilgi" style="margin-top:30px;">
-    <span>TarımZeka &mdash; Proje İlerleme Raporu &mdash; 11 Nisan 2026</span>
-    <span>Sayfa 8 / 8</span>
+  <!-- SAYFA 10 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h3>Örnek Senaryolar</h3>
+    <table>
+      <thead><tr><th>İl</th><th>Yıl</th><th>Sistemin 1. Önerisi</th><th>Gerçek Sıra</th><th>Sonuç</th></tr></thead>
+      <tbody>
+        <tr><td>Adıyaman</td><td>2020</td><td>Buğday</td><td>1</td><td>İlk tercihte tam isabet</td></tr>
+        <tr><td>Adıyaman</td><td>2024</td><td>Buğday</td><td>3</td><td>İlk 3 kapsamı korundu</td></tr>
+        <tr><td>Afyonkarahisar</td><td>2020</td><td>Patates</td><td>1</td><td>İlk tercihte tam isabet</td></tr>
+        <tr><td>Adana</td><td>2023</td><td>Mısır</td><td>6</td><td>Kapsam dışında kaldı</td></tr>
+      </tbody>
+    </table>
+
+    <hr class="bolum-ayrac">
+
+    <h2>4.3 Model Güveninin Yeniden Tasarımı</h2>
+
+    <h3>Önceki Yapının Sorunu</h3>
+    <p>Sprint 3'e kadar model güveni, SMAPE/WAPE gibi hata metriklerinden türetilen heuristik katsayılı tek bir sayı olarak kullanılıyordu. Bu değer kullanıcıya önerinin benzer geçmiş durumlarda ne kadar başarılı olduğunu açık biçimde göstermiyordu.</p>
+
+    <h3>Yeni Yaklaşım: Olasılıksal Kalibrasyon</h3>
+    <p>Bu sprintte model güveni, walk-forward doğrulama sonuçlarına dayalı bir <em>başarı olasılığı</em> olarak yeniden tanımlandı. Kalibrasyon üç aşamada çalışmaktadır:</p>
+    <ol>
+      <li>İl + ürün + tahmin ufku üçlüsüne karşılık gelen benzer geçmiş senaryolar sorgulanır.</li>
+      <li>Yerel senaryo sayısı sınırlı kalırsa ürün + tahmin ufku veya genel tahmin ufku düzeyindeki daha geniş referans setleri kullanılır.</li>
+      <li>Küçük örneklem kaynaklı aşırı oynakl ığı gidermek için ampirik Bayes shrinkage uygulanır.</li>
+    </ol>
+
+    <div class="formul">Posterior Başarı Oranı =
+    (yerel_başarı + α_prior) / (yerel_toplam + α_prior + β_prior)
+
+  α = β = 2   (standart Beta dağılımı priorı)</div>
+
+    <p>Arayüz tarafında başarı olasılığı, kalibrasyonun hangi veri seviyesinden üretildiği, referans senaryo sayısı ve fallback kullanımı gibi bilgiler gösterilmeye başlandı.</p>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 10 / 21</span>
+    </div>
   </div>
 
-</div>
+  <!-- SAYFA 11 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h2>4.4 Arz-Talep Dengesi Katmanı</h2>
 
-</body>
-</html>
+    <p>Bu sprintte tüketim verisinin sisteme eklenme biçimi güncellendi. Önceki yapıda bu veri yalnızca genel bir "tüketim trendi skoru" üretirken, yeni yapıda ulusal düzeyde tahmini üretim ile tahmini tüketim karşılaştırılmaya başlandı.</p>
+
+    <table>
+      <thead><tr><th>Gösterge</th><th>Hesap Mantığı</th><th>Çıktı</th></tr></thead>
+      <tbody>
+        <tr><td>Karşılama Oranı</td><td>Tahmini üretim / tahmini tüketim</td><td>Üretim talebi yüzde olarak karşılıyor mu?</td></tr>
+        <tr><td>Denge Farkı</td><td>Tahmini üretim − tahmini tüketim</td><td>Ton bazında arz açığı veya fazla üretim</td></tr>
+        <tr><td>Durum Etiketi</td><td>&lt;%95 → arz açığı, %95–105 → dengeli, &gt;%105 → üretim fazlası</td><td>Piyasa baskısı ve stok/ithalat riski yorumu</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Örnek: Konya / Buğday Senaryosu</h3>
+    <p>Bu senaryo üzerinden sistemin ürettiği çıktılar şöyledir:</p>
+    <table>
+      <thead><tr><th>Gösterge</th><th>Değer</th></tr></thead>
+      <tbody>
+        <tr><td>Plan uygunluk skoru (AHP)</td><td>%66.0</td></tr>
+        <tr><td>Geçmiş verim skoru</td><td>%72.2</td></tr>
+        <tr><td>Ulusal verim endeksi (şehir / ulusal ort.)</td><td>%119.1</td></tr>
+        <tr><td>Şehir persentili</td><td>%75.9</td></tr>
+        <tr><td>Tahmini ulusal üretim</td><td>~20.8 milyon ton</td></tr>
+        <tr><td>Tahmini ulusal tüketim</td><td>~19.3 milyon ton</td></tr>
+        <tr><td>Karşılama oranı</td><td>%108.2 — Üretim fazlası</td></tr>
+        <tr><td>Denge farkı</td><td>+1.122.673 ton</td></tr>
+      </tbody>
+    </table>
+
+    <div class="not yesil">
+      <p><strong>Sistem yorumu:</strong> Konya için buğday teknik olarak uygun görünmektedir ve geçmiş performansı yüksektir. Ancak ulusal düzeyde buğday üretimi talebin üzerine çıktığı için sonuç ekranında olası fiyat baskısı bilgisi de gösterilmektedir.</p>
+    </div>
+
+    <div class="not">
+      <p><strong>Veri sınırlılığı:</strong> Mevcut tüketim verisi Türkiye geneli ürün seviyesindedir. Bu nedenle arz-talep analizi il bazında değil, ulusal ürün düzeyinde yapılmıştır.</p>
+    </div>
+
+    <hr class="bolum-ayrac">
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 11 / 21</span>
+    </div>
+  </div>
+
+  <!-- SAYFA 12 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h2>Sprint 4'te Değiştirilen / Oluşturulan Dosyalar</h2>
+    <table class="dosya-listesi">
+      <thead><tr><th>Dosya</th><th>İşlem</th><th>Katkı</th></tr></thead>
+      <tbody>
+        <tr><td>backend/scoring_profile.json</td><td>Yeni</td><td>AHP ağırlıkları ve tutarlılık metrikleri (dışa alındı)</td></tr>
+        <tr><td>backend/scoring.py</td><td>Yeni</td><td>Ağırlıklar JSON profilinden okunuyor</td></tr>
+        <tr><td>backend/devtools/ahp_backtest.py</td><td>Yeni</td><td>Walk-forward backtest betiği</td></tr>
+        <tr><td>backend/db/repositories.py</td><td>Güncellendi</td><td>Kalibrasyon ve arz-talep sorguları eklendi</td></tr>
+        <tr><td>frontend/src/pages/AiRecommendations.jsx</td><td>Güncellendi</td><td>Arz-talep kartı ve güven detayları eklendi</td></tr>
+        <tr><td>docs/ahp_backtest_report.json</td><td>Yeni (otomatik)</td><td>Backtest çıktısı, betik çalıştıkça güncelleniyor</td></tr>
+        <tr><td>docs/ahp_metodoloji.md</td><td>Yeni</td><td>Matris, ağırlıklar ve tutarlılık hesabının belgelenmesi</td></tr>
+      </tbody>
+    </table>
+
+    <h2>5. Veritabanı Mimarisi</h2>
+
+    <p>Sistem iki şema üzerine kurulmuştur. <code>app</code> şeması kullanıcı, tarla ve plan yönetimini; <code>analytics</code> şeması ise tarihsel veri ve analiz tablolarını içermektedir. Sprintler boyunca ihtiyaç oldukça yeni tablolar ve alanlar eklenmiştir.</p>
+
+    <div class="iki-kolon">
+      <div class="kutu">
+        <h4>app şeması</h4>
+        <ul>
+          <li><code>users</code> — Kullanıcı hesapları</li>
+          <li><code>user_sessions</code> — Oturum yönetimi (Sprint 1)</li>
+          <li><code>fields</code> — Tarla tanımları</li>
+          <li><code>production_plans</code> — Üretim planları (Sprint 2)</li>
+          <li><code>ai_analyses</code> — Hesaplanan skorlar ve JSON döküm (Sprint 3)</li>
+          <li><code>ai_recommendations</code> — Önerilen ürün listesi (Sprint 3)</li>
+        </ul>
+      </div>
+      <div class="kutu">
+        <h4>analytics şeması</h4>
+        <ul>
+          <li><code>production_history</code> — İl × ürün × yıl verimi</li>
+          <li><code>model_predictions</code> — Gelecek dönem üretim tahminleri</li>
+          <li><code>consumption_history</code> — Ulusal tüketim verisi</li>
+          <li><code>climate_history</code> — İklim metrikleri</li>
+          <li><code>walk_forward_predictions</code> — Tahmin / gerçekleşen karşılaştırması</li>
+          <li><code>walk_forward_metrics</code> — Model hata metrikleri</li>
+        </ul>
+      </div>
+    </div>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 12 / 21</span>
+    </div>
+  </div>
+
+  <!-- SAYFA 13 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h3>Örnek Veri Akışı: Konya / Buğday Analizi</h3>
+    <p>Kullanıcı "Konya'da 50 dönüme buğday ekecek" planı oluşturduğunda sistem aşağıdaki sorgu adımlarını çalıştırır:</p>
+
+    <table>
+      <thead><tr><th>Adım</th><th>Sorgulanan Tablo</th><th>Üretilen Alt Skor</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td><code>analytics.production_history</code></td><td>Geçmiş Verim Skoru (%72.2)</td></tr>
+        <tr><td>2</td><td><code>analytics.walk_forward_predictions</code></td><td>Model Projeksiyonu Skoru</td></tr>
+        <tr><td>3</td><td><code>analytics.climate_history</code></td><td>İklim Dayanıklılığı Skoru</td></tr>
+        <tr><td>4</td><td><code>analytics.consumption_history</code></td><td>Tüketim Eğilimi + Arz-Talep Dengesi</td></tr>
+        <tr><td>5</td><td>—</td><td>AHP ağırlıklarıyla toplam skor: <strong>%66</strong></td></tr>
+        <tr><td>6</td><td><code>analytics.walk_forward_predictions</code></td><td>Kalibrasyon sorgusu → Güven Skoru</td></tr>
+      </tbody>
+    </table>
+
+    <p>Hesaplama tamamlandığında skor, skor dökümleri ve öneriler sırasıyla <code>app.ai_analyses</code> ve <code>app.ai_recommendations</code> tablolarına yazılır. Arayüz tarafı da bu verileri okuyarak analiz ekranını ve rapor geçmişini oluşturur.</p>
+
+    <h3>Tasarım Kararları</h3>
+    <ul>
+      <li><strong>JSON veri tipi:</strong> <code>ai_analyses.score_breakdown</code> alanı JSON olarak saklanmaktadır; böylece skor bileşenlerinin dökümleri şema değişikliği gerektirmeden genişletilebilir.</li>
+      <li><strong>Sayısal hassasiyet:</strong> Üretim verileri <code>NUMERIC(18,6)</code>, verim değerleri <code>NUMERIC(14,2)</code> tipinde tanımlandı.</li>
+      <li><strong>İndeksleme:</strong> Sıkça filtrelenen <code>year</code>, <code>city_name</code> ve <code>product_name</code> sütunlarına performans indeksi eklendi.</li>
+      <li><strong>CASCADE silme:</strong> Bir kullanıcı silindiğinde tüm bağlı verilerin tutarlı biçimde temizlenebilmesi için foreign key ilişkileri CASCADE davranışıyla kuruldu.</li>
+    </ul>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 13 / 21</span>
+    </div>
+  </div>
+
+  <!-- SAYFA 14 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h2>6. Genel Durum ve Notlar</h2>
+
+    <h3>Bu Haftaya Kadar Tamamlanan Başlıca Çalışmalar</h3>
+    <p>Bu raporda anlatılan sprintler sonunda sistemde aşağıdaki çalışmalar tamamlandı:</p>
+    <ul>
+      <li>Gerçek kimlik doğrulama ve kullanıcıya özel veri izolasyonu</li>
+      <li>Veritabanına kalıcı olarak kaydedilen plan ve analiz geçmişi</li>
+      <li>Mock veriden arındırılmış, gerçek analitik tablolara dayalı bölgesel analiz</li>
+      <li>AHP ile belirlenen kriter ağırlıkları</li>
+      <li>Walk-forward backtest ile test edilen sıralama performansı</li>
+      <li>Olasılıksal kalibrasyon tabanlı model güven skoru</li>
+      <li>Tüketim verisine dayalı arz-talep dengesi katmanı</li>
+    </ul>
+
+    <h3>Mevcut Sınırlılıklar</h3>
+    <table>
+      <thead><tr><th>Sınırlılık</th><th>Açıklama</th><th>Not</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>AHP matrisinin tek uzman tohumu niteliği taşıması</td>
+          <td>Ağırlıklar şu aşamada tek bir bakış açısını yansıtıyor</td>
+          <td>İleride farklı uzman görüşleriyle tekrar güncellenebilir</td>
+        </tr>
+        <tr>
+          <td>Top-1 exact rate'in düşüklüğü (%15.31)</td>
+          <td>Sistem her zaman en yüksek verimli ürünü birinci sıraya yerleştiremiyor</td>
+          <td>Bu nedenle Top-3 metriği de ayrıca takip edilmiştir</td>
+        </tr>
+        <tr>
+          <td>Tüketim verisinin ulusal düzeyde kalması</td>
+          <td>Arz-talep analizi il bazında yapılamamaktadır</td>
+          <td>Şu an yorum ulusal ürün düzeyinde yapılmaktadır</td>
+        </tr>
+        <tr>
+          <td>Bazı durumlarda fallback kalibrasyonu</td>
+          <td>Yerel senaryo sayısı azsa üst düzey referansa geçiliyor</td>
+          <td>Bu durumda üst düzey referans verisi kullanılmaktadır</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>Not</h3>
+    <p>Bu çalışmada kullanılan AHP, çok kriterli karar verme problemlerinde kullanılan bir yöntemdir. Walk-forward backtest ise tahmin performansını dönemsel olarak görmek için kullanılmıştır.</p>
+    <p>Bu projede bu yöntemler aynı sistem içinde bir araya getirilmiş ve kullanıcıya doğrudan öneri sunan yapı üzerinde uygulanmıştır.</p>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 14 / 21</span>
+    </div>
+  </div>
+
+  <!-- SAYFA 15 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h3>Sonraki Çalışmalar İçin Notlar</h3>
+    <ol>
+      <li>AHP matrisinin uzman paneli ile genişletilmesi ve farklı ağırlık profillerinin karşılaştırılması</li>
+      <li>Şehir × ürün kombinasyonları için ayrı kalibrasyon profilleri ve yerel başarı oranlarının analizi</li>
+      <li>Backtest sonuçlarına göre ağırlık profilinin sürümlenmesi ve zamansal karşılaştırma</li>
+      <li>Dış ticaret verisi entegrasyonuyla arz-talep analizinin il düzeyine taşınması</li>
+      <li>Model projeksiyonu bileşenine belirsizlik bantlarının eklenmesi</li>
+    </ol>
+
+    <hr class="bolum-ayrac">
+
+    <div class="not yesil" style="margin-top:0;">
+      <p style="font-size:10.5pt;"><strong>Özet:</strong> Bu rapor döneminde kullanıcı altyapısı, plan oluşturma akışı, gerçek veriye bağlı öneri sistemi, AHP ile ağırlıklandırma, backtest, güven skoru düzenlemesi ve arz-talep analizi üzerinde çalışıldı. Son durumda sistemin temel akışları çalışır hale getirilmiş ve raporlanan bölümler güncellenmiştir.</p>
+    </div>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 15 / 21</span>
+    </div>
+  </div>
+
+  <!-- SAYFA 16 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h2>7. 12 Nisan Güncelleme Dönemi</h2>
+
+    <p>11 Nisan raporundan sonra tamamlanan çalışmalar, mevcut karar destek sisteminin kullanıcıya daha doğrudan bağlanması, model çıktılarının uygulama akışıyla daha uyumlu hale getirilmesi ve arayüzde tespit edilen mantık / kullanılabilirlik problemlerinin giderilmesi etrafında toplanmıştır.</p>
+
+    <div class="not yesil">
+      <p><strong>Genel durum:</strong> Bu ek güncellemelerle birlikte sistem, sabit varsayılan değerlerden daha fazla arındırılmış; kullanıcının profilindeki il / ilçe, oluşturduğu planlar ve geçmiş analiz kayıtları daha merkezi hale getirilmiştir.</p>
+    </div>
+
+    <h3>7.1 Sprint 5: Kayıt Olma ve Kullanıcı Onboarding</h3>
+    <p>Sprint 5 kapsamında kullanıcının sisteme ilk kez dahil olma akışı geliştirildi. Önceki sprintlerde kimlik doğrulama ve oturum yönetimi kurulmuştu; bu sprintte ise bu yapı kayıt olma ekranı, profil başlangıç bilgileri ve kullanıcıya özel veri bağlamı ile genişletildi.</p>
+
+    <table>
+      <thead><tr><th>Alan</th><th>Yapılan Güncelleme</th><th>Sisteme Katkısı</th></tr></thead>
+      <tbody>
+        <tr><td>Kayıt ekranı</td><td>Yeni kullanıcı oluşturma akışı eklendi</td><td>Uygulama tek kullanıcılı demo davranışından çıkarıldı</td></tr>
+        <tr><td>Profil bilgisi</td><td>Kullanıcıdan il / ilçe gibi temel konum bilgileri alınmaya başlandı</td><td>Dashboard ve iklim ekranları kişiye özel varsayılan konumla çalışabilir hale geldi</td></tr>
+        <tr><td>Backend endpointleri</td><td>Register akışı auth yapısına bağlandı</td><td>Kullanıcı kaydı, oturum ve profil verisi aynı mimari içinde ele alındı</td></tr>
+        <tr><td>Frontend oturum durumu</td><td>AuthContext tarafında kayıt olma sonrası oturum davranışı güçlendirildi</td><td>Kullanıcının kayıttan sonra uygulama içindeki akışı daha pürüzsüz hale getirildi</td></tr>
+      </tbody>
+    </table>
+
+    <p>Bu değişikliğin önemli sonucu, sistemde artık "açılışta Manisa gelsin" gibi sabit bir varsayıma ihtiyaç kalmamasıdır. Kullanıcı kayıt olurken il / ilçe bilgisi verdiği için konuma bağlı ekranlar bu profil bilgisinden beslenebilecek hale getirilmiştir.</p>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 16 / 21</span>
+    </div>
+  </div>
+
+  <!-- SAYFA 17 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h3>7.2 Teknik Dokümantasyonun Güncellenmesi</h3>
+    <p>Bu dönemde README ve teknik dokümantasyon da genişletildi. Projenin frontend, backend, veritabanı, model ve veri işleme katmanları daha açık anlatıldı. Ayrıca kullanılan endpointler, AHP ağırlıkları, backtest sonuçları, hava durumu cache yapısı ve veri kaynakları gibi bölümler güncel proje durumuna göre revize edildi.</p>
+
+    <h3>7.3 12 Nisan Commit Özeti</h3>
+    <table>
+      <thead><tr><th>Commit</th><th>Konu</th><th>Açıklama</th></tr></thead>
+      <tbody>
+        <tr><td><code>14b8d86</code></td><td>Sprint 5</td><td>Register ve kullanıcı onboarding akışı eklendi</td></tr>
+        <tr><td><code>336244e</code></td><td>Model ve DB import</td><td>Üretim / tüketim modelleri yeniden düzenlendi ve veritabanı import süreci güncellendi</td></tr>
+        <tr><td><code>64fcd89</code></td><td>AI ürün eşleşmesi</td><td>Yerel plan ile model / veritabanı ürün adları arasındaki eşleşme katmanı iyileştirildi</td></tr>
+        <tr><td><code>09d9ba8</code></td><td>Hava durumu cache</td><td>Günlük hava durumu cache akışı eklendi</td></tr>
+        <tr><td><code>baf88a2</code></td><td>Dashboard ve Plan Wizard</td><td>Lokasyon filtresi, bildirim sistemi ve Plan Wizard UI düzenlemeleri yapıldı</td></tr>
+        <tr><td><code>44065ab</code></td><td>AI, iklim ve profil</td><td>AI önerileri, iklim sayfası ve profil yükleme akışı iyileştirildi</td></tr>
+        <tr><td><code>d481d72</code></td><td>İl listesi düzeltmesi</td><td>Dashboard ve İklim ekranlarında tekrar eden il seçenekleri tekilleştirildi</td></tr>
+      </tbody>
+    </table>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 17 / 21</span>
+    </div>
+  </div>
+
+  <!-- SAYFA 18 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h2>8. Model, Veri ve Konum Altyapısı Güncellemeleri</h2>
+
+    <h3>8.1 Üretim ve Tüketim Modellerinin Güncellenmesi</h3>
+    <p>12 Nisan çalışmalarında üretim ve tüketim modellerinin güncel halleri projeye dahil edildi. Üretim modeli tarafında XGBoost tabanlı doğrudan tahmin ufku yaklaşımını destekleyen dosyalar ve çıktılar güncellendi. Tüketim modeli tarafında da notebook ve model çalışmalarının son hali eklendi.</p>
+
+    <table>
+      <thead><tr><th>Bileşen</th><th>Güncelleme</th><th>Beklenen Etki</th></tr></thead>
+      <tbody>
+        <tr><td>Üretim modeli</td><td>Yeni model dosyaları, XGBoost çıktıları ve çalıştırma betikleri güncellendi</td><td>Ürün / il bazlı projeksiyon katmanının güncel veriyle beslenmesi</td></tr>
+        <tr><td>Tüketim modeli</td><td>Tüketim notebooklarının güncel hali eklendi</td><td>Arz-talep yorumlarında daha güncel tüketim sinyali kullanılması</td></tr>
+        <tr><td>DB import</td><td>Model çıktılarının veritabanına aktarım süreci tamamlandı</td><td>Notebook çıktılarının uygulama API'leri tarafından okunabilir hale gelmesi</td></tr>
+        <tr><td>Bağımlılıklar</td><td>Model requirements dosyaları revize edildi</td><td>Model ortamının tekrar kurulabilir ve takip edilebilir hale gelmesi</td></tr>
+      </tbody>
+    </table>
+
+    <p>Bu çalışma, model tarafının yalnızca deneysel notebook çıktısı olarak kalmaması ve uygulamanın karar üreten backend katmanıyla daha doğrudan konuşabilmesi için yapılmıştır.</p>
+
+    <h3>8.2 Yerel Plan ve Ürün Eşleştirme Katmanı</h3>
+    <p>AI analizinde kullanıcının seçtiği ürün adı ile veritabanı / model tarafındaki ürün adının her zaman birebir aynı yazılmaması bir risk oluşturuyordu. Bu nedenle yerel plan ile ürün eşleştirme katmanı iyileştirildi.</p>
+
+    <div class="not">
+      <p><strong>Örnek problem:</strong> Arayüzde seçilen bir ürün adının model verisinde farklı karakter, farklı boşluk, farklı büyük / küçük harf veya alternatif adla bulunması analiz sonucunun eksik ya da yanlış oluşmasına neden olabilir. Bu katman bu uyumsuzluğu azaltmak için eklenmiştir.</p>
+    </div>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 18 / 21</span>
+    </div>
+  </div>
+
+  <!-- SAYFA 19 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h3>8.3 Günlük Hava Durumu Cache Akışı</h3>
+    <p>Hava durumu verilerinin her ekranda dış servisten tekrar tekrar çekilmesi yerine günlük cache mantığı eklendi. Bu yapıda il / ilçe koordinatları kullanılarak hava durumu verisi alınmakta ve veritabanında günlük olarak saklanabilmektedir.</p>
+
+    <table>
+      <thead><tr><th>Parça</th><th>Görevi</th></tr></thead>
+      <tbody>
+        <tr><td><code>backend/weather_service.py</code></td><td>Hava durumu verisini dış servisten alma ve normalize etme katmanı</td></tr>
+        <tr><td><code>analytics.weather_daily_cache</code></td><td>Günlük hava durumu verisini tekrar kullanılabilir şekilde saklama alanı</td></tr>
+        <tr><td><code>tools/refresh_weather_cache.py</code></td><td>Cache verisini zamanlanmış veya manuel şekilde güncellemek için yardımcı betik</td></tr>
+        <tr><td><code>analytics.geo_locations</code></td><td>İl / ilçe koordinatı ile hava durumu sorgusu arasında bağlantı kuran tablo</td></tr>
+      </tbody>
+    </table>
+
+    <h3>8.4 Lokasyon Seçeneklerinin Veritabanından Beslenmesi</h3>
+    <p>Dashboard ve İklim ekranlarındaki il / ilçe seçenekleri için uygulama çalışma zamanında CSV dosyasına bağlı kalmak yerine veritabanını esas alacak şekilde düzenlendi. Bu kararın nedeni, kullanıcı kayıtları, tarla kayıtları ve analitik lokasyon tablolarının zaten veritabanında tutulmasıdır.</p>
+
+    <p>Bu kapsamda <code>/api/locations/options</code> benzeri bir API akışı kullanılarak il / ilçe seçenekleri <code>analytics.cities</code>, <code>analytics.geo_locations</code>, <code>app.users</code> ve <code>app.fields</code> gibi kaynaklardan türetildi. Son aşamada aynı ilin listede iki kere görünmesi problemi de normalize edilmiş karşılaştırma anahtarlarıyla giderildi.</p>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 19 / 21</span>
+    </div>
+  </div>
+
+  <!-- SAYFA 20 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h2>9. UI/UX ve Mantık Akışı İyileştirmeleri</h2>
+
+    <h3>9.1 Dashboard Güncellemeleri</h3>
+    <p>Dashboard ekranında hava durumu kartının içindeki il seçimi ayrı bir konum seçimi alanına taşındı. Bu alan uyarıların üst tarafında, profil bölgesinin altında konumlandırıldı. İl seçimine ek olarak ilçe seçimi de eklendi ve kullanıcının <strong>Uygula</strong> butonu ile ekran bileşenlerini yeni konuma göre güncellemesi sağlandı.</p>
+
+    <ul>
+      <li>Varsayılan Manisa davranışı kaldırıldı; açılışta kullanıcı profilindeki il / ilçe esas alındı.</li>
+      <li>Boş kalan acil uyarı alanı yerine, uyarı olmadığı durumlarda anlamlı bölgesel notlar gösterilecek şekilde dinamik içerik eklendi.</li>
+      <li>Bildirim çanı çalışır hale getirildi ve kullanıcının uyarı / notlara erişmesi için dropdown davranışı eklendi.</li>
+      <li>İl listesinde tekrar eden kayıtların görünmesi normalize edilmiş tekilleştirme ile düzeltildi.</li>
+    </ul>
+
+    <h3>9.2 Plan Wizard Güncellemeleri</h3>
+    <p>Yeni üretim planı oluşturma ekranında planlanan alan kutusunda <em>Dönüm</em> yazısı ile seçim / ok alanının çakışması gibi görsel problemler giderildi. Ürün seçimi alanında çok fazla kutucuk bulunması nedeniyle oluşan uzun kaydırma deneyimi de iyileştirildi.</p>
+
+    <p>Ayrıca geliştirme sürecinden kalmış "sprint" gibi teknik metinlerin son kullanıcı ekranında kalmaması için arayüz metinleri daha ürün odaklı hale getirildi.</p>
+
+    <h3>9.3 Yapay Zeka Önerileri Sayfası</h3>
+    <p>Önceki davranışta kullanıcı ana sayfadan Yapay Zeka Önerileri ekranına gittiğinde kısa süre boş bir bileşen görüyor, ardından sistem otomatik olarak en son oluşturulan planın analizini açıyordu. Bu durum kullanıcı için belirsizdi; hangi planın neden açıldığı arayüzden anlaşılmıyordu.</p>
+
+    <p>Yeni yapıda sayfa <code>planId</code> veya <code>analysisId</code> olmadan açılırsa önce kullanıcının önceki plan analizleri listelenmektedir. En yeni analizler üstte, daha eski analizler altta gösterilir. Kullanıcı listeden bir planı seçtiğinde o plana ait öneri ve analiz sonucu açılır. Plan Wizard'dan yeni plan oluşturup doğrudan AI ekranına gitme akışı ise korunmuştur.</p>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 20 / 21</span>
+    </div>
+  </div>
+
+  <!-- SAYFA 21 -->
+  <div class="sayfa">
+    <div class="sayfa-icerik">
+<h3>9.4 İklim ve Risk Sayfası</h3>
+    <p>İklim ve Risk sayfasında da sabit Manisa varsayımı kaldırıldı. Sayfa, kullanıcı profilindeki il / ilçe bilgisini kullanacak şekilde düzenlendi. Dashboard ile aynı lokasyon seçenekleri mantığı kullanıldığı için iki ekranda da tutarlı konum davranışı sağlandı.</p>
+
+    <h3>9.5 Profil Sayfası Performansı</h3>
+    <p>Profil sayfasının geç yüklenmesi incelendiğinde problemin FastAPI'nin genel performansından çok, sayfanın açılışta fazla veriyi aynı anda istemesinden kaynaklandığı değerlendirildi. Bu nedenle profil ekranı için daha hafif bir özet endpointi eklendi.</p>
+
+    <table>
+      <thead><tr><th>Eski Davranış</th><th>Yeni Davranış</th><th>Kazanım</th></tr></thead>
+      <tbody>
+        <tr><td>Profil, tarla kayıtları ve analiz geçmişi birlikte yükleniyordu</td><td>Önce profil özeti yükleniyor</td><td>İlk ekran daha hızlı açılıyor</td></tr>
+        <tr><td>Ağır veri grupları açılışta isteniyordu</td><td>Tarlalar ve rapor geçmişi sekme ihtiyacına göre yükleniyor</td><td>Gereksiz API bekleme süresi azalıyor</td></tr>
+        <tr><td>Kullanıcı boş / yükleniyor hissiyle bekliyordu</td><td>Önce temel bilgiler görünür hale geliyor</td><td>Algılanan performans iyileşiyor</td></tr>
+      </tbody>
+    </table>
+
+    <hr class="bolum-ayrac">
+
+    <h2>10. Güncel Sonuç</h2>
+    <p>3 Nisan sonrasında tamamlanan ek geliştirmelerle TarımZeka; kullanıcı profili, üretim planı, geçmiş analizler, iklim verisi, hava durumu cache sistemi, model çıktıları ve AHP tabanlı karar mekanizmasını daha bütünlüklü kullanan bir tarımsal karar destek sistemine dönüşmüştür.</p>
+
+    <div class="not yesil">
+      <p><strong>Son özet:</strong> Sistem artık kullanıcının profilindeki konuma göre açılmakta, plan oluşturulduğunda ilgili analizle doğrudan bağlantı kurmakta, geçmiş plan analizlerini seçilebilir olarak sunmakta ve UI tarafında tespit edilen boş / belirsiz / tekrar eden durumları daha kontrollü bir deneyime dönüştürmektedir.</p>
+    </div>
+    </div>
+
+    <div class="alt-bilgi">
+      <span>Tar&#305;mZeka &mdash; Proje &#304;lerleme Raporu &mdash; 12 Nisan 2026</span>
+      <span>Sayfa 21 / 21</span>
+    </div>
+  </div>
+
+  </body>
+  </html>

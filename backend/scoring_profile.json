@@ -14,7 +14,7 @@
     "demand": 0.1223241565234746,
     "climate": 0.22704446506343962
   },
-  "pairwiseMatrixPath": "C:\\Users\\Ali\\Documents\\GitHub\\tarimpro\\docs\\ahp_pairwise_matrix.csv",
+  "pairwiseMatrixPath": "docs/ahp_pairwise_matrix.csv",
   "pairwiseMatrix": [
     [
       1.0,

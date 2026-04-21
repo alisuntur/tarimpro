@@ -338,12 +338,13 @@ const Dashboard = () => {
                                         <th>Planlama Tarihi</th>
                                         <th>Hedeflenen Verim</th>
                                         <th>Durum</th>
+                                        <th>İşlem</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {history.length === 0 ? (
                                         <tr>
-                                            <td colSpan="4" className="text-muted">
+                                            <td colSpan="5" className="text-muted">
                                                 Henüz üretim planı oluşturmadınız. İlk planınızı oluşturduğunuzda geçmiş kayıtlar burada listelenecek.
                                             </td>
                                         </tr>
@@ -363,6 +364,15 @@ const Dashboard = () => {
                                                 <span className={`status-badge ${plan.status === 'Tamamlandı' ? 'success' : 'pending'}`}>
                                                     {plan.status}
                                                 </span>
+                                            </td>
+                                            <td className="history-action-cell">
+                                                <button
+                                                    type="button"
+                                                    className="btn-secondary history-action-btn"
+                                                    onClick={() => navigate(`/ai-recommendations?planId=${plan.id}`)}
+                                                >
+                                                    Raporu Aç
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}

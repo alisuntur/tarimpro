@@ -61,7 +61,7 @@ from db.repositories import (
 from dependencies import require_current_user, security
 from scoring import compute_weighted_score, get_scoring_profile
 from security import generate_session_token, hash_password, hash_session_token, verify_password
-from weather_service import TURKEY_TIMEZONE, get_daily_weather, refresh_known_weather_cache, weather_code_label
+from weather_service import TURKEY_TIMEZONE, get_daily_weather, refresh_climate_history_for_city, refresh_known_weather_cache, weather_code_label
 
 
 TURKISH_ASCII_TRANSLATION = str.maketrans({"\u00e7": "c", "\u00c7": "C", "\u011f": "g", "\u011e": "G", "\u0131": "i", "\u0130": "I", "\u00f6": "o", "\u00d6": "O", "\u015f": "s", "\u015e": "S", "\u00fc": "u", "\u00dc": "U"})
@@ -300,6 +300,29 @@ def _dashboard_city(user: dict, city: str | None) -> str:
     return (city or user.get("city") or "").strip()
 
 
+def _same_location_name(left: str | None, right: str | None) -> bool:
+    return _location_option_key(left) == _location_option_key(right)
+
+
+def _district_for_city(city_name: str | None, district_name: str | None, *, source_city: str | None = None) -> str | None:
+    district_value = (district_name or "").strip() or None
+    if not district_value:
+        return None
+    city_value = (city_name or "").strip() or None
+    source_city_value = (source_city or "").strip() or None
+    if city_value and source_city_value and not _same_location_name(city_value, source_city_value):
+        return None
+    return district_value
+
+
+def _display_district_for_city(city_name: str | None, district_name: str | None) -> str | None:
+    district_value = (district_name or "").strip() or None
+    city_value = (city_name or "").strip() or None
+    if not city_value or not district_value:
+        return district_value
+    return district_value if get_geo_location(city_value, district_value) else None
+
+
 
 def _serialize_user(user: dict) -> dict:
     return {
@@ -357,12 +380,13 @@ def _serialize_plan(plan: dict | None) -> dict | None:
     if not plan:
         return None
 
+    city_name = plan.get("city") or plan.get("field_city")
     return {
         "id": str(plan["id"]),
         "fieldId": str(plan["field_id"]) if plan.get("field_id") else None,
         "fieldName": plan.get("field_name"),
-        "city": plan.get("city") or plan.get("field_city"),
-        "district": plan.get("district") or plan.get("field_district"),
+        "city": city_name,
+        "district": _display_district_for_city(city_name, plan.get("district") or plan.get("field_district")),
         "selectedCropName": plan.get("selected_crop_name"),
         "plannedAreaDecare": float(plan.get("planned_area_decare") or 0),
         "seasonYear": plan.get("season_year"),
@@ -874,11 +898,10 @@ def _decorate_analysis_with_market_context(analysis: dict | None) -> dict | None
 
 
 def _serialize_analysis_report(analysis: dict) -> dict[str, object]:
-    analysis = _decorate_analysis_with_confidence(analysis) or {}
     score = _safe_float(analysis.get("score"), 0) or 0
-    confidence_payload = analysis.get("confidence_payload") or {}
-    confidence_score = _safe_float(confidence_payload.get("score"), _safe_float(analysis.get("confidence_score"), 0)) or 0
+    confidence_score = _safe_float(analysis.get("confidence_score"), 0) or 0
     selected_crop = analysis.get("selected_crop_name") or analysis.get("focus_crop_name")
+    city_name = analysis.get("city") or analysis.get("field_city")
     return {
         "id": str(analysis["id"]),
         "analysisId": str(analysis["id"]),
@@ -889,8 +912,8 @@ def _serialize_analysis_report(analysis: dict) -> dict[str, object]:
         "status": f"Skor %{int(round(score))}",
         "score": round(score, 1),
         "confidenceScore": round(confidence_score, 1),
-        "confidenceLabel": confidence_payload.get("label") or _confidence_label(confidence_score),
-        "city": analysis.get("city") or analysis.get("field_city"),
+        "confidenceLabel": _confidence_label(confidence_score),
+        "city": city_name,
         "selectedCropName": selected_crop,
         "analyzedAt": analysis.get("analyzed_at").isoformat() if analysis.get("analyzed_at") else None,
     }
@@ -905,7 +928,7 @@ def _serialize_plan_analysis_item(item: dict) -> dict[str, object]:
         or item.get("selected_crop_name")
     )
     city = item.get("city") or item.get("field_city")
-    district = item.get("district") or item.get("field_district")
+    district = _display_district_for_city(city, item.get("district") or item.get("field_district"))
     has_analysis = bool(item.get("analysis_id"))
     created_at = item.get("created_at")
     analyzed_at = item.get("analyzed_at")
@@ -933,9 +956,23 @@ def _serialize_plan_analysis_item(item: dict) -> dict[str, object]:
 
 
 
-def _serialize_saved_recommendation(item: dict) -> dict[str, object]:
+def _serialize_saved_recommendation(
+    item: dict,
+    *,
+    city_name: str | None = None,
+    planned_area_decare: float | int | None = None,
+) -> dict[str, object]:
     expected_return = _safe_float(item.get("expected_return_percent"), None)
     recommendation_score = _safe_float(item.get("recommendation_score"), 0) or 0
+    expected_yield = _safe_float(item.get("expected_yield_kg_decare"), None)
+    expected_production = _safe_float(item.get("expected_production_ton"), None)
+    if expected_yield is None and city_name and item.get("crop_name"):
+        yield_context = get_product_yield_context(city_name, item.get("crop_name"), years=5)
+        expected_yield = _safe_float(yield_context.get("city_avg_yield"), None)
+    if expected_production is None and expected_yield is not None and planned_area_decare not in (None, 0):
+        planned_area = _safe_float(planned_area_decare, None)
+        if planned_area:
+            expected_production = (expected_yield * planned_area) / 1000
     return {
         "id": str(item["id"]),
         "rank": item.get("rank_order"),
@@ -943,8 +980,8 @@ def _serialize_saved_recommendation(item: dict) -> dict[str, object]:
         "score": round(recommendation_score, 1),
         "forecastYear": item.get("forecast_year"),
         "expectedReturn": f"{expected_return:+.1f}%" if expected_return is not None else "-",
-        "expectedYieldKgDecare": round(_safe_float(item.get("expected_yield_kg_decare"), 0) or 0, 1) if item.get("expected_yield_kg_decare") is not None else None,
-        "estimatedProductionTon": round(_safe_float(item.get("expected_production_ton"), 0) or 0, 1) if item.get("expected_production_ton") is not None else None,
+        "expectedYieldKgDecare": round(expected_yield, 1) if expected_yield is not None else None,
+        "estimatedProductionTon": round(expected_production, 1) if expected_production is not None else None,
         "predictedProductionTon": round(_safe_float(item.get("predicted_production_ton"), 0) or 0, 1) if item.get("predicted_production_ton") is not None else None,
         "reason": item.get("reason"),
     }
@@ -958,13 +995,23 @@ def _serialize_analysis_response(analysis: dict, recommendations: list[dict], tr
     supply_demand = analysis.get("supply_demand") or {}
     yield_context = analysis.get("yield_context") or {}
     score = _safe_float(analysis.get("score"), 0) or 0
+    plan_city = analysis.get("city") or analysis.get("field_city")
+    plan_district = _display_district_for_city(plan_city, analysis.get("district") or analysis.get("field_district"))
+    stored_expected_yield = _safe_float(analysis.get("expected_yield_kg_decare"), None)
+    if stored_expected_yield is None:
+        stored_expected_yield = _safe_float(yield_context.get("city_avg_yield"), None)
+    stored_expected_production = _safe_float(analysis.get("expected_production_ton"), None)
+    if stored_expected_production is None and stored_expected_yield is not None:
+        planned_area = _safe_float(analysis.get("planned_area_decare"), None)
+        if planned_area:
+            stored_expected_production = (stored_expected_yield * planned_area) / 1000
     summary = _build_farmer_plan_summary(
         selected_crop_name,
-        analysis.get("city") or analysis.get("field_city"),
+        plan_city,
         analysis.get("forecast_year"),
         score,
         _safe_float(analysis.get("planned_area_decare"), None),
-        _safe_float(analysis.get("expected_production_ton"), None),
+        stored_expected_production,
         fallback=analysis.get("summary"),
     )
 
@@ -988,9 +1035,9 @@ def _serialize_analysis_response(analysis: dict, recommendations: list[dict], tr
             "name": selected_crop_name,
             "score": round(score, 1),
             "forecastYear": analysis.get("forecast_year"),
-            "expectedYieldKgDecare": round(_safe_float(analysis.get("expected_yield_kg_decare"), 0) or 0, 1) if analysis.get("expected_yield_kg_decare") is not None else None,
-            "expectedProductionTon": round(_safe_float(analysis.get("expected_production_ton"), 0) or 0, 1) if analysis.get("expected_production_ton") is not None else None,
-            "yieldScore": _yield_score_from_context(yield_context, analysis.get("expected_yield_kg_decare") is not None),
+            "expectedYieldKgDecare": round(stored_expected_yield, 1) if stored_expected_yield is not None else None,
+            "expectedProductionTon": round(stored_expected_production, 1) if stored_expected_production is not None else None,
+            "yieldScore": _yield_score_from_context(yield_context, stored_expected_yield is not None),
             "yieldIndexPct": round(_safe_float(yield_context.get("relative_index_pct"), 0) or 0, 1) if yield_context.get("relative_index_pct") is not None else None,
             "yieldPercentile": round(_safe_float(yield_context.get("percentile_score"), 0) or 0, 1) if yield_context.get("percentile_score") is not None else None,
         },
@@ -1000,8 +1047,8 @@ def _serialize_analysis_response(analysis: dict, recommendations: list[dict], tr
             "id": str(analysis.get("plan_id")) if analysis.get("plan_id") else None,
             "fieldId": str(analysis.get("field_id")) if analysis.get("field_id") else None,
             "fieldName": analysis.get("field_name"),
-            "city": analysis.get("city") or analysis.get("field_city"),
-            "district": analysis.get("district") or analysis.get("field_district"),
+            "city": plan_city,
+            "district": plan_district,
             "selectedCropName": selected_crop_name,
             "plannedAreaDecare": round(_safe_float(analysis.get("planned_area_decare"), 0) or 0, 1),
             "seasonYear": analysis.get("season_year"),
@@ -1010,7 +1057,14 @@ def _serialize_analysis_response(analysis: dict, recommendations: list[dict], tr
             "createdAt": None,
             "updatedAt": analysis.get("analyzed_at").isoformat() if analysis.get("analyzed_at") else None,
         },
-        "recommendations": [_serialize_saved_recommendation(item) for item in recommendations],
+        "recommendations": [
+            _serialize_saved_recommendation(
+                item,
+                city_name=plan_city,
+                planned_area_decare=analysis.get("planned_area_decare"),
+            )
+            for item in recommendations
+        ],
         "trendSeries": [
             {
                 "year": str(row["year"]),
@@ -1110,7 +1164,9 @@ def _normalize_field_payload(payload: FieldUpsertRequest, user: dict) -> dict[st
         raise HTTPException(status_code=400, detail="Tarla büyüklüğü sıfırdan büyük olmalıdır.")
 
     city = (payload.city or user.get("city") or "").strip() or None
-    district = (payload.district or user.get("district") or "").strip() or None
+    district = (payload.district or "").strip() or None
+    if not district and city and user.get("city") and _same_location_name(city, user.get("city")):
+        district = (user.get("district") or "").strip() or None
     latitude = payload.latitude
     longitude = payload.longitude
 
@@ -1168,7 +1224,12 @@ def _normalize_plan_payload(payload: PlanUpsertRequest, user: dict, *, existing_
         "planned_sowing_date": None,
         "planned_harvest_date": None,
         "city": city,
-        "district": (payload.district or (field or {}).get("district") or user.get("district") or "").strip() or None,
+        "district": (
+            _district_for_city(city, (field or {}).get("district"), source_city=(field or {}).get("city"))
+            if field
+            else _district_for_city(city, payload.district, source_city=user.get("city"))
+            or (_district_for_city(city, user.get("district"), source_city=user.get("city")) if user.get("district") else None)
+        ),
     }
 
 
@@ -1501,6 +1562,8 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
         selected_crop = candidate_pool[0]["product_name"]
         selected_key = _comparison_key(selected_crop)
 
+    with suppress(Exception):
+        refresh_climate_history_for_city(city_name, months=12)
     climate_rows = list(reversed(get_climate_series(city_name, limit=12)))
     latest_temp = mean([_safe_float(row.get("temperature_avg_c"), 0) or 0 for row in climate_rows]) if climate_rows else 0
     latest_rainfall = mean([_safe_float(row.get("rainfall_mm"), 0) or 0 for row in climate_rows]) if climate_rows else 0
@@ -1616,6 +1679,12 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
 
     trend_rows = get_product_supply_demand_series(focus_crop, history_limit=5, forecast_limit=3)
 
+    analysis_district = None
+    if plan and plan.get("district") and get_geo_location(city_name, plan.get("district")):
+        analysis_district = plan.get("district")
+    elif user.get("district") and user.get("city") and _same_location_name(city_name, user.get("city")):
+        analysis_district = user.get("district")
+
     analysis_payload = {
         "id": "preview",
         "plan_id": plan["id"] if plan else None,
@@ -1634,7 +1703,7 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
         "selected_crop_name": focus_crop,
         "focus_crop_name": focus_crop,
         "city": city_name,
-        "district": plan.get("district") if plan else user.get("district"),
+        "district": analysis_district,
         "forecast_year": forecast_year,
         "planned_area_decare": planned_area,
         "expected_yield_kg_decare": selected_item.get("expected_yield_kg_decare"),
@@ -1672,7 +1741,7 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
             "selected_crop_name": focus_crop,
             "focus_crop_name": focus_crop,
             "city": city_name,
-            "district": plan.get("district") or user.get("district"),
+            "district": analysis_district,
             "forecast_year": forecast_year,
             "planned_area_decare": planned_area,
             "expected_yield_kg_decare": selected_item.get("expected_yield_kg_decare"),
@@ -1734,6 +1803,8 @@ def get_saved_analysis(analysis_id: str, user=Depends(require_current_user)):
 @app.get("/api/regional-analysis")
 def get_regional_analysis(city: str | None = None, historyRange: str = "5Y", user=Depends(require_current_user)):
     city_name = _dashboard_city(user, city)
+    with suppress(Exception):
+        refresh_climate_history_for_city(city_name, months=12)
     climate = get_latest_climate(city_name)
     climate_rows = list(reversed(get_climate_series(city_name, limit=12)))
     production_overview = get_city_production_overview(city_name)
@@ -1822,6 +1893,8 @@ def get_regional_analysis(city: str | None = None, historyRange: str = "5Y", use
 def get_climate_data(period: str = "1Y", city: str | None = None, user=Depends(require_current_user)):
     city_name = _dashboard_city(user, city)
     limit_map = {"6M": 6, "1Y": 12, "5Y": 60}
+    with suppress(Exception):
+        refresh_climate_history_for_city(city_name, months=max(limit_map.get(period, 12), 12))
     rows = list(reversed(get_climate_series(city_name, limit=limit_map.get(period, 12))))
 
     series = []
@@ -1865,7 +1938,9 @@ def get_profile_me(user=Depends(require_current_user)):
 
 @app.get("/api/profile/summary")
 def get_profile_summary(user=Depends(require_current_user)):
-    return {"user": _serialize_profile_user(user)}
+    return {
+        "user": _serialize_profile_user(user),
+    }
 
 
 @app.put("/api/profile/me")

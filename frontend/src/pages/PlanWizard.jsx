@@ -220,7 +220,7 @@ const PlanWizard = () => {
                 body: {
                     fieldId: selectedFieldId || null,
                     city,
-                    district: selectedField?.district || null,
+                    district: selectedField && selectedField.city === city ? selectedField.district || null : null,
                     regionCode: selectedField?.regionCode || null,
                     plannedAreaDecare: Number(size),
                     selectedCropName: selectedCrop || null,

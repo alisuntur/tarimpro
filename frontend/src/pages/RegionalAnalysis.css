@@ -91,6 +91,17 @@
     /* Glow effect */
 }
 
+.city-tooltip-wrapper[data-selected="true"] path {
+    fill: var(--regional-primary-dark) !important;
+    stroke: #0f5132 !important;
+    stroke-width: 2px !important;
+    filter: drop-shadow(0 6px 10px rgba(22, 101, 52, 0.32));
+}
+
+.city-tooltip-wrapper[data-selected="true"]:hover path {
+    fill: var(--regional-primary-dark) !important;
+}
+
 /* City Details layout */
 .city-details-card {
     display: flex;

@@ -129,6 +129,42 @@ def _product_lookup_candidates(value: str | None) -> list[str]:
     return candidates
 
 
+def _production_area_sql(alias: str) -> str:
+    return f"COALESCE({alias}.area_decare, {alias}.orchard_area_decare)"
+
+
+def _production_output_sql(alias: str) -> str:
+    return (
+        f"COALESCE("
+        f"{alias}.production_ton, "
+        f"({alias}.yield_kg_per_tree * {alias}.fruit_bearing_tree_count / 1000.0)"
+        f")"
+    )
+
+
+def _production_yield_sql(alias: str) -> str:
+    area_sql = _production_area_sql(alias)
+    output_sql = _production_output_sql(alias)
+    return (
+        f"COALESCE("
+        f"NULLIF({alias}.yield_kg_decare, 0), "
+        f"({output_sql} * 1000 / NULLIF({area_sql}, 0))"
+        f")"
+    )
+
+
+def _aggregate_production_yield_sql(alias: str) -> str:
+    area_sql = _production_area_sql(alias)
+    output_sql = _production_output_sql(alias)
+    row_yield_sql = _production_yield_sql(alias)
+    return (
+        f"COALESCE("
+        f"SUM({output_sql}) * 1000 / NULLIF(SUM({area_sql}), 0), "
+        f"AVG({row_yield_sql})"
+        f")"
+    )
+
+
 def _resolve_consumption_product_name(product_name: str | None) -> str | None:
     candidates = _product_lookup_candidates(product_name)
     if not candidates:
@@ -608,9 +644,19 @@ def get_latest_climate(city_name: str):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
+                WITH monthly_climate AS (
+                    SELECT date_trunc('month', observation_date)::date AS observation_date,
+                           city_name,
+                           AVG(temperature_avg_c) AS temperature_avg_c,
+                           SUM(rainfall_mm) AS rainfall_mm,
+                           AVG(soil_moisture_pct) AS soil_moisture_pct,
+                           AVG(wind_speed) AS wind_speed
+                    FROM analytics.climate_history
+                    WHERE city_name = ANY(%(city_candidates)s)
+                    GROUP BY 1, 2
+                )
                 SELECT observation_date, city_name, temperature_avg_c, rainfall_mm, soil_moisture_pct, wind_speed
-                FROM analytics.climate_history
-                WHERE city_name = ANY(%(city_candidates)s)
+                FROM monthly_climate
                 ORDER BY observation_date DESC
                 LIMIT 1
                 """,
@@ -628,15 +674,84 @@ def get_climate_series(city_name: str, limit: int = 12):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
+                WITH monthly_climate AS (
+                    SELECT date_trunc('month', observation_date)::date AS observation_date,
+                           city_name,
+                           AVG(temperature_avg_c) AS temperature_avg_c,
+                           SUM(rainfall_mm) AS rainfall_mm,
+                           AVG(soil_moisture_pct) AS soil_moisture_pct,
+                           AVG(wind_speed) AS wind_speed
+                    FROM analytics.climate_history
+                    WHERE city_name = ANY(%(city_candidates)s)
+                    GROUP BY 1, 2
+                )
                 SELECT observation_date, city_name, temperature_avg_c, rainfall_mm, soil_moisture_pct, wind_speed
-                FROM analytics.climate_history
-                WHERE city_name = ANY(%(city_candidates)s)
+                FROM monthly_climate
                 ORDER BY observation_date DESC
                 LIMIT %(limit)s
                 """,
                 {"city_candidates": city_candidates, "limit": limit},
             )
             return cursor.fetchall()
+
+
+def replace_climate_history(rows: list[dict[str, object]]):
+    if not rows:
+        return 0
+
+    city_name = _clean_text(rows[0].get("city_name"))
+    if not city_name:
+        return 0
+
+    observation_dates = [row.get("observation_date") for row in rows if row.get("observation_date")]
+    if not observation_dates:
+        return 0
+
+    start_date = min(observation_dates)
+    end_date = max(observation_dates)
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                DELETE FROM analytics.climate_history
+                WHERE city_name = %(city_name)s
+                  AND observation_date BETWEEN %(start_date)s AND %(end_date)s
+                """,
+                {
+                    "city_name": city_name,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                },
+            )
+
+            for row in rows:
+                cursor.execute(
+                    """
+                    INSERT INTO analytics.climate_history (
+                        observation_date,
+                        city_name,
+                        temperature_avg_c,
+                        rainfall_mm,
+                        wind_speed,
+                        soil_moisture_pct,
+                        source_file
+                    )
+                    VALUES (
+                        %(observation_date)s,
+                        %(city_name)s,
+                        %(temperature_avg_c)s,
+                        %(rainfall_mm)s,
+                        %(wind_speed)s,
+                        %(soil_moisture_pct)s,
+                        %(source_file)s
+                    )
+                    """,
+                    row,
+                )
+        connection.commit()
+
+    return len(rows)
 
 
 def get_geo_location(city_name: str | None, district_name: str | None = None):
@@ -945,6 +1060,9 @@ def get_city_crop_options(city_name: str, limit: int | None = None):
     if not city_candidates:
         return []
 
+    production_output_sql = _production_output_sql('p')
+    aggregate_yield_sql = _aggregate_production_yield_sql('p')
+    area_sql = _production_area_sql('p')
     sql = """
         WITH crop_latest_year AS (
             SELECT product_name,
@@ -955,8 +1073,8 @@ def get_city_crop_options(city_name: str, limit: int | None = None):
         )
         SELECT latest.product_name,
                latest.latest_year,
-               SUM(p.production_ton) AS production_ton,
-               AVG(NULLIF(p.yield_kg_decare, 0)) AS yield_kg_decare
+               SUM({production_output_sql}) AS production_ton,
+               {aggregate_yield_sql} AS yield_kg_decare
         FROM crop_latest_year AS latest
         JOIN analytics.production_history AS p
           ON p.product_name = latest.product_name
@@ -967,7 +1085,11 @@ def get_city_crop_options(city_name: str, limit: int | None = None):
                  production_ton DESC NULLS LAST,
                  yield_kg_decare DESC NULLS LAST,
                  latest.product_name ASC
-    """
+    """.format(
+        production_output_sql=production_output_sql,
+        aggregate_yield_sql=aggregate_yield_sql,
+        area_sql=area_sql,
+    )
     params: dict[str, object] = {"city_candidates": city_candidates}
     if limit is not None:
         sql += " LIMIT %(limit)s"
@@ -984,19 +1106,22 @@ def get_city_production_overview(city_name: str):
     if not city_candidates:
         return None
 
+    production_output_sql = _production_output_sql('p')
+    aggregate_yield_sql = _aggregate_production_yield_sql('p')
+    area_sql = _production_area_sql('p')
     with get_connection(row_factory=dict_row) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                 WITH latest_year AS (
                     SELECT MAX(year) AS year
                     FROM analytics.production_history
                     WHERE city_name = ANY(%(city_candidates)s)
                 )
                 SELECT latest_year.year AS latest_year,
-                       SUM(p.production_ton) AS total_production_ton,
-                       AVG(NULLIF(p.yield_kg_decare, 0)) AS average_yield_kg_decare,
-                       SUM(p.area_decare) AS total_area_decare
+                       SUM({production_output_sql}) AS total_production_ton,
+                       {aggregate_yield_sql} AS average_yield_kg_decare,
+                       SUM({area_sql}) AS total_area_decare
                 FROM analytics.production_history AS p
                 CROSS JOIN latest_year
                 WHERE p.city_name = ANY(%(city_candidates)s)
@@ -1013,11 +1138,13 @@ def get_city_production_trend(city_name: str, limit: int | None = 6):
     if not city_candidates:
         return []
 
-    sql = """
+    production_output_sql = _production_output_sql('p')
+    aggregate_yield_sql = _aggregate_production_yield_sql('p')
+    sql = f"""
         SELECT year,
-               SUM(production_ton) AS total_production_ton,
-               AVG(NULLIF(yield_kg_decare, 0)) AS average_yield_kg_decare
-        FROM analytics.production_history
+               SUM({production_output_sql}) AS total_production_ton,
+               {aggregate_yield_sql} AS average_yield_kg_decare
+        FROM analytics.production_history AS p
         WHERE city_name = ANY(%(city_candidates)s)
         GROUP BY year
         ORDER BY year DESC
@@ -1073,8 +1200,13 @@ def get_crop_projection_series(
     if not product_name:
         return []
 
-    history_where = ["product_name = %(product_name)s"]
-    history_params: dict[str, object] = {"product_name": product_name, "history_limit": history_limit}
+    product_candidates = _product_lookup_candidates(product_name)
+    if not product_candidates:
+        return []
+
+    production_output_sql = _production_output_sql('p')
+    history_where = ["product_name = ANY(%(product_candidates)s)"]
+    history_params: dict[str, object] = {"product_candidates": product_candidates, "history_limit": history_limit}
     city_candidates = _lookup_candidates(city_name) if city_name else []
     if city_candidates:
         history_where.append("city_name = ANY(%(city_candidates)s)")
@@ -1084,8 +1216,8 @@ def get_crop_projection_series(
         with connection.cursor() as cursor:
             cursor.execute(
                 f"""
-                SELECT year, SUM(production_ton) AS historical_production_ton
-                FROM analytics.production_history
+                SELECT year, SUM({production_output_sql}) AS historical_production_ton
+                FROM analytics.production_history AS p
                 WHERE {' AND '.join(history_where)}
                 GROUP BY year
                 ORDER BY year DESC
@@ -1101,11 +1233,11 @@ def get_crop_projection_series(
                 forecast_rows = []
             else:
                 forecast_where = [
-                    "product_name = %(product_name)s",
+                    "product_name = ANY(%(product_candidates)s)",
                     "year = ANY(%(forecast_years)s)",
                 ]
                 forecast_params: dict[str, object] = {
-                    "product_name": product_name,
+                    "product_candidates": product_candidates,
                     "forecast_years": forecast_years,
                 }
                 if city_candidates:
@@ -1168,6 +1300,8 @@ def get_candidate_forecasts(city_name: str | None, forecast_year: int | None = N
 
     with get_connection(row_factory=dict_row) as connection:
         with connection.cursor() as cursor:
+            production_output_sql = _production_output_sql('p')
+            aggregate_yield_sql = _aggregate_production_yield_sql('p')
             cursor.execute(
                 f"""
                 WITH forecast AS (
@@ -1187,8 +1321,8 @@ def get_candidate_forecasts(city_name: str | None, forecast_year: int | None = N
                 FROM forecast
                 LEFT JOIN LATERAL (
                     SELECT p.year AS latest_year,
-                           SUM(p.production_ton) AS latest_production_ton,
-                           COALESCE(AVG(NULLIF(p.yield_kg_decare, 0)), (SUM(p.production_ton) * 1000 / NULLIF(SUM(p.area_decare), 0))) AS latest_yield_kg_decare
+                           SUM({production_output_sql}) AS latest_production_ton,
+                           {aggregate_yield_sql} AS latest_yield_kg_decare
                     FROM analytics.production_history AS p
                     WHERE {' AND '.join(history_where)}
                     GROUP BY p.year
@@ -1208,8 +1342,14 @@ def get_crop_history_rows(city_name: str | None, product_name: str, years: int =
     if not product_name:
         return []
 
-    where_clauses = ["product_name = %(product_name)s"]
-    params: dict[str, object] = {"product_name": product_name, "years": years}
+    product_candidates = _product_lookup_candidates(product_name)
+    if not product_candidates:
+        return []
+
+    production_output_sql = _production_output_sql('p')
+    aggregate_yield_sql = _aggregate_production_yield_sql('p')
+    where_clauses = ["product_name = ANY(%(product_candidates)s)"]
+    params: dict[str, object] = {"product_candidates": product_candidates, "years": years}
     city_candidates = _lookup_candidates(city_name) if city_name else []
     if city_candidates:
         where_clauses.append("city_name = ANY(%(city_candidates)s)")
@@ -1220,9 +1360,9 @@ def get_crop_history_rows(city_name: str | None, product_name: str, years: int =
             cursor.execute(
                 f"""
                 SELECT year,
-                       SUM(production_ton) AS production_ton,
-                       COALESCE(AVG(NULLIF(yield_kg_decare, 0)), (SUM(production_ton) * 1000 / NULLIF(SUM(area_decare), 0))) AS yield_kg_decare
-                FROM analytics.production_history
+                       SUM({production_output_sql}) AS production_ton,
+                       {aggregate_yield_sql} AS yield_kg_decare
+                FROM analytics.production_history AS p
                 WHERE {' AND '.join(where_clauses)}
                 GROUP BY year
                 ORDER BY year DESC
@@ -1239,9 +1379,16 @@ def get_product_yield_context(city_name: str | None, product_name: str, years: i
     if not product_name:
         return {}
 
+    product_candidates = _product_lookup_candidates(product_name)
+    if not product_candidates:
+        return {}
+
+    production_output_sql = _production_output_sql('p')
+    area_sql = _production_area_sql('p')
+    row_yield_sql = _production_yield_sql('p')
     city_candidates = _lookup_candidates(city_name) if city_name else []
     params: dict[str, object] = {
-        "product_name": product_name,
+        "product_candidates": product_candidates,
         "years": years,
         "city_candidates": city_candidates or [city_name or ''],
     }
@@ -1249,28 +1396,22 @@ def get_product_yield_context(city_name: str | None, product_name: str, years: i
     with get_connection(row_factory=dict_row) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                 WITH recent_years AS (
                     SELECT DISTINCT year
                     FROM analytics.production_history
-                    WHERE product_name = %(product_name)s
+                    WHERE product_name = ANY(%(product_candidates)s)
                     ORDER BY year DESC
                     LIMIT %(years)s
                 ), city_year_yields AS (
                     SELECT city_name,
                            year,
-                           COALESCE(
-                               AVG(NULLIF(yield_kg_decare, 0)),
-                               SUM(production_ton) * 1000 / NULLIF(SUM(area_decare), 0)
-                           ) AS year_yield
-                    FROM analytics.production_history
-                    WHERE product_name = %(product_name)s
+                           COALESCE(SUM({production_output_sql}) * 1000 / NULLIF(SUM({area_sql}), 0), AVG({row_yield_sql})) AS year_yield
+                    FROM analytics.production_history AS p
+                    WHERE product_name = ANY(%(product_candidates)s)
                       AND year IN (SELECT year FROM recent_years)
                     GROUP BY city_name, year
-                    HAVING COALESCE(
-                        AVG(NULLIF(yield_kg_decare, 0)),
-                        SUM(production_ton) * 1000 / NULLIF(SUM(area_decare), 0)
-                    ) IS NOT NULL
+                    HAVING COALESCE(SUM({production_output_sql}) * 1000 / NULLIF(SUM({area_sql}), 0), AVG({row_yield_sql})) IS NOT NULL
                 ), city_yields AS (
                     SELECT city_name,
                            AVG(year_yield) AS avg_yield
@@ -1326,6 +1467,10 @@ def get_product_supply_demand_projection(product_name: str, forecast_year: int |
     if not product_name or effective_year is None:
         return {}
 
+    product_candidates = _product_lookup_candidates(product_name)
+    if not product_candidates:
+        return {}
+
     consumption_product_name = _resolve_consumption_product_name(product_name)
 
     with get_connection(row_factory=dict_row) as connection:
@@ -1334,10 +1479,10 @@ def get_product_supply_demand_projection(product_name: str, forecast_year: int |
                 """
                 SELECT SUM(predicted_production_ton) AS predicted_supply_ton
                 FROM analytics.model_predictions
-                WHERE product_name = %(product_name)s
+                WHERE product_name = ANY(%(product_candidates)s)
                   AND year = %(forecast_year)s
                 """,
-                {"product_name": product_name, "forecast_year": effective_year},
+                {"product_candidates": product_candidates, "forecast_year": effective_year},
             )
             supply_row = cursor.fetchone() or {}
 
@@ -1382,21 +1527,26 @@ def get_product_supply_demand_series(product_name: str, history_limit: int = 5, 
     if not product_name:
         return []
 
+    product_candidates = _product_lookup_candidates(product_name)
+    if not product_candidates:
+        return []
+
     consumption_product_name = _resolve_consumption_product_name(product_name)
+    production_output_sql = _production_output_sql('p')
 
     with get_connection(row_factory=dict_row) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
-                """
+                f"""
                 SELECT year,
-                       SUM(production_ton) AS historical_production_ton
-                FROM analytics.production_history
-                WHERE product_name = %(product_name)s
+                       SUM({production_output_sql}) AS historical_production_ton
+                FROM analytics.production_history AS p
+                WHERE product_name = ANY(%(product_candidates)s)
                 GROUP BY year
                 ORDER BY year DESC
                 LIMIT %(history_limit)s
                 """,
-                {"product_name": product_name, "history_limit": history_limit},
+                {"product_candidates": product_candidates, "history_limit": history_limit},
             )
             history_rows = list(reversed(cursor.fetchall()))
 
@@ -1405,16 +1555,16 @@ def get_product_supply_demand_series(product_name: str, history_limit: int = 5, 
             forecast_rows = []
             if forecast_years:
                 cursor.execute(
-                    """
+                    f"""
                     SELECT year,
                            SUM(predicted_production_ton) AS predicted_supply_ton
                     FROM analytics.model_predictions
-                    WHERE product_name = %(product_name)s
+                    WHERE product_name = ANY(%(product_candidates)s)
                       AND year = ANY(%(forecast_years)s)
                     GROUP BY year
                     ORDER BY year ASC
                     """,
-                    {"product_name": product_name, "forecast_years": forecast_years},
+                    {"product_candidates": product_candidates, "forecast_years": forecast_years},
                 )
                 forecast_rows = cursor.fetchall()
 

@@ -1,5 +1,6 @@
 import argparse
 import os
+import shutil
 import subprocess
 import tempfile
 import unicodedata
@@ -10,7 +11,6 @@ import pandas as pd
 
 DEFAULT_DB_NAME = "tarimpro"
 DEFAULT_DB_USER = "postgres"
-DEFAULT_PG_BIN = Path(r"C:\Program Files\PostgreSQL\18\bin")
 MODEL_NAME = "Dengeli_XGBoost_DirectHorizon"
 MODEL_VERSION = "2025_2027"
 
@@ -19,14 +19,26 @@ def quote_identifier(name: str) -> str:
     return '"' + name.replace('"', '""') + '"'
 
 
+def resolve_postgres_command(command: str, pg_bin: Path | None = None) -> Path:
+    if pg_bin:
+        for candidate in (pg_bin / f"{command}.exe", pg_bin / command):
+            if candidate.exists():
+                return candidate
+
+    resolved = shutil.which(f"{command}.exe") or shutil.which(command)
+    if resolved:
+        return Path(resolved)
+
+    location_hint = f" in {pg_bin}" if pg_bin else " on PATH"
+    raise FileNotFoundError(f"{command} bulunamadi{location_hint}.")
+
+
 class PostgresImporter:
-    def __init__(self, db_name: str, db_user: str, pg_bin: Path):
+    def __init__(self, db_name: str, db_user: str, pg_bin: Path | None = None):
         self.db_name = db_name
         self.db_user = db_user
-        self.psql = pg_bin / "psql.exe"
-        self.createdb = pg_bin / "createdb.exe"
-        if not self.psql.exists():
-            raise FileNotFoundError(f"psql bulunamadi: {self.psql}")
+        self._pg_bin = pg_bin
+        self.psql = resolve_postgres_command("psql", pg_bin)
 
     def run_psql(self, sql: str, database: str | None = None) -> None:
         cmd = [
@@ -59,6 +71,7 @@ class PostgresImporter:
         subprocess.run(cmd, check=True)
 
     def ensure_database(self) -> None:
+        createdb = resolve_postgres_command("createdb", self._pg_bin)
         check_sql = f"SELECT 1 FROM pg_database WHERE datname = '{self.db_name}';"
         cmd = [
             str(self.psql),
@@ -74,7 +87,7 @@ class PostgresImporter:
         if result.stdout.strip() == "1":
             return
         subprocess.run(
-            [str(self.createdb), "-U", self.db_user, "-w", self.db_name],
+            [str(createdb), "-U", self.db_user, "-w", self.db_name],
             check=True,
         )
 
@@ -549,7 +562,11 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="veri klasorundeki Excel dosyalarini PostgreSQL'e aktarir.")
     parser.add_argument("--db-name", default=os.getenv("PGDATABASE", DEFAULT_DB_NAME))
     parser.add_argument("--db-user", default=os.getenv("PGUSER", DEFAULT_DB_USER))
-    parser.add_argument("--pg-bin", default=os.getenv("POSTGRES_BIN", str(DEFAULT_PG_BIN)))
+    parser.add_argument(
+        "--pg-bin",
+        default=os.getenv("POSTGRES_BIN"),
+        help="PostgreSQL bin dizini. Verilmezse PATH uzerinden psql/createdb aranir.",
+    )
     parser.add_argument("--skip-create-db", action="store_true")
     args = parser.parse_args()
 
@@ -557,10 +574,11 @@ def main() -> None:
     data_dir = repo_root / "veri"
     schema_file = repo_root / "backend" / "db" / "schema.sql"
 
+    pg_bin = Path(args.pg_bin).expanduser() if args.pg_bin else None
     importer = PostgresImporter(
         db_name=args.db_name,
         db_user=args.db_user,
-        pg_bin=Path(args.pg_bin),
+        pg_bin=pg_bin,
     )
 
     if not args.skip_create_db:

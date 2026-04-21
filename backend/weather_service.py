@@ -3,24 +3,30 @@ from __future__ import annotations
 import json
 import math
 import unicodedata
-from datetime import date, datetime
+from collections import Counter
+from datetime import date, datetime, timedelta
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 from db.repositories import (
+    get_climate_series,
     get_geo_location,
+    get_latest_climate,
     get_weather_daily_cache,
     list_weather_location_candidates,
+    replace_climate_history,
     upsert_geo_location,
     upsert_weather_daily_cache,
 )
 
 
 OPEN_METEO_FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+OPEN_METEO_ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
 OPEN_METEO_GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 OPEN_METEO_PROVIDER = "open-meteo"
+OPEN_METEO_ARCHIVE_PROVIDER = "open-meteo-archive"
 TURKEY_TIMEZONE = "Europe/Istanbul"
 REQUEST_TIMEOUT_SECONDS = 15
 BATCH_SIZE = 50
@@ -110,6 +116,108 @@ def _canonical_city_name(city_name: str | None) -> str | None:
     if not city:
         return None
     return TURKEY_CITY_LOOKUP.get(_normalize_lookup(city), city)
+
+
+def _same_location_name(left: str | None, right: str | None) -> bool:
+    return _normalize_lookup(left) == _normalize_lookup(right)
+
+
+def _shift_month_start(month_start: date, months: int) -> date:
+    year = month_start.year + ((month_start.month - 1 + months) // 12)
+    month = ((month_start.month - 1 + months) % 12) + 1
+    return date(year, month, 1)
+
+
+def _estimate_soil_moisture_pct(temperature_c: float | None, rainfall_mm: float | None) -> float | None:
+    if temperature_c is None and rainfall_mm is None:
+        return None
+
+    temp = float(temperature_c or 0)
+    rainfall = float(rainfall_mm or 0)
+    estimate = 45 + min(rainfall, 140) * 0.45 - max(temp - 18, 0) * 1.6
+    return round(max(5.0, min(95.0, estimate)), 1)
+
+
+def _aggregate_monthly_climate(daily_payload: dict[str, Any], city_name: str) -> list[dict[str, Any]]:
+    daily = daily_payload.get("daily") or {}
+    dates = daily.get("time") or []
+    temperatures = daily.get("temperature_2m_mean") or []
+    rainfall = daily.get("precipitation_sum") or []
+    wind_speed = daily.get("wind_speed_10m_max") or []
+    weather_codes = daily.get("weather_code") or []
+
+    buckets: dict[date, dict[str, list[float] | list[int]]] = {}
+    for index, date_text in enumerate(dates):
+        try:
+            observation_date = datetime.fromisoformat(date_text).date()
+        except (TypeError, ValueError):
+            continue
+
+        month_start = observation_date.replace(day=1)
+        bucket = buckets.setdefault(month_start, {"temperature": [], "rainfall": [], "wind": [], "codes": []})
+
+        temperature = temperatures[index] if index < len(temperatures) else None
+        precipitation = rainfall[index] if index < len(rainfall) else None
+        wind = wind_speed[index] if index < len(wind_speed) else None
+        weather_code = weather_codes[index] if index < len(weather_codes) else None
+
+        if temperature is not None:
+            bucket["temperature"].append(float(temperature))
+        if precipitation is not None:
+            bucket["rainfall"].append(float(precipitation))
+        if wind is not None:
+            bucket["wind"].append(float(wind))
+        if weather_code is not None:
+            bucket["codes"].append(int(weather_code))
+
+    monthly_rows: list[dict[str, Any]] = []
+    for month_start in sorted(buckets):
+        bucket = buckets[month_start]
+        temperatures_list = bucket["temperature"]
+        rainfall_list = bucket["rainfall"]
+        wind_list = bucket["wind"]
+        codes_list = bucket["codes"]
+
+        avg_temp = round(sum(temperatures_list) / len(temperatures_list), 1) if temperatures_list else None
+        total_rainfall = round(sum(rainfall_list), 1) if rainfall_list else None
+        avg_wind = round(sum(wind_list) / len(wind_list), 1) if wind_list else None
+        soil_moisture = _estimate_soil_moisture_pct(avg_temp, total_rainfall)
+        code = Counter(codes_list).most_common(1)[0][0] if codes_list else None
+
+        monthly_rows.append(
+            {
+                "observation_date": month_start,
+                "city_name": city_name,
+                "temperature_avg_c": avg_temp,
+                "rainfall_mm": total_rainfall,
+                "wind_speed": avg_wind,
+                "soil_moisture_pct": soil_moisture,
+                "source_file": "Open-Meteo Archive API",
+                "weather_code": code,
+            }
+        )
+
+    return monthly_rows
+
+
+def _fetch_climate_archive(latitude: float, longitude: float, start_date: date, end_date: date) -> dict[str, Any]:
+    payload = _fetch_json(
+        OPEN_METEO_ARCHIVE_URL,
+        {
+            "latitude": latitude,
+            "longitude": longitude,
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
+            "daily": "temperature_2m_mean,precipitation_sum,wind_speed_10m_max,weather_code",
+            "timezone": TURKEY_TIMEZONE,
+            "temperature_unit": "celsius",
+            "wind_speed_unit": "kmh",
+            "precipitation_unit": "mm",
+        },
+    )
+    if not isinstance(payload, dict):
+        raise ValueError("Open-Meteo archive response was not an object.")
+    return payload
 
 
 def _today() -> date:
@@ -205,6 +313,29 @@ def geocode_location(city_name: str, district_name: str | None = None):
     if not result:
         return None
 
+    result_admin1 = _normalize_lookup(result.get("admin1"))
+    if district and result_admin1 and result_admin1 != _normalize_lookup(city):
+        try:
+            city_payload = _fetch_json(
+                OPEN_METEO_GEOCODING_URL,
+                {
+                    "name": city,
+                    "count": 10,
+                    "language": "tr",
+                    "format": "json",
+                    "countryCode": "TR",
+                },
+            )
+        except Exception:
+            return None
+
+        city_results = city_payload.get("results", []) if isinstance(city_payload, dict) else []
+        city_result = _pick_geocode_result(city_results, city, None)
+        if not city_result:
+            return None
+        result = city_result
+        district = None
+
     return upsert_geo_location(
         {
             "city_name": city,
@@ -252,6 +383,33 @@ def resolve_geo_location(city_name: str, district_name: str | None = None):
             return None
 
     return None
+
+
+def refresh_climate_history_for_city(city_name: str, *, months: int = 12, force: bool = False):
+    city = _canonical_city_name(city_name)
+    if not city:
+        return None
+
+    location = resolve_geo_location(city, None)
+    if not location:
+        return None
+
+    current_month_start = _today().replace(day=1)
+    latest = get_latest_climate(city)
+    existing_rows = get_climate_series(city, limit=months)
+    if not force and latest and latest.get("observation_date") and len(existing_rows) >= months:
+        latest_month = latest["observation_date"].replace(day=1)
+        if latest_month >= current_month_start:
+            return existing_rows
+
+    start_date = _shift_month_start(current_month_start, -(months - 1))
+    archive_payload = _fetch_climate_archive(float(location["latitude"]), float(location["longitude"]), start_date, _today())
+    monthly_rows = _aggregate_monthly_climate(archive_payload, city)
+    if not monthly_rows:
+        return existing_rows
+
+    replace_climate_history(monthly_rows)
+    return monthly_rows
 
 
 def _nearest_hourly_value(hourly: dict[str, Any], key: str, current_time: str | None):

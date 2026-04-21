@@ -27,6 +27,14 @@ from scoring import (  # noqa: E402
 )
 
 
+def repo_relative(path: str | Path) -> str:
+    resolved = Path(path).resolve()
+    try:
+        return str(resolved.relative_to(ROOT))
+    except ValueError:
+        return str(resolved)
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="AHP agirliklari ve sehir-yil backtest raporu uretir.")
     parser.add_argument("--matrix", default=str(ROOT / "docs" / "ahp_pairwise_matrix.csv"))
@@ -326,15 +334,19 @@ def build_profile(result: dict[str, object], matrix_path: str) -> dict[str, obje
 
 def main() -> None:
     args = parse_args()
-    matrix_payload = read_pairwise_matrix_csv(args.matrix)
+    matrix_path = Path(args.matrix)
+    profile_path = Path(args.profile)
+    report_path = Path(args.report)
+
+    matrix_payload = read_pairwise_matrix_csv(matrix_path)
     ahp_result = ahp_weights_from_matrix(matrix_payload["criteria"], matrix_payload["matrix"])
     ahp_result["matrix"] = matrix_payload["matrix"]
     weights = normalize_weights(ahp_result["weights"])
     backtest = run_backtest(args.start_year, args.end_year, args.min_products, weights)
 
     payload = {
-        "matrixPath": str(Path(args.matrix).resolve()),
-        "profilePath": str(Path(args.profile).resolve()),
+        "matrixPath": repo_relative(matrix_path),
+        "profilePath": repo_relative(profile_path),
         "criteria": matrix_payload["criteria"],
         "weights": weights,
         "consistency": {
@@ -346,12 +358,11 @@ def main() -> None:
         "backtest": backtest,
     }
 
-    report_path = Path(args.report)
     report_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
     if args.write_profile:
-        profile = build_profile(ahp_result, str(Path(args.matrix).resolve()))
-        Path(args.profile).write_text(json.dumps(profile, ensure_ascii=False, indent=2), encoding="utf-8")
+        profile = build_profile(ahp_result, repo_relative(matrix_path))
+        profile_path.write_text(json.dumps(profile, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print(json.dumps(payload, ensure_ascii=False, indent=2))
 

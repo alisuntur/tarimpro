@@ -187,7 +187,10 @@ Bu sonuc sistemin tek bir kesin karar verici olarak degil, kullaniciya guclu bir
 - Python 3.12 veya uyumlu bir Python 3 surumu
 - Node.js ve npm
 - PostgreSQL
-- Windows ortaminda veri importu icin `psql.exe` ve `createdb.exe` yolunun bilinmesi
+- Windows ortaminda veri importu icin PostgreSQL komutlarinin PATH'te olmasi ya da `POSTGRES_BIN` ile belirtilmesi
+
+Tek komutlu baslatma icin repo kokundeki `start-dev.bat` dosyasini kullanabilirsin.
+Mac ve Linux icin ayni islevin shell karsiligi `start-dev.sh` dosyasidir.
 
 ### Backend
 
@@ -229,10 +232,10 @@ Varsayilan Vite adresi:
 http://127.0.0.1:5173
 ```
 
-Frontend API adresi `VITE_API_BASE` ile degistirilebilir. Varsayilan deger:
+Frontend API istekleri varsayilan olarak ayni origin uzerinden `/api` yolunu kullanir. Gelistirmede Vite proxy bu yolu backend'e yonlendirir. Backend farkli bir host/port'taysa `VITE_API_BASE` ile backend origin'ini verebilirsin.
 
-```text
-http://127.0.0.1:8000
+```powershell
+$env:VITE_API_BASE="http://127.0.0.1:8000"
 ```
 
 ## Veri Aktarimi
@@ -243,17 +246,43 @@ Excel dosyalarini PostgreSQL'e aktarmak icin:
 python tools/import_veri.py --db-name tarimpro --db-user postgres
 ```
 
-PostgreSQL binary dizini farkliysa:
+PostgreSQL komutlari PATH'te degilse:
 
 ```powershell
-python tools/import_veri.py --db-name tarimpro --db-user postgres --pg-bin "C:\Program Files\PostgreSQL\18\bin"
+$env:POSTGRES_BIN="C:\Program Files\PostgreSQL\<surum>\bin"
+python tools/import_veri.py --db-name tarimpro --db-user postgres
 ```
+
+Ayni dizini `--pg-bin` ile de verebilirsin.
 
 Veritabani zaten olusturulduysa:
 
 ```powershell
 python tools/import_veri.py --skip-create-db
 ```
+
+## Linux / macOS Kurulum
+
+Bu proje Docker gerektirmez. Ayni veriyi ve ekrani gormek icin su yol izlenir:
+
+1. Python 3, Node.js/npm ve PostgreSQL kur.
+1. Repo'yu klonla.
+1. Veritabaniyi hazirla:
+   ```bash
+   createdb tarimpro
+   ```
+1. Mevcut yedegi geri yukle:
+   ```bash
+   pg_restore -U postgres -d tarimpro backups/tarimpro_full.dump
+   ```
+1. Backend baglantisi icin gerekirse `PGHOST`, `PGPORT`, `PGDATABASE`, `PGUSER`, `PGPASSWORD` degerlerini ayarla.
+1. Frontend icin backend farkli bir origin'de calisiyorsa `VITE_API_BASE` ver; yerelde `start-dev.sh` proxy ile yeterlidir.
+1. Son olarak:
+   ```bash
+   bash start-dev.sh
+   ```
+
+Eger dump yerine Excel kaynaklarindan yeniden doldurmak istersen `python tools/import_veri.py` kullanabilirsin. Bunun icin `psql`, `createdb` ve gerekirse `pg_restore` komutlari PATH uzerinde olmali.
 
 ## AHP Backtest Calistirma
 

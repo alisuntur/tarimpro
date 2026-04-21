@@ -20,6 +20,7 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
+import { useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import './RegionalAnalysis.css';
 
@@ -53,11 +54,44 @@ const riskClassName = (riskLevel) => {
 };
 
 const RegionalAnalysis = () => {
-    const [selectedCity, setSelectedCity] = useState(null);
+    const [searchParams, setSearchParams] = useSearchParams();
+    const [selectedCity, setSelectedCity] = useState(searchParams.get('city') || '');
     const [analysis, setAnalysis] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [historyRange, setHistoryRange] = useState('5Y');
+    const [historyRange, setHistoryRange] = useState(searchParams.get('historyRange') || '5Y');
+
+    useEffect(() => {
+        const nextCity = searchParams.get('city') || '';
+        const nextRange = searchParams.get('historyRange') || '5Y';
+        setSelectedCity((current) => (current === nextCity ? current : nextCity));
+        setHistoryRange((current) => (current === nextRange ? current : nextRange));
+    }, [searchParams]);
+
+    const syncSelectionToUrl = (nextCity, nextRange = historyRange) => {
+        const nextParams = new URLSearchParams(searchParams);
+        if (nextCity) {
+            nextParams.set('city', nextCity);
+        } else {
+            nextParams.delete('city');
+        }
+        if (nextRange) {
+            nextParams.set('historyRange', nextRange);
+        } else {
+            nextParams.delete('historyRange');
+        }
+        setSearchParams(nextParams, { replace: true });
+    };
+
+    const handleCitySelect = (cityName) => {
+        setSelectedCity(cityName);
+        syncSelectionToUrl(cityName, historyRange);
+    };
+
+    const handleHistoryRangeChange = (range) => {
+        setHistoryRange(range);
+        syncSelectionToUrl(selectedCity, range);
+    };
 
     useEffect(() => {
         if (!selectedCity) return;
@@ -105,9 +139,13 @@ const RegionalAnalysis = () => {
                     <div className="map-wrapper">
                         <TurkeyMap
                             hoverable
-                            onClick={({ name }) => setSelectedCity(name)}
+                            onClick={({ name }) => handleCitySelect(name)}
                             cityWrapper={(cityComponent, cityData) => (
-                                <g key={cityData.name} className="city-tooltip-wrapper">
+                                <g
+                                    key={cityData.name}
+                                    className="city-tooltip-wrapper"
+                                    data-selected={selectedCity === cityData.name ? 'true' : 'false'}
+                                >
                                     <title>{cityData.name}</title>
                                     {cityComponent}
                                 </g>
@@ -115,7 +153,6 @@ const RegionalAnalysis = () => {
                             customStyle={{
                                 idleColor: '#e2e8f0',
                                 hoverColor: '#74c69d',
-                                selectedColor: '#2d6a4f',
                             }}
                         />
                     </div>
@@ -259,9 +296,9 @@ const RegionalAnalysis = () => {
                                 </div>
                             </div>
                             <div className="range-switch" role="group" aria-label="Üretim trendi zaman aralığı">
-                                <button type="button" className={`range-switch-btn ${historyRange === '5Y' ? 'active' : ''}`} onClick={() => setHistoryRange('5Y')}>{'5 Yıl'}</button>
-                                <button type="button" className={`range-switch-btn ${historyRange === '10Y' ? 'active' : ''}`} onClick={() => setHistoryRange('10Y')}>{'10 Yıl'}</button>
-                                <button type="button" className={`range-switch-btn ${historyRange === 'ALL' ? 'active' : ''}`} onClick={() => setHistoryRange('ALL')}>{'Tüm Veri'}</button>
+                                <button type="button" className={`range-switch-btn ${historyRange === '5Y' ? 'active' : ''}`} onClick={() => handleHistoryRangeChange('5Y')}>{'5 Yıl'}</button>
+                                <button type="button" className={`range-switch-btn ${historyRange === '10Y' ? 'active' : ''}`} onClick={() => handleHistoryRangeChange('10Y')}>{'10 Yıl'}</button>
+                                <button type="button" className={`range-switch-btn ${historyRange === 'ALL' ? 'active' : ''}`} onClick={() => handleHistoryRangeChange('ALL')}>{'Tüm Veri'}</button>
                             </div>
                         </div>
                         <ResponsiveContainer width="100%" height={300}>

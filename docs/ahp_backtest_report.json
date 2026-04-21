@@ -1,6 +1,6 @@
 {
-  "matrixPath": "C:\\Users\\Ali\\Documents\\GitHub\\tarimpro\\docs\\ahp_pairwise_matrix.csv",
-  "profilePath": "C:\\Users\\Ali\\Documents\\GitHub\\tarimpro\\backend\\scoring_profile.json",
+  "matrixPath": "docs/ahp_pairwise_matrix.csv",
+  "profilePath": "backend/scoring_profile.json",
   "criteria": [
     "yield",
     "forecast",

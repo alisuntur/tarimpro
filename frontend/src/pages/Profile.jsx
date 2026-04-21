@@ -145,15 +145,19 @@ const Profile = () => {
         }
     }, []);
 
-    const loadReports = useCallback(async () => {
+    const loadReports = useCallback(async ({ silent = false } = {}) => {
         setReportsLoading(true);
-        setError('');
+        if (!silent) {
+            setError('');
+        }
         try {
             const payload = await apiFetch('/api/analyses');
             setProfile((prev) => ({ ...(prev || {}), reports: payload.reports || [] }));
             setReportsLoaded(true);
         } catch (err) {
-            setError(err.message || 'Analiz raporları yüklenemedi.');
+            if (!silent) {
+                setError(err.message || 'Analiz raporları yüklenemedi.');
+            }
             setReportsLoaded(true);
         } finally {
             setReportsLoading(false);
@@ -168,6 +172,14 @@ const Profile = () => {
                 const payload = await apiFetch('/api/profile/summary');
                 if (!active) return;
                 applyProfileUser(payload.user);
+                if (Array.isArray(payload.fields)) {
+                    setProfile((prev) => ({ ...(prev || {}), fields: payload.fields }));
+                    setFieldsLoaded(true);
+                }
+                if (Array.isArray(payload.reports)) {
+                    setProfile((prev) => ({ ...(prev || {}), reports: payload.reports }));
+                    setReportsLoaded(true);
+                }
             } catch (err) {
                 if (active) setError(err.message || 'Profil verileri alınamadı.');
             } finally {
@@ -192,6 +204,33 @@ const Profile = () => {
             loadReports();
         }
     }, [activeTab, fieldsLoaded, fieldsLoading, loadFields, loadLocationOptions, loadReports, locationsLoaded, reportsLoaded, reportsLoading]);
+
+    useEffect(() => {
+        if (reportsLoaded || reportsLoading || profileLoading) {
+            return undefined;
+        }
+
+        const runPrefetch = () => {
+            if (!reportsLoaded && !reportsLoading) {
+                loadReports({ silent: true });
+            }
+        };
+
+        let cleanup;
+        if (typeof window !== 'undefined' && typeof window.requestIdleCallback === 'function') {
+            const idleId = window.requestIdleCallback(runPrefetch, { timeout: 1800 });
+            cleanup = () => {
+                if (typeof window.cancelIdleCallback === 'function') {
+                    window.cancelIdleCallback(idleId);
+                }
+            };
+        } else {
+            const timerId = window.setTimeout(runPrefetch, 900);
+            cleanup = () => window.clearTimeout(timerId);
+        }
+
+        return cleanup;
+    }, [loadReports, profileLoading, reportsLoaded, reportsLoading]);
 
     const handleLogout = async () => {
         await logout();

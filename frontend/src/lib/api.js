@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://127.0.0.1:8000';
+const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '');
 const AUTH_STORAGE_KEY = 'tarimpro.auth';
 const AUTH_EVENT = 'tarimpro-auth-changed';
 
@@ -37,7 +37,9 @@ export async function apiFetch(path, options = {}) {
     ...(options.headers || {}),
   };
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const requestPath = path.startsWith('/') ? path : `/${path}`;
+
+  const response = await fetch(`${API_BASE}${requestPath}`, {
     ...options,
     headers,
     body:

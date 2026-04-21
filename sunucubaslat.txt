@@ -1,14 +1,19 @@
+Repo kokunden en kolay baslatma:
+
+.\start-dev.bat
+./start-dev.sh
+
+Manuel calistirma:
+
 cd frontend
 npm install
 npm run dev
 
-cd backend
-conda activate base
+cd ..\backend
 pip install -r requirements.txt
 python -m uvicorn main:app --reload
 
-
-Giriş için demo hesap:
+Giris icin demo hesap:
 
 Telefon: 05551234567
-Şifre: demo123
+Sifre: demo123

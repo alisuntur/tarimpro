@@ -313,6 +313,19 @@
     vertical-align: middle;
 }
 
+.history-action-cell {
+    white-space: nowrap;
+}
+
+.history-action-btn {
+    padding: 0.55rem 0.85rem;
+    font-size: 0.88rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 7.5rem;
+}
+
 .history-table tr:last-child td {
     border-bottom: none;
 }

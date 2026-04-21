@@ -1,0 +1,28 @@
+* [33mc1ab20e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m fix: docker'da iklim seed kaynağını bağla
+* [33mfe2c96a[m[33m ([m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m fix: iklim cache ve analiz akisini sehir bazinda tutarli hale getir
+* [33mf922f7b[m Docker entegrasyonu
+* [33mcf64049[m .delete mac kurulum
+* [33m8fbb92a[m mac kurulum /açılış dosyası dosyası
+* [33m2462c8c[m Makale ve rapor güncellendi
+* [33ma8e7b26[m Kullanıcı deneyimini ve profil ayarlarını iyileştir
+* [33m4f9f595[m Makale ve rapor düzenlendi
+* [33md481d72[m İklim ve dashboard ekranı mini fix :
+* [33m44065ab[m feat: AI önerileri ve profil yükleme akışını iyileştir
+* [33m0d9dc31[m Tüketim modeli güncel hali
+* [33mbaf88a2[m feat: Dashboard lokasyon filtreleme ve bildirim sistemi geliştir + Plan Wizard UI iyileştir
+* [33mbdbff5e[m chore: üretim modeli güncel hali
+* [33m09d9ba8[m feat: günlük hava durumu cache akışını ekle
+* [33m64fcd89[m AI analizinde yerel plan ve ürün eşleşme katmanını iyileştir
+* [33m336244e[m Üretim ve tüketim modellerini yeniden tasarla DB importunu tamamla
+* [33m14b8d86[m Sprint 5: Register ve Kullanıcı Onboarding
+* [33me857255[m Readme güncellemesi ve teknik dökümantasyon
+* [33m15232ba[m Update .gitignore
+* [33m173fd6b[m Model sprint4 raporu eklendi
+* [33m93b7887[m Sprint 4 tamamlandı.
+* [33meb7cb38[m Bölgesel analiz renk paleti güncelleme
+* [33mbe809f2[m fix: complete analysis flow and remove remaining mock-like data gaps
+* [33mf6dc5f3[m Sprint 3 tamamlandı.
+* [33m0658933[m Sprint 2 tamamlandı.
+* [33m3c0da7b[m Metinlerde oluşan harf hataları düzeltildi , sunucu başlatmak için dosya konuldu
+* [33m3eec948[m Sprint 1 tamamlandı.
+* [33ma5063e2[m chore: tarimpro son hal - tüm frontend ve backend dosyaları

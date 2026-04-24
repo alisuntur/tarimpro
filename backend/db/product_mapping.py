@@ -24,6 +24,8 @@ TURKISH_ASCII_TRANSLATION = str.maketrans(
 # used while resolving the matching product name in analytics.consumption_history.
 PRODUCT_TO_CONSUMPTION_ALIASES: dict[str, tuple[str, ...]] = {
     "M\u0131s\u0131r": ("M\u0131s\u0131r Durum",),
+    "Mercimek, Kuru (K\u0131rm\u0131z\u0131)": ("K\u0131rm\u0131z\u0131 Mercimek",),
+    "Mercimek, Kuru (Ye\u015fil)": ("Ye\u015fil Mercimek",),
     "Domates (Sal\u00e7al\u0131k)": ("Domates",),
     "Domates (Sofral\u0131k)": ("Domates",),
     "Elma (Starking)": ("Elma",),
@@ -58,6 +60,7 @@ PRODUCT_TO_CONSUMPTION_ALIASES: dict[str, tuple[str, ...]] = {
     "Bezelye, Taze": ("Bezelye Taze",),
     "Kabak (Sak\u0131z)": ("Kabak Sak\u0131z",),
     "Patates (Tatl\u0131 Patates Hari\u00e7)": ("Patates",),
+    "Tatl\u0131 Patates": ("Patates",),
     "So\u011fan (Kuru)": ("So\u011fan Kuru",),
     "So\u011fan (Taze)": ("So\u011fan Taze",),
     "Sar\u0131msak (Kuru)": ("Sar\u0131msak Kuru",),
@@ -78,6 +81,7 @@ PRODUCT_TO_CONSUMPTION_ALIASES: dict[str, tuple[str, ...]] = {
     "\u0130ncir (Ya\u015f)": ("\u0130ncir",),
     "\u00c7ay Yapraklar\u0131": ("\u00c7ay",),
     "Muz, Plantain Ve Benzerleri": ("Muz",),
+    "\u015eam F\u0131st\u0131\u011f\u0131 (Antep F\u0131st\u0131\u011f\u0131)": ("Antep F\u0131st\u0131\u011f\u0131",),
     "Turp (Bay\u0131r)": ("Turp",),
     "Turp (Beyaz)": ("Turp",),
     "Turp (K\u0131rm\u0131z\u0131)": ("Turp",),

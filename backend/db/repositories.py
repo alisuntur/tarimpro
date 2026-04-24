@@ -133,6 +133,18 @@ def _production_area_sql(alias: str) -> str:
     return f"COALESCE({alias}.area_decare, {alias}.orchard_area_decare)"
 
 
+def _production_yield_basis_sql(alias: str) -> str:
+    tree_basis_sql = f"COALESCE(NULLIF({alias}.yield_kg_per_tree, 0), NULLIF({alias}.fruit_bearing_tree_count, 0)) IS NOT NULL"
+    area_basis_sql = f"COALESCE(NULLIF({alias}.yield_kg_decare, 0), NULLIF({alias}.area_decare, 0), NULLIF({alias}.orchard_area_decare, 0)) IS NOT NULL"
+    return (
+        f"CASE "
+        f"WHEN {tree_basis_sql} THEN 'tree' "
+        f"WHEN {area_basis_sql} THEN 'decare' "
+        f"ELSE NULL "
+        f"END"
+    )
+
+
 def _production_output_sql(alias: str) -> str:
     return (
         f"COALESCE("
@@ -143,26 +155,25 @@ def _production_output_sql(alias: str) -> str:
 
 
 def _production_yield_sql(alias: str) -> str:
-    area_sql = _production_area_sql(alias)
     output_sql = _production_output_sql(alias)
+    area_sql = _production_area_sql(alias)
+    tree_count_sql = f"NULLIF({alias}.fruit_bearing_tree_count, 0)"
     return (
         f"COALESCE("
+        f"NULLIF({alias}.yield_kg_per_tree, 0), "
         f"NULLIF({alias}.yield_kg_decare, 0), "
-        f"({output_sql} * 1000 / NULLIF({area_sql}, 0))"
+        f"CASE "
+        f"WHEN COALESCE(NULLIF({alias}.yield_kg_per_tree, 0), NULLIF({alias}.fruit_bearing_tree_count, 0)) IS NOT NULL "
+        f"THEN ({output_sql} * 1000 / {tree_count_sql}) "
+        f"ELSE ({output_sql} * 1000 / NULLIF({area_sql}, 0)) "
+        f"END"
         f")"
     )
 
 
 def _aggregate_production_yield_sql(alias: str) -> str:
-    area_sql = _production_area_sql(alias)
-    output_sql = _production_output_sql(alias)
     row_yield_sql = _production_yield_sql(alias)
-    return (
-        f"COALESCE("
-        f"SUM({output_sql}) * 1000 / NULLIF(SUM({area_sql}), 0), "
-        f"AVG({row_yield_sql})"
-        f")"
-    )
+    return f"AVG({row_yield_sql})"
 
 
 def _resolve_consumption_product_name(product_name: str | None) -> str | None:
@@ -1062,6 +1073,7 @@ def get_city_crop_options(city_name: str, limit: int | None = None):
 
     production_output_sql = _production_output_sql('p')
     aggregate_yield_sql = _aggregate_production_yield_sql('p')
+    yield_basis_sql = _production_yield_basis_sql('p')
     area_sql = _production_area_sql('p')
     sql = """
         WITH crop_latest_year AS (
@@ -1073,8 +1085,14 @@ def get_city_crop_options(city_name: str, limit: int | None = None):
         )
         SELECT latest.product_name,
                latest.latest_year,
+               MIN(p.category_name) AS category_name,
                SUM({production_output_sql}) AS production_ton,
-               {aggregate_yield_sql} AS yield_kg_decare
+               {aggregate_yield_sql} AS yield_kg_decare,
+               CASE
+                   WHEN COUNT(*) FILTER (WHERE {yield_basis_sql} = 'tree') > 0 THEN 'tree'
+                   WHEN COUNT(*) FILTER (WHERE {yield_basis_sql} = 'decare') > 0 THEN 'decare'
+                   ELSE NULL
+               END AS yield_basis
         FROM crop_latest_year AS latest
         JOIN analytics.production_history AS p
           ON p.product_name = latest.product_name
@@ -1088,6 +1106,7 @@ def get_city_crop_options(city_name: str, limit: int | None = None):
     """.format(
         production_output_sql=production_output_sql,
         aggregate_yield_sql=aggregate_yield_sql,
+        yield_basis_sql=yield_basis_sql,
         area_sql=area_sql,
     )
     params: dict[str, object] = {"city_candidates": city_candidates}
@@ -1109,6 +1128,7 @@ def get_city_production_overview(city_name: str):
     production_output_sql = _production_output_sql('p')
     aggregate_yield_sql = _aggregate_production_yield_sql('p')
     area_sql = _production_area_sql('p')
+    yield_basis_sql = _production_yield_basis_sql('p')
     with get_connection(row_factory=dict_row) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
@@ -1117,16 +1137,30 @@ def get_city_production_overview(city_name: str):
                     SELECT MAX(year) AS year
                     FROM analytics.production_history
                     WHERE city_name = ANY(%(city_candidates)s)
+                ), basis_counts AS (
+                    SELECT
+                        COUNT(*) FILTER (WHERE {yield_basis_sql} = 'tree') AS tree_rows,
+                        COUNT(*) FILTER (WHERE {yield_basis_sql} = 'decare') AS area_rows
+                    FROM analytics.production_history AS p
+                    CROSS JOIN latest_year
+                    WHERE p.city_name = ANY(%(city_candidates)s)
+                      AND p.year = latest_year.year
                 )
                 SELECT latest_year.year AS latest_year,
                        SUM({production_output_sql}) AS total_production_ton,
                        {aggregate_yield_sql} AS average_yield_kg_decare,
-                       SUM({area_sql}) AS total_area_decare
+                       SUM({area_sql}) AS total_area_decare,
+                       CASE
+                           WHEN basis_counts.tree_rows = 0 AND basis_counts.area_rows = 0 THEN NULL
+                           WHEN basis_counts.tree_rows >= basis_counts.area_rows THEN 'tree'
+                           ELSE 'decare'
+                       END AS average_yield_basis
                 FROM analytics.production_history AS p
                 CROSS JOIN latest_year
+                CROSS JOIN basis_counts
                 WHERE p.city_name = ANY(%(city_candidates)s)
                   AND p.year = latest_year.year
-                GROUP BY latest_year.year
+                GROUP BY latest_year.year, basis_counts.tree_rows, basis_counts.area_rows
                 """,
                 {"city_candidates": city_candidates},
             )
@@ -1348,6 +1382,7 @@ def get_crop_history_rows(city_name: str | None, product_name: str, years: int =
 
     production_output_sql = _production_output_sql('p')
     aggregate_yield_sql = _aggregate_production_yield_sql('p')
+    yield_basis_sql = _production_yield_basis_sql('p')
     where_clauses = ["product_name = ANY(%(product_candidates)s)"]
     params: dict[str, object] = {"product_candidates": product_candidates, "years": years}
     city_candidates = _lookup_candidates(city_name) if city_name else []
@@ -1361,7 +1396,12 @@ def get_crop_history_rows(city_name: str | None, product_name: str, years: int =
                 f"""
                 SELECT year,
                        SUM({production_output_sql}) AS production_ton,
-                       {aggregate_yield_sql} AS yield_kg_decare
+                       {aggregate_yield_sql} AS yield_kg_decare,
+                       CASE
+                           WHEN COUNT(*) FILTER (WHERE {yield_basis_sql} = 'tree') > 0 THEN 'tree'
+                           WHEN COUNT(*) FILTER (WHERE {yield_basis_sql} = 'decare') > 0 THEN 'decare'
+                           ELSE NULL
+                       END AS yield_basis
                 FROM analytics.production_history AS p
                 WHERE {' AND '.join(where_clauses)}
                 GROUP BY year
@@ -1383,9 +1423,8 @@ def get_product_yield_context(city_name: str | None, product_name: str, years: i
     if not product_candidates:
         return {}
 
-    production_output_sql = _production_output_sql('p')
-    area_sql = _production_area_sql('p')
     row_yield_sql = _production_yield_sql('p')
+    yield_basis_sql = _production_yield_basis_sql('p')
     city_candidates = _lookup_candidates(city_name) if city_name else []
     params: dict[str, object] = {
         "product_candidates": product_candidates,
@@ -1406,17 +1445,26 @@ def get_product_yield_context(city_name: str | None, product_name: str, years: i
                 ), city_year_yields AS (
                     SELECT city_name,
                            year,
-                           COALESCE(SUM({production_output_sql}) * 1000 / NULLIF(SUM({area_sql}), 0), AVG({row_yield_sql})) AS year_yield
+                           AVG({row_yield_sql}) AS year_yield
                     FROM analytics.production_history AS p
                     WHERE product_name = ANY(%(product_candidates)s)
                       AND year IN (SELECT year FROM recent_years)
                     GROUP BY city_name, year
-                    HAVING COALESCE(SUM({production_output_sql}) * 1000 / NULLIF(SUM({area_sql}), 0), AVG({row_yield_sql})) IS NOT NULL
+                    HAVING AVG({row_yield_sql}) IS NOT NULL
                 ), city_yields AS (
                     SELECT city_name,
                            AVG(year_yield) AS avg_yield
                     FROM city_year_yields
                     GROUP BY city_name
+                ), basis_summary AS (
+                    SELECT CASE
+                               WHEN COUNT(*) FILTER (WHERE {yield_basis_sql} = 'tree') > 0 THEN 'tree'
+                               WHEN COUNT(*) FILTER (WHERE {yield_basis_sql} = 'decare') > 0 THEN 'decare'
+                               ELSE NULL
+                           END AS yield_basis
+                    FROM analytics.production_history AS p
+                    WHERE product_name = ANY(%(product_candidates)s)
+                      AND year IN (SELECT year FROM recent_years)
                 ), target AS (
                     SELECT AVG(avg_yield) AS city_avg_yield
                     FROM city_yields
@@ -1428,7 +1476,8 @@ def get_product_yield_context(city_name: str | None, product_name: str, years: i
                        MIN(avg_yield) AS min_yield,
                        MAX(avg_yield) AS max_yield,
                        COUNT(*) AS city_count,
-                       SUM(CASE WHEN avg_yield <= (SELECT city_avg_yield FROM target) THEN 1 ELSE 0 END) AS cities_at_or_below
+                       SUM(CASE WHEN avg_yield <= (SELECT city_avg_yield FROM target) THEN 1 ELSE 0 END) AS cities_at_or_below,
+                       (SELECT yield_basis FROM basis_summary) AS yield_basis
                 FROM city_yields
                 """,
                 params,
@@ -1458,6 +1507,8 @@ def get_product_yield_context(city_name: str | None, product_name: str, years: i
         "city_count": city_count,
         "percentile_score": percentile_score,
         "relative_index_pct": relative_index_pct,
+        "yield_basis": row.get("yield_basis"),
+        "yield_unit_label": "kg/meyve veren ağaç" if row.get("yield_basis") == "tree" else "kg/dönüm" if row.get("yield_basis") == "decare" else None,
     }
 
 

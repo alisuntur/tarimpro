@@ -42,6 +42,13 @@ const formatMarketTon = (value) => {
     return formatTon(value);
 };
 
+const formatYieldValue = (value, unitLabel) => {
+    if (value == null) {
+        return 'Veri yok';
+    }
+    return `${numberFormatter.format(value)} ${unitLabel || 'kg/dönüm'}`;
+};
+
 const formatSignedMarketTon = (value) => {
     if (value == null) {
         return '-';
@@ -493,7 +500,7 @@ const AiRecommendations = () => {
                             </div>
                             <p className="card-scope-note">{`${localPlanScope} için hesaplanır. Buradaki tonaj, Türkiye geneli piyasa tonajı değil, seçtiğiniz alanın tahmini üretimidir.`}</p>
                             <p className="insight-metric">{'Ürün'}: <strong>{selectedCrop.name || focusCrop}</strong></p>
-                            <p className="insight-metric">{'Beklenen Verim'}: <strong>{selectedCrop.expectedYieldKgDecare != null ? `${numberFormatter.format(selectedCrop.expectedYieldKgDecare)} kg/dekar` : 'Veri yok'}</strong></p>
+                            <p className="insight-metric">{'Beklenen Verim'}: <strong>{formatYieldValue(selectedCrop.expectedYieldKgDecare, selectedCrop.yieldUnitLabel)}</strong></p>
                             <p className="insight-metric">{'Plan Bazlı Beklenen Üretim'}: <strong>{selectedCrop.expectedProductionTon != null ? `${numberFormatter.format(selectedCrop.expectedProductionTon)} ton` : 'Veri yok'}</strong></p>
                             <p className="insight-metric">{'Tahmin Yılı'}: <strong>{selectedCrop.forecastYear || '-'}</strong></p>
                             <p className="insight-metric">{'Yerel Verim Notu'}: <strong>{formatPercent(selectedCrop.yieldScore)}</strong></p>
@@ -614,7 +621,7 @@ const AiRecommendations = () => {
                                             </div>
                                             <div className="suggestion-meta-grid">
                                                 <span>{'Plan notu'}: <strong>%{Math.round(item.score || 0)}</strong></span>
-                                                <span>{'Beklenen verim'}: <strong>{item.expectedYieldKgDecare != null ? `${numberFormatter.format(item.expectedYieldKgDecare)} kg/dekar` : 'Veri yok'}</strong></span>
+                                                <span>{'Beklenen verim'}: <strong>{formatYieldValue(item.expectedYieldKgDecare, item.yieldUnitLabel)}</strong></span>
                                                 <span>{'Plan bazlı üretim'}: <strong>{item.estimatedProductionTon != null ? `${numberFormatter.format(item.estimatedProductionTon)} ton` : 'Veri yok'}</strong></span>
                                             </div>
                                             <div className="suggestion-body">

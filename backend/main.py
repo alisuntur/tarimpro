@@ -3,6 +3,7 @@ import json
 import os
 import re
 from contextlib import asynccontextmanager, suppress
+from collections import Counter
 from datetime import date, datetime, time, timedelta
 from math import sqrt
 from statistics import mean, pstdev
@@ -370,9 +371,11 @@ def _serialize_field(field: dict) -> dict:
 def _serialize_crop_option(option: dict) -> dict:
     return {
         "name": option["product_name"],
+        "categoryName": option.get("category_name"),
         "latestYear": option.get("latest_year"),
         "latestProductionTon": round(float(option["production_ton"])) if option.get("production_ton") is not None else None,
         "latestYieldKgDecare": round(float(option["yield_kg_decare"]), 1) if option.get("yield_kg_decare") is not None else None,
+        "latestYieldUnitLabel": option.get("yield_unit_label") or _yield_unit_label_from_basis(option.get("yield_basis")),
     }
 
 
@@ -441,6 +444,18 @@ def _score_breakdown_label(key: str | None) -> str:
     }
     return labels.get(key or "", key or "Skor")
 
+
+
+def _yield_unit_label_from_basis(basis: str | None) -> str | None:
+    if not basis:
+        return None
+
+    normalized = str(basis).strip().lower()
+    if normalized == "tree":
+        return "kg/meyve veren ağaç"
+    if normalized in {"decare", "area"}:
+        return "kg/dönüm"
+    return None
 
 
 def _parse_score_breakdown(value) -> list[dict[str, object]]:
@@ -579,15 +594,22 @@ def _blend_metric(local_value: float | None, prior_value: float | None, local_we
 
 
 
-def _history_summary(rows: list[dict]) -> dict[str, float | int | None]:
+def _history_summary(rows: list[dict]) -> dict[str, float | int | str | None]:
     yield_values = [_safe_float(row.get("yield_kg_decare"), None) for row in rows]
     yield_values = [value for value in yield_values if value is not None and value > 0]
     production_values = [_safe_float(row.get("production_ton"), None) for row in rows]
     production_values = [value for value in production_values if value is not None and value > 0]
+    basis_counts = Counter(str(row.get("yield_basis")) for row in rows if row.get("yield_basis"))
     latest_row = rows[-1] if rows else None
     avg_yield = mean(yield_values) if yield_values else None
     latest_yield = _safe_float(latest_row.get("yield_kg_decare"), None) if latest_row else None
     latest_production = _safe_float(latest_row.get("production_ton"), None) if latest_row else None
+    yield_basis = None
+    if basis_counts:
+        tree_count = basis_counts.get("tree", 0)
+        area_count = basis_counts.get("decare", 0)
+        if tree_count or area_count:
+            yield_basis = "tree" if tree_count >= area_count else "decare"
 
     if len(yield_values) >= 2 and avg_yield and avg_yield > 0:
         variation = pstdev(yield_values) / avg_yield
@@ -604,6 +626,8 @@ def _history_summary(rows: list[dict]) -> dict[str, float | int | None]:
         "latest_production": latest_production,
         "stability_score": stability_score,
         "avg_production": mean(production_values) if production_values else None,
+        "yield_basis": yield_basis,
+        "yield_unit_label": _yield_unit_label_from_basis(yield_basis),
     }
 
 
@@ -966,10 +990,13 @@ def _serialize_saved_recommendation(
     recommendation_score = _safe_float(item.get("recommendation_score"), 0) or 0
     expected_yield = _safe_float(item.get("expected_yield_kg_decare"), None)
     expected_production = _safe_float(item.get("expected_production_ton"), None)
-    if expected_yield is None and city_name and item.get("crop_name"):
-        yield_context = get_product_yield_context(city_name, item.get("crop_name"), years=5)
+    yield_context = get_product_yield_context(city_name, item.get("crop_name"), years=5) if city_name and item.get("crop_name") else {}
+    if expected_yield is None and yield_context:
         expected_yield = _safe_float(yield_context.get("city_avg_yield"), None)
-    if expected_production is None and expected_yield is not None and planned_area_decare not in (None, 0):
+    yield_unit_label = _yield_unit_label_from_basis(yield_context.get("yield_basis"))
+    if yield_unit_label == "kg/meyve veren ağaç":
+        expected_production = None
+    elif expected_production is None and expected_yield is not None and planned_area_decare not in (None, 0):
         planned_area = _safe_float(planned_area_decare, None)
         if planned_area:
             expected_production = (expected_yield * planned_area) / 1000
@@ -981,6 +1008,7 @@ def _serialize_saved_recommendation(
         "forecastYear": item.get("forecast_year"),
         "expectedReturn": f"{expected_return:+.1f}%" if expected_return is not None else "-",
         "expectedYieldKgDecare": round(expected_yield, 1) if expected_yield is not None else None,
+        "yieldUnitLabel": yield_unit_label,
         "estimatedProductionTon": round(expected_production, 1) if expected_production is not None else None,
         "predictedProductionTon": round(_safe_float(item.get("predicted_production_ton"), 0) or 0, 1) if item.get("predicted_production_ton") is not None else None,
         "reason": item.get("reason"),
@@ -1000,8 +1028,11 @@ def _serialize_analysis_response(analysis: dict, recommendations: list[dict], tr
     stored_expected_yield = _safe_float(analysis.get("expected_yield_kg_decare"), None)
     if stored_expected_yield is None:
         stored_expected_yield = _safe_float(yield_context.get("city_avg_yield"), None)
+    stored_yield_unit_label = _yield_unit_label_from_basis(yield_context.get("yield_basis"))
     stored_expected_production = _safe_float(analysis.get("expected_production_ton"), None)
-    if stored_expected_production is None and stored_expected_yield is not None:
+    if stored_yield_unit_label == "kg/meyve veren ağaç":
+        stored_expected_production = None
+    elif stored_expected_production is None and stored_expected_yield is not None:
         planned_area = _safe_float(analysis.get("planned_area_decare"), None)
         if planned_area:
             stored_expected_production = (stored_expected_yield * planned_area) / 1000
@@ -1036,6 +1067,7 @@ def _serialize_analysis_response(analysis: dict, recommendations: list[dict], tr
             "score": round(score, 1),
             "forecastYear": analysis.get("forecast_year"),
             "expectedYieldKgDecare": round(stored_expected_yield, 1) if stored_expected_yield is not None else None,
+            "yieldUnitLabel": stored_yield_unit_label,
             "expectedProductionTon": round(stored_expected_production, 1) if stored_expected_production is not None else None,
             "yieldScore": _yield_score_from_context(yield_context, stored_expected_yield is not None),
             "yieldIndexPct": round(_safe_float(yield_context.get("relative_index_pct"), 0) or 0, 1) if yield_context.get("relative_index_pct") is not None else None,
@@ -1580,9 +1612,10 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
         expected_yield = history.get("avg_yield") or _safe_float(item.get("latest_yield_kg_decare"), None)
         latest_production = history.get("latest_production") or _safe_float(item.get("latest_production_ton"), None)
         predicted_production = _safe_float(item.get("predicted_production_ton"), 0) or 0
-        estimated_production = ((expected_yield or 0) * planned_area / 1000) if planned_area and expected_yield else None
-        projected_growth = ((predicted_production - latest_production) / latest_production) * 100 if latest_production else None
         yield_context = get_product_yield_context(city_name, item["product_name"], years=5)
+        yield_unit_label = _yield_unit_label_from_basis(yield_context.get("yield_basis")) or history.get("yield_unit_label") or _yield_unit_label_from_basis(history.get("yield_basis")) or "kg/dönüm"
+        estimated_production = ((expected_yield or 0) * planned_area / 1000) if yield_unit_label == "kg/dönüm" and planned_area and expected_yield else None
+        projected_growth = ((predicted_production - latest_production) / latest_production) * 100 if latest_production else None
         supply_demand = _build_supply_demand_payload(get_product_supply_demand_projection(item["product_name"], forecast_year))
 
         raw_items.append(
@@ -1627,7 +1660,7 @@ def analyze_plan(request: AIAnalysisRequest, user=Depends(require_current_user))
                 )
             else:
                 reason_parts.append(
-                    f"{city_name} için geçmiş ortalama verim {item['expected_yield_kg_decare']:.1f} kg/dekar"
+                    f"{city_name} için geçmiş ortalama verim {item['expected_yield_kg_decare']:.1f} {yield_unit_label}"
                 )
         reason_parts.append(f"{forecast_year} model üretim tahmini {item['predicted_production_ton']:,.0f} ton seviyesinde")
         if supply_demand.get("status") and supply_demand.get("status") != "Veri sınırlı":
@@ -1849,6 +1882,7 @@ def get_regional_analysis(city: str | None = None, historyRange: str = "5Y", use
             "latestYear": production_overview.get("latest_year") if production_overview else None,
             "totalProductionTon": round(float(production_overview["total_production_ton"])) if production_overview and production_overview.get("total_production_ton") is not None else None,
             "averageYieldKgDecare": round(float(production_overview["average_yield_kg_decare"]), 1) if production_overview and production_overview.get("average_yield_kg_decare") is not None else None,
+            "averageYieldUnitLabel": _yield_unit_label_from_basis(production_overview.get("average_yield_basis")) if production_overview else None,
             "totalAreaDecare": round(float(production_overview["total_area_decare"])) if production_overview and production_overview.get("total_area_decare") is not None else None,
         },
         "topCrops": [
@@ -1856,6 +1890,7 @@ def get_regional_analysis(city: str | None = None, historyRange: str = "5Y", use
                 "name": item["product_name"],
                 "latestProductionTon": round(float(item["production_ton"])) if item.get("production_ton") is not None else None,
                 "latestYieldKgDecare": round(float(item["yield_kg_decare"]), 1) if item.get("yield_kg_decare") is not None else None,
+                "latestYieldUnitLabel": _yield_unit_label_from_basis(item.get("yield_basis")),
                 "latestYear": item.get("latest_year"),
             }
             for item in top_crops

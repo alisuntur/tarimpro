@@ -53,6 +53,9 @@ const riskClassName = (riskLevel) => {
     return `risk-${riskLevel.toLocaleLowerCase('tr-TR').replace('ü', 'u').replace('ş', 's')}`;
 };
 
+const yieldFormatter = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1 });
+const formatYieldValue = (value, unitLabel) => (value == null ? '—' : `${yieldFormatter.format(value)} ${unitLabel || 'kg/dönüm'}`);
+
 const RegionalAnalysis = () => {
     const [searchParams, setSearchParams] = useSearchParams();
     const [selectedCity, setSelectedCity] = useState(searchParams.get('city') || '');
@@ -209,7 +212,7 @@ const RegionalAnalysis = () => {
                                     </div>
                                     <div className="stat-details">
                                         <h4>Ortalama Verim</h4>
-                                        <span className="stat-value">{analysis.production?.averageYieldKgDecare || '—'} kg/dönüm</span>
+                                        <span className="stat-value">{formatYieldValue(analysis.production?.averageYieldKgDecare, analysis.production?.averageYieldUnitLabel)}</span>
                                     </div>
                                 </div>
                             </div>

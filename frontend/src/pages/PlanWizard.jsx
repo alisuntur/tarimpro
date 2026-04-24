@@ -43,44 +43,113 @@ const cropIconFor = (cropName) => {
     return <Leaf size={28} />;
 };
 
-const getCropCategory = (cropName) => {
-    const normalized = cropName.toLocaleLowerCase('tr-TR');
+const normalizeCropText = (value) => String(value || '').trim().toLocaleLowerCase('tr-TR');
 
-    if (normalized.includes('mısır') || normalized.includes('buğday') || normalized.includes('arpa') || 
-        normalized.includes('çavdar') || normalized.includes('yulaf')) {
+const includesAny = (value, terms) => terms.some((term) => value.includes(term));
+
+const getLegacyCropCategory = (cropName) => {
+    const normalized = normalizeCropText(cropName);
+
+    if (
+        includesAny(normalized, [
+            'mısır',
+            'buğday',
+            'arpa',
+            'çavdar',
+            'yulaf',
+            'nohut',
+            'fasulye',
+            'mercimek',
+            'bakla',
+            'bezelye',
+            'soya',
+            'ayçiçe',
+            'kanola',
+            'kolza',
+            'pamuk',
+            'patates',
+            'tatlı patates',
+        ])
+    ) {
         return 'Tahıllar';
     }
-    if (normalized.includes('ayçiçe') || normalized.includes('soya') || normalized.includes('kanola') || 
-        normalized.includes('kolza')) {
-        return 'Yağlı Tohumlar';
-    }
-    if (normalized.includes('pamuk')) {
-        return 'Lifli Ürünler';
-    }
-    if (normalized.includes('fındık')) {
-        return 'Kabuklu Meyveler';
-    }
-    if (normalized.includes('zeytin')) {
-        return 'Ağaç Ürünleri';
-    }
-    if (normalized.includes('elma') || normalized.includes('armut') || normalized.includes('kiraz') ||
-        normalized.includes('şeftali') || normalized.includes('kayısı') || normalized.includes('karpuz')) {
-        return 'Meyve';
-    }
-    if (normalized.includes('çilek') || normalized.includes('böğürtlen') || normalized.includes('ahududu')) {
-        return 'Berry Ürünleri';
-    }
-    if (normalized.includes('domates') || normalized.includes('biber') || normalized.includes('salatalık') ||
-        normalized.includes('kabak') || normalized.includes('patlıcan')) {
+
+    if (
+        includesAny(normalized, [
+            'domates',
+            'biber',
+            'salatalık',
+            'kabak',
+            'patlıcan',
+            'soğan',
+            'sarımsak',
+            'marul',
+            'lahana',
+            'turp',
+            'havuç',
+            'ıspanak',
+            'pırasa',
+            'semizotu',
+            'bamya',
+        ])
+    ) {
         return 'Sebze';
     }
+
+    if (
+        includesAny(normalized, [
+            'elma',
+            'armut',
+            'kiraz',
+            'şeftali',
+            'kayısı',
+            'karpuz',
+            'çilek',
+            'böğürtlen',
+            'ahududu',
+            'erik',
+            'ayva',
+            'dut',
+            'nar',
+            'incir',
+            'üzüm',
+            'portakal',
+            'mandalina',
+            'limon',
+            'greyfurt',
+            'muz',
+            'fındık',
+            'ceviz',
+            'kestane',
+            'şam fıstığı',
+            'zeytin',
+            'çay',
+        ])
+    ) {
+        return 'Meyve';
+    }
+
     return 'Diğer';
+};
+
+const CATEGORY_LABELS = {
+    tahil: 'Tahıllar',
+    meyve: 'Meyve',
+    sebze: 'Sebze',
+};
+
+const getCropCategory = (crop) => {
+    const categoryKey = normalizeCropText(crop?.categoryName || crop?.category_name);
+    if (CATEGORY_LABELS[categoryKey]) {
+        return CATEGORY_LABELS[categoryKey];
+    }
+    return getLegacyCropCategory(crop?.name);
 };
 
 const groupCropsByCategory = (crops) => {
     const grouped = {};
     crops.forEach((crop) => {
-        const category = getCropCategory(crop.name);
+        const category = getCropCategory(crop);
         if (!grouped[category]) {
             grouped[category] = [];
         }
@@ -91,13 +160,8 @@ const groupCropsByCategory = (crops) => {
 
 const CATEGORY_ORDER = [
     'Tahıllar',
-    'Yağlı Tohumlar',
-    'Lifli Ürünler',
     'Sebze',
     'Meyve',
-    'Berry Ürünleri',
-    'Kabuklu Meyveler',
-    'Ağaç Ürünleri',
     'Diğer',
 ];
 
@@ -344,7 +408,9 @@ const PlanWizard = () => {
                                     const groupedCrops = groupCropsByCategory(cropOptions);
                                     const availableCategories = CATEGORY_ORDER.filter((cat) => groupedCrops[cat]?.length > 0);
                                     const defaultCategory = availableCategories[0] || '';
-                                    const activeCategory = selectedCropCategory || defaultCategory;
+                                    const activeCategory = availableCategories.includes(selectedCropCategory)
+                                        ? selectedCropCategory
+                                        : defaultCategory;
                                     const cropsInCategory = groupedCrops[activeCategory] || [];
 
                                     return (
@@ -353,6 +419,7 @@ const PlanWizard = () => {
                                                 {availableCategories.map((category) => (
                                                     <button
                                                         key={category}
+                                                        type="button"
                                                         className={`crop-category-tab ${activeCategory === category ? 'active' : ''}`}
                                                         onClick={() => setSelectedCropCategory(category)}
                                                     >

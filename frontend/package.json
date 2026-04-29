@@ -15,7 +15,6 @@
     "react-dom": "^19.2.0",
     "react-is": "^19.2.4",
     "react-router-dom": "^7.13.1",
-    "react-turkey-map": "^1.0.19",
     "recharts": "^3.7.0",
     "turkey-map-react": "^2.0.3"
   },

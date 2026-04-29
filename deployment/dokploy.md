@@ -65,6 +65,14 @@ WEATHER_CACHE_STARTUP_REFRESH_ENABLED=true
 8. HTTPS icin Let's Encrypt aktif et.
 9. Deploy et.
 
+Eger `Github Provider not found` hatasi gorursen:
+
+1. Sol menuden `Git` -> `Github` ekranina gir.
+2. `Create Github App` ile baglanti kur.
+3. `Install` ile GitHub hesabinda bu repoyu yetkilendir.
+4. Sonra uygulamaya geri donup branch ve repository secimini tekrar yap.
+5. Ardindan yeniden deploy et.
+
 ## GitHub ile baglama
 
 Evet, bunu GitHub uzerinden direkt yaptirabilirsin. Dokploy GitHub

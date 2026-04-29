@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import unicodedata
 from collections import Counter
 from datetime import date, datetime, timedelta
@@ -116,6 +117,33 @@ def _canonical_city_name(city_name: str | None) -> str | None:
     if not city:
         return None
     return TURKEY_CITY_LOOKUP.get(_normalize_lookup(city), city)
+
+
+def _location_variants(value: str | None) -> list[str]:
+    cleaned = _clean_text(value)
+    if not cleaned:
+        return []
+
+    variants: list[str] = []
+
+    def add(candidate: str | None) -> None:
+        item = _clean_text(candidate)
+        if item and item not in variants:
+            variants.append(item)
+
+    add(cleaned)
+
+    for inner in re.findall(r"\((.*?)\)", cleaned):
+        add(inner)
+
+    stripped = re.sub(r"\s*\([^)]*\)", "", cleaned).strip()
+    add(stripped)
+
+    for separator in (",", "/", "-"):
+        if separator in stripped:
+            add(stripped.split(separator, 1)[0].strip())
+
+    return variants
 
 
 def _same_location_name(left: str | None, right: str | None) -> bool:
@@ -293,94 +321,80 @@ def _pick_geocode_result(results: list[dict[str, Any]], city_name: str, district
 
 def geocode_location(city_name: str, district_name: str | None = None):
     city = _canonical_city_name(city_name)
-    district = _clean_text(district_name)
     if not city:
         return None
 
-    query_name = district or city
-    payload = _fetch_json(
-        OPEN_METEO_GEOCODING_URL,
-        {
-            "name": query_name,
-            "count": 10,
-            "language": "tr",
-            "format": "json",
-            "countryCode": "TR",
-        },
-    )
-    results = payload.get("results", []) if isinstance(payload, dict) else []
-    result = _pick_geocode_result(results, city, district)
-    if not result:
-        return None
+    district_variants = _location_variants(district_name)
+    query_names = district_variants or [None]
 
-    result_admin1 = _normalize_lookup(result.get("admin1"))
-    if district and result_admin1 and result_admin1 != _normalize_lookup(city):
-        try:
-            city_payload = _fetch_json(
-                OPEN_METEO_GEOCODING_URL,
-                {
-                    "name": city,
-                    "count": 10,
-                    "language": "tr",
-                    "format": "json",
-                    "countryCode": "TR",
-                },
-            )
-        except Exception:
-            return None
+    for query_name in query_names:
+        payload = _fetch_json(
+            OPEN_METEO_GEOCODING_URL,
+            {
+                "name": query_name or city,
+                "count": 10,
+                "language": "tr",
+                "format": "json",
+                "countryCode": "TR",
+            },
+        )
+        results = payload.get("results", []) if isinstance(payload, dict) else []
+        result = _pick_geocode_result(results, city, query_name)
+        if not result:
+            continue
 
-        city_results = city_payload.get("results", []) if isinstance(city_payload, dict) else []
-        city_result = _pick_geocode_result(city_results, city, None)
-        if not city_result:
-            return None
-        result = city_result
-        district = None
+        result_admin1 = _normalize_lookup(result.get("admin1"))
+        if query_name and result_admin1 and result_admin1 != _normalize_lookup(city):
+            continue
 
-    return upsert_geo_location(
-        {
-            "city_name": city,
-            "district_name": district,
-            "latitude": result.get("latitude"),
-            "longitude": result.get("longitude"),
-            "elevation_m": result.get("elevation"),
-            "timezone": result.get("timezone") or TURKEY_TIMEZONE,
-            "country_code": result.get("country_code") or "TR",
-            "provider": OPEN_METEO_PROVIDER,
-            "provider_location_id": result.get("id"),
-            "feature_code": result.get("feature_code"),
-            "admin1": result.get("admin1"),
-            "admin2": result.get("admin2"),
-            "source_name": "Open-Meteo Geocoding API",
-            "fetched_at": datetime.now(ZoneInfo(TURKEY_TIMEZONE)),
-        }
-    )
+        return upsert_geo_location(
+            {
+                "city_name": city,
+                "district_name": query_name,
+                "latitude": result.get("latitude"),
+                "longitude": result.get("longitude"),
+                "elevation_m": result.get("elevation"),
+                "timezone": result.get("timezone") or TURKEY_TIMEZONE,
+                "country_code": result.get("country_code") or "TR",
+                "provider": OPEN_METEO_PROVIDER,
+                "provider_location_id": result.get("id"),
+                "feature_code": result.get("feature_code"),
+                "admin1": result.get("admin1"),
+                "admin2": result.get("admin2"),
+                "source_name": "Open-Meteo Geocoding API",
+                "fetched_at": datetime.now(ZoneInfo(TURKEY_TIMEZONE)),
+            }
+        )
+
+    return None
 
 
 def resolve_geo_location(city_name: str, district_name: str | None = None):
     city = _canonical_city_name(city_name)
-    district = _clean_text(district_name)
     if not city:
         return None
 
-    cached = get_geo_location(city, district)
-    if cached:
-        return cached
+    district_variants = _location_variants(district_name)
+    for district_variant in district_variants:
+        cached = get_geo_location(city, district_variant)
+        if cached:
+            return cached
 
     try:
-        resolved = geocode_location(city, district)
-        if resolved:
-            return resolved
+        for district_variant in district_variants:
+            resolved = geocode_location(city, district_variant)
+            if resolved:
+                return resolved
     except Exception:
         pass
 
-    if district:
-        cached_city = get_geo_location(city, None)
-        if cached_city:
-            return cached_city
-        try:
-            return geocode_location(city, None)
-        except Exception:
-            return None
+    cached_city = get_geo_location(city, None)
+    if cached_city:
+        return cached_city
+    try:
+        return geocode_location(city, None)
+    except Exception:
+        return None
 
     return None
 
@@ -519,6 +533,69 @@ def _chunks(items: list[dict[str, Any]], size: int):
         yield items[index : index + size]
 
 
+def _location_failure_payload(location: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "city_name": location.get("city_name"),
+        "district_name": location.get("district_name"),
+    }
+
+
+def _refresh_weather_locations(locations: list[dict[str, Any]], *, force: bool = False) -> tuple[int, list[dict[str, Any]]]:
+    if not locations:
+        return 0, []
+
+    if len(locations) == 1:
+        location = locations[0]
+        try:
+            if refresh_weather_for_location(location, force=force):
+                return 1, []
+        except Exception:
+            pass
+        return 0, [_location_failure_payload(location)]
+
+    try:
+        responses = fetch_open_meteo_weather_batch(locations)
+    except Exception:
+        mid = max(1, len(locations) // 2)
+        left_updated, left_failures = _refresh_weather_locations(locations[:mid], force=force)
+        right_updated, right_failures = _refresh_weather_locations(locations[mid:], force=force)
+        return left_updated + right_updated, left_failures + right_failures
+
+    if len(responses) != len(locations):
+        mid = max(1, len(locations) // 2)
+        left_updated, left_failures = _refresh_weather_locations(locations[:mid], force=force)
+        right_updated, right_failures = _refresh_weather_locations(locations[mid:], force=force)
+        return left_updated + right_updated, left_failures + right_failures
+
+    updated = 0
+    failures: list[dict[str, Any]] = []
+    for location, raw_payload in zip(locations, responses):
+        try:
+            values = _extract_weather_values(raw_payload)
+            cache = upsert_weather_daily_cache(
+                {
+                    "location_id": location["id"],
+                    **values,
+                    "provider": OPEN_METEO_PROVIDER,
+                    "raw_payload": raw_payload,
+                }
+            )
+            if cache:
+                updated += 1
+                continue
+            raise ValueError("Weather cache upsert returned no row.")
+        except Exception:
+            try:
+                if refresh_weather_for_location(location, force=True):
+                    updated += 1
+                else:
+                    failures.append(_location_failure_payload(location))
+            except Exception:
+                failures.append(_location_failure_payload(location))
+
+    return updated, failures
+
+
 def refresh_known_weather_cache(*, batch_size: int = BATCH_SIZE, force: bool = False, limit: int | None = None):
     candidates = list_weather_location_candidates(limit=limit)
     deduped_candidates: list[dict[str, Any]] = []
@@ -551,23 +628,9 @@ def refresh_known_weather_cache(*, batch_size: int = BATCH_SIZE, force: bool = F
 
     updated = 0
     for chunk in _chunks(locations_to_refresh, max(1, batch_size)):
-        try:
-            responses = fetch_open_meteo_weather_batch(chunk)
-        except Exception:
-            failures.extend({"city_name": item["city_name"], "district_name": item.get("district_name")} for item in chunk)
-            continue
-
-        for location, raw_payload in zip(chunk, responses):
-            values = _extract_weather_values(raw_payload)
-            if upsert_weather_daily_cache(
-                {
-                    "location_id": location["id"],
-                    **values,
-                    "provider": OPEN_METEO_PROVIDER,
-                    "raw_payload": raw_payload,
-                }
-            ):
-                updated += 1
+        chunk_updated, chunk_failures = _refresh_weather_locations(chunk, force=force)
+        updated += chunk_updated
+        failures.extend(chunk_failures)
 
     return {
         "candidate_count": len(deduped_candidates),

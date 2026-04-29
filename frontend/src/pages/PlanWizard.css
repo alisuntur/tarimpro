@@ -163,8 +163,8 @@
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 1.2rem;
-    background-color: var(--color-bg-main);
-    border: 1px solid rgba(0, 0, 0, 0.1);
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-full);
     font-size: 0.95rem;
     font-weight: 500;
@@ -175,16 +175,16 @@
 }
 
 .crop-category-tab:hover {
-    background-color: rgba(116, 198, 157, 0.08);
-    border-color: rgba(45, 106, 79, 0.2);
+    background-color: var(--color-hover-surface);
+    border-color: var(--color-border-strong);
     color: var(--color-text-main);
 }
 
 .crop-category-tab.active {
-    background-color: var(--color-primary-light);
-    border-color: var(--color-primary);
-    color: white;
-    box-shadow: 0 4px 12px rgba(116, 198, 157, 0.3);
+    background-color: var(--color-hover-surface);
+    border-color: var(--color-border-strong);
+    color: var(--color-text-main);
+    box-shadow: var(--shadow-sm);
 }
 
 .category-count {
@@ -193,14 +193,17 @@
     justify-content: center;
     width: 22px;
     height: 22px;
-    background-color: rgba(255, 255, 255, 0.3);
+    background-color: var(--color-bg-main);
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border-subtle);
     border-radius: 50%;
     font-size: 0.8rem;
     font-weight: 600;
 }
 
 .crop-category-tab.active .category-count {
-    background-color: rgba(255, 255, 255, 0.5);
+    background-color: var(--color-bg-card);
+    color: var(--color-text-main);
 }
 
 .crop-btn {
@@ -210,21 +213,23 @@
     justify-content: center;
     gap: 1rem;
     padding: 1.5rem 1rem;
-    background-color: var(--color-bg-main);
-    border: 2px solid transparent;
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border-subtle);
     border-radius: var(--radius-lg);
     cursor: pointer;
     transition: all var(--transition-normal);
+    box-shadow: var(--shadow-sm);
 }
 
 .crop-btn:hover {
-    background-color: rgba(116, 198, 157, 0.1);
+    background-color: var(--color-hover-surface);
+    border-color: var(--color-border-strong);
 }
 
 .crop-btn.selected {
-    background-color: rgba(116, 198, 157, 0.15);
-    border-color: var(--color-primary);
-    box-shadow: 0 4px 12px rgba(45, 106, 79, 0.1);
+    background-color: var(--color-hover-surface);
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-md);
 }
 
 .crop-icon-wrapper {
@@ -233,7 +238,7 @@
 }
 
 .crop-btn.selected .crop-icon-wrapper {
-    color: var(--color-primary-dark);
+    color: var(--color-accent);
     transform: scale(1.1);
 }
 
@@ -244,7 +249,7 @@
 }
 
 .crop-btn.selected .crop-name {
-    color: var(--color-primary-dark);
+    color: var(--color-text-main);
 }
 
 /* Action Button */

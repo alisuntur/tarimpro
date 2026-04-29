@@ -185,7 +185,7 @@ Bu sonuc sistemin tek bir kesin karar verici olarak degil, kullaniciya guclu bir
 ### Gereksinimler
 
 - Python 3.12 veya uyumlu bir Python 3 surumu
-- Node.js ve npm
+- Node.js 20.19+ veya 22.12+ ve npm
 - PostgreSQL
 - Windows ortaminda veri importu icin PostgreSQL komutlarinin PATH'te olmasi ya da `POSTGRES_BIN` ile belirtilmesi
 
@@ -283,6 +283,22 @@ Bu proje Docker gerektirmez. Ayni veriyi ve ekrani gormek icin su yol izlenir:
    ```
 
 Eger dump yerine Excel kaynaklarindan yeniden doldurmak istersen `python tools/import_veri.py` kullanabilirsin. Bunun icin `psql`, `createdb` ve gerekirse `pg_restore` komutlari PATH uzerinde olmali.
+
+## Canli Kurulum
+
+Eger sunucuda Dokploy kuruluysa en kolay yol Dokploy Compose rehberidir:
+
+- [deployment/dokploy.md](deployment/dokploy.md)
+- [docker-compose.dokploy.yml](docker-compose.dokploy.yml)
+
+Dokploy'de GitHub baglantisi ile auto deploy kullanabilirsin.
+
+Dokploy kullanmiyorsan Ubuntu 24.04 VDS icin manuel kurulum rehberi:
+
+- [deployment/ubuntu-24.04-vds.md](deployment/ubuntu-24.04-vds.md)
+- [deployment/backend.env.example](deployment/backend.env.example)
+- [deployment/tarimpro-backend.service](deployment/tarimpro-backend.service)
+- [deployment/tarimpro.nginx.conf](deployment/tarimpro.nginx.conf)
 
 ## AHP Backtest Calistirma
 

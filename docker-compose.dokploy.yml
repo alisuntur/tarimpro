@@ -1,0 +1,61 @@
+version: "3.9"
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PGDATABASE:-tarimpro}
+      POSTGRES_USER: ${PGUSER:-tarimpro_user}
+      POSTGRES_PASSWORD: ${PGPASSWORD}
+    volumes:
+      - tarimpro_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PGUSER:-tarimpro_user} -d ${PGDATABASE:-tarimpro}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - dokploy-network
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      PGHOST: db
+      PGPORT: "5432"
+      PGDATABASE: ${PGDATABASE:-tarimpro}
+      PGUSER: ${PGUSER:-tarimpro_user}
+      PGPASSWORD: ${PGPASSWORD}
+      WEATHER_CACHE_REFRESH_HOUR: ${WEATHER_CACHE_REFRESH_HOUR:-9}
+      WEATHER_CACHE_REFRESH_MINUTE: ${WEATHER_CACHE_REFRESH_MINUTE:-0}
+      WEATHER_CACHE_BATCH_SIZE: ${WEATHER_CACHE_BATCH_SIZE:-50}
+      WEATHER_CACHE_SCHEDULER_ENABLED: ${WEATHER_CACHE_SCHEDULER_ENABLED:-true}
+      WEATHER_CACHE_STARTUP_REFRESH_ENABLED: ${WEATHER_CACHE_STARTUP_REFRESH_ENABLED:-true}
+    expose:
+      - "8000"
+    depends_on:
+      - db
+    networks:
+      - dokploy-network
+
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "80"
+    depends_on:
+      - api
+    networks:
+      - dokploy-network
+
+volumes:
+  tarimpro_pgdata: {}
+
+networks:
+  dokploy-network:
+    external: true

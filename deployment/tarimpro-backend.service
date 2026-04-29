@@ -1,0 +1,19 @@
+[Unit]
+Description=TarimPro FastAPI backend
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=tarimpro
+Group=tarimpro
+WorkingDirectory=/opt/tarimpro/backend
+EnvironmentFile=/etc/tarimpro/backend.env
+ExecStart=/opt/tarimpro/.venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=20
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

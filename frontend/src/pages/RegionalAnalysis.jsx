@@ -28,19 +28,10 @@ const CustomTooltip = ({ active, payload, label }) => {
     if (!active || !payload?.length) return null;
 
     return (
-        <div style={{
-            background: 'rgba(248, 250, 252, 0.96)',
-            border: '1px solid rgba(22, 101, 52, 0.18)',
-            borderRadius: '10px',
-            padding: '10px 16px',
-            fontSize: '0.82rem',
-            color: '#0f172a',
-            boxShadow: '0 18px 36px rgba(15, 23, 42, 0.12)',
-            backdropFilter: 'blur(10px)',
-        }}>
-            <p style={{ fontWeight: 700, marginBottom: 6, color: '#166534' }}>{label}</p>
+        <div className="regional-tooltip">
+            <p className="regional-tooltip-label">{label}</p>
             {payload.map((item) => (
-                <p key={item.dataKey} style={{ color: item.color || '#334155', margin: '2px 0' }}>
+                <p key={item.dataKey} className="regional-tooltip-row" style={{ color: item.color || '#334155' }}>
                     {item.name}: <strong>{item.value}</strong>
                 </p>
             ))}

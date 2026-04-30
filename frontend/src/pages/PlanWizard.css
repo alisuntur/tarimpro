@@ -488,3 +488,128 @@
 .validation-error {
     color: #b91c1c;
 }
+
+@media (max-width: 768px) {
+    .wizard-container {
+        gap: 1.25rem;
+    }
+
+    .wizard-header-text h1 {
+        font-size: 1.6rem;
+    }
+
+    .wizard-card,
+    .analysis-factors-card {
+        padding: 1.5rem;
+        gap: 1.5rem;
+    }
+
+    .step-header {
+        align-items: flex-start;
+    }
+
+    .step-header h3 {
+        font-size: 1.1rem;
+    }
+
+    .step-content {
+        padding-left: 0;
+    }
+
+    .wizard-input {
+        padding: 1rem 1rem 1rem 3rem;
+        font-size: 1rem;
+    }
+
+    .size-input {
+        padding-right: 4.5rem !important;
+    }
+
+    .unit-label {
+        right: 1rem;
+        font-size: 0.95rem;
+    }
+
+    .crop-btn {
+        padding: 1rem;
+        align-items: flex-start;
+        text-align: left;
+        gap: 0.75rem;
+    }
+
+    .crop-name {
+        font-size: 0.95rem;
+        line-height: 1.35;
+    }
+
+    .crop-meta {
+        text-align: left;
+    }
+
+    .analysis-factors-card {
+        padding: 1.5rem;
+    }
+
+    .factors-header h2 {
+        font-size: 1.2rem;
+    }
+
+    .factors-description {
+        font-size: 0.95rem;
+    }
+
+    .factors-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .factor-item {
+        padding: 1.25rem;
+    }
+
+    .factor-item {
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .wizard-card {
+        padding: 1.25rem;
+        gap: 1.25rem;
+    }
+
+    .wizard-action {
+        padding-top: 1.25rem;
+    }
+
+    .btn-ai-analyze {
+        max-width: none;
+        padding: 1rem 1.25rem;
+        font-size: 1rem;
+    }
+
+    .crop-selector {
+        grid-template-columns: 1fr;
+    }
+
+    .crop-category-tabs {
+        gap: 0.5rem;
+        padding-bottom: 0.25rem;
+    }
+
+    .crop-category-tab {
+        padding: 0.5rem 0.9rem;
+        font-size: 0.85rem;
+    }
+
+    .selected-field-summary {
+        width: 100%;
+    }
+
+    .analysis-factors-card {
+        padding: 1.25rem;
+    }
+
+    .factors-grid {
+        gap: 1rem;
+    }
+}

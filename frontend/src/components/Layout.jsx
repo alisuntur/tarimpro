@@ -11,13 +11,18 @@ import {
     Sprout,
     LogOut,
     Globe,
+    X,
 } from 'lucide-react';
 import { apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import './Layout.css';
 
 const Layout = () => {
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const getIsMobile = () => (typeof window !== 'undefined'
+        ? window.matchMedia('(max-width: 1024px)').matches
+        : false);
+    const [sidebarOpen, setSidebarOpen] = useState(() => !getIsMobile());
+    const [isMobile, setIsMobile] = useState(getIsMobile);
     const [alertCount, setAlertCount] = useState(0);
     const [alerts, setAlerts] = useState([]);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -62,8 +67,55 @@ const Layout = () => {
         };
     }, []);
 
+    useEffect(() => {
+        const mediaQuery = window.matchMedia('(max-width: 1024px)');
+
+        const handleMediaChange = (event) => {
+            setIsMobile(event.matches);
+            setSidebarOpen(!event.matches);
+        };
+
+        handleMediaChange(mediaQuery);
+
+        if (typeof mediaQuery.addEventListener === 'function') {
+            mediaQuery.addEventListener('change', handleMediaChange);
+        } else {
+            mediaQuery.addListener(handleMediaChange);
+        }
+
+        return () => {
+            if (typeof mediaQuery.removeEventListener === 'function') {
+                mediaQuery.removeEventListener('change', handleMediaChange);
+            } else {
+                mediaQuery.removeListener(handleMediaChange);
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!isMobile || !sidebarOpen) return undefined;
+
+        const handleEscape = (event) => {
+            if (event.key === 'Escape') {
+                setSidebarOpen(false);
+            }
+        };
+
+        document.addEventListener('keydown', handleEscape);
+        return () => {
+            document.removeEventListener('keydown', handleEscape);
+        };
+    }, [isMobile, sidebarOpen]);
+
     const toggleSidebar = () => {
         setSidebarOpen(!sidebarOpen);
+    };
+
+    const handleNavItemClick = () => {
+        setNotificationsOpen(false);
+        if (isMobile) {
+            setSidebarOpen(false);
+        }
     };
 
     const handleLogout = async () => {
@@ -102,6 +154,16 @@ const Layout = () => {
                             <Sprout color="var(--color-accent)" size={28} />
                         )}
                     </div>
+                    {isMobile && sidebarOpen && (
+                        <button
+                            type="button"
+                            className="sidebar-close-btn"
+                            aria-label="Menüyü kapat"
+                            onClick={() => setSidebarOpen(false)}
+                        >
+                            <X size={20} color="var(--color-text-main)" />
+                        </button>
+                    )}
                 </div>
 
                 <nav className="sidebar-nav">
@@ -110,6 +172,7 @@ const Layout = () => {
                             key={item.path}
                             to={item.path}
                             className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                            onClick={handleNavItemClick}
                         >
                             <div className="nav-icon">{item.icon}</div>
                             {sidebarOpen && <span className="nav-label animate-fade-in">{item.label}</span>}
@@ -118,7 +181,7 @@ const Layout = () => {
                 </nav>
 
                 <div className="sidebar-footer">
-                    <button className="nav-item logout-btn" onClick={handleLogout}>
+                    <button type="button" className="nav-item logout-btn" onClick={handleLogout}>
                         <div className="nav-icon"><LogOut size={20} color="var(--color-danger)" /></div>
                         {sidebarOpen && <span className="nav-label text-danger">Çıkış Yap</span>}
                     </button>
@@ -128,7 +191,13 @@ const Layout = () => {
             <main className="main-content">
                 <header className="top-header">
                     <div className="header-left">
-                        <button className="menu-toggle" onClick={toggleSidebar}>
+                        <button
+                            type="button"
+                            className="menu-toggle"
+                            aria-label={sidebarOpen ? 'Menüyü kapat' : 'Menüyü aç'}
+                            aria-expanded={sidebarOpen}
+                            onClick={toggleSidebar}
+                        >
                             <Menu size={24} color="var(--color-text-main)" />
                         </button>
                         <h2 className="welcome-text">Hoş geldiniz, {firstName}!</h2>
@@ -180,11 +249,17 @@ const Layout = () => {
                                 </div>
                             )}
                         </div>
-                        <div className="user-profile" onClick={() => navigate('/profile')} title={user?.name || 'Profil'}>
+                        <button
+                            type="button"
+                            className="user-profile"
+                            onClick={() => navigate('/profile')}
+                            title={user?.name || 'Profil'}
+                            aria-label="Profili aç"
+                        >
                             <div className="avatar">
                                 <User size={20} color="white" />
                             </div>
-                        </div>
+                        </button>
                     </div>
                 </header>
 

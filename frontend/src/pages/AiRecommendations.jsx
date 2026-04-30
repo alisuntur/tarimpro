@@ -287,7 +287,7 @@ const AiRecommendations = () => {
         return (
             <div className="recommendations-container animate-fade-in">
                 <div className="recommendations-header">
-                    <div className="header-text-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: 1 }}>
+                    <div className="recommendations-header-group">
                         <button className="back-btn" onClick={() => navigate(-1)}>
                             <ChevronLeft size={20} />
                             {'Geri Dön'}
@@ -376,7 +376,7 @@ const AiRecommendations = () => {
     return (
         <div className="recommendations-container animate-fade-in">
             <div className="recommendations-header">
-                <div className="header-text-group" style={{ display: 'flex', alignItems: 'center', gap: '1.5rem', flex: 1 }}>
+                <div className="recommendations-header-group">
                     <button className="back-btn" onClick={() => navigate(-1)}>
                         <ChevronLeft size={20} />
                         {'Geri Dön'}

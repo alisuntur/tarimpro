@@ -11,6 +11,14 @@
     margin-bottom: 0.5rem;
 }
 
+.recommendations-header-group {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex: 1;
+    min-width: 0;
+}
+
 .back-btn {
     display: flex;
     align-items: center;
@@ -648,4 +656,186 @@
     font-style: normal;
     font-weight: 700;
     color: #475569;
+}
+
+@media (max-width: 768px) {
+    .recommendations-container {
+        gap: 1.25rem;
+    }
+
+    .recommendations-header {
+        align-items: stretch;
+        flex-wrap: wrap;
+        gap: 0.85rem;
+    }
+
+    .recommendations-header-group {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.85rem;
+    }
+
+    .back-btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .header-text h1 {
+        font-size: 1.45rem;
+    }
+
+    .gauge-section {
+        padding: 1.25rem;
+        gap: 1.25rem;
+    }
+
+    .gauge-chart-container {
+        max-width: 260px;
+        height: 180px;
+    }
+
+    .gauge-chart-container .recharts-responsive-container {
+        height: 180px !important;
+    }
+
+    .gauge-overlay-text h2 {
+        font-size: 2.25rem;
+    }
+
+    .gauge-info h3 {
+        font-size: 1.25rem;
+    }
+
+    .gauge-info p {
+        font-size: 0.95rem;
+    }
+
+    .recommendations-content {
+        gap: 1.25rem;
+    }
+
+    .analysis-insight-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .analysis-summary-header {
+        align-items: stretch;
+    }
+
+    .confidence-pill {
+        width: 100%;
+        justify-content: center;
+        text-align: center;
+    }
+
+    .title-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .suggestion-card,
+    .chart-card,
+    .analysis-picker-item {
+        padding: 1.25rem;
+    }
+
+    .analysis-picker-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .analysis-picker-header .primary-analysis-action {
+        width: 100%;
+    }
+
+    .analysis-picker-meta {
+        gap: 0.45rem 0.75rem;
+    }
+
+    .section-title {
+        font-size: 1.1rem;
+    }
+
+    .section-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .chart-card {
+        height: auto;
+        justify-content: flex-start;
+    }
+
+    .chart-card .recharts-responsive-container {
+        height: 320px !important;
+    }
+
+    .analysis-picker-score {
+        justify-items: start;
+    }
+
+    .analysis-picker-item {
+        flex-direction: column;
+    }
+
+    .analysis-picker-score {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .breakdown-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .confidence-detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .confidence-detail-row strong {
+        text-align: left;
+    }
+}
+
+@media (max-width: 520px) {
+    .plan-context-chips {
+        gap: 0.5rem;
+    }
+
+    .context-chip {
+        width: 100%;
+        justify-content: flex-start;
+        font-size: 0.85rem;
+    }
+
+    .gauge-section {
+        padding: 1rem;
+    }
+
+    .gauge-chart-container {
+        max-width: 220px;
+        height: 160px;
+    }
+
+    .gauge-chart-container .recharts-responsive-container {
+        height: 160px !important;
+    }
+
+    .gauge-overlay-text {
+        top: 62%;
+    }
+
+    .gauge-overlay-text h2 {
+        font-size: 1.9rem;
+    }
+
+    .chart-card {
+        padding: 1rem;
+    }
+
+    .chart-card .recharts-responsive-container {
+        height: 280px !important;
+    }
 }

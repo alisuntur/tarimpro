@@ -457,15 +457,15 @@ const Profile = () => {
 
                     {activeTab === 'fields' && (
                         <div className="tab-pane animate-fade-in">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                                <h2 className="tab-title" style={{ marginBottom: 0 }}>Kayıtlı Tarlalarım</h2>
+                            <div className="profile-section-toolbar">
+                                <h2 className="tab-title profile-tab-title-spread">Kayıtlı Tarlalarım</h2>
                                 <button className="btn-secondary" onClick={resetFieldForm}>
                                     <Plus size={16} />
                                     Yeni Tarla
                                 </button>
                             </div>
 
-                            <form onSubmit={handleFieldSubmit} style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem' }}>
+                            <form onSubmit={handleFieldSubmit} className="profile-form-stack profile-fields-form">
                                 <div style={formGridStyle}>
                                     <input style={inputStyle} placeholder="Tarla adı" value={fieldForm.name} onChange={(e) => setFieldForm((prev) => ({ ...prev, name: e.target.value }))} />
                                     <select style={inputStyle} value={fieldForm.city} onChange={handleFieldCityChange}>
@@ -493,9 +493,9 @@ const Profile = () => {
                                     <input className="field-readonly-input" style={inputStyle} type="number" step="0.000001" placeholder="Enlem otomatik gelir" value={fieldForm.latitude} readOnly />
                                     <input className="field-readonly-input" style={inputStyle} type="number" step="0.000001" placeholder="Boylam otomatik gelir" value={fieldForm.longitude} readOnly />
                                 </div>
-                                <textarea style={{ ...inputStyle, minHeight: '90px', resize: 'vertical' }} placeholder="Notlar" value={fieldForm.notes} onChange={(e) => setFieldForm((prev) => ({ ...prev, notes: e.target.value }))} />
-                                {fieldError && <p style={{ color: '#b91c1c', margin: 0 }}>{fieldError}</p>}
-                                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                                <textarea className="profile-notes-textarea" style={inputStyle} placeholder="Notlar" value={fieldForm.notes} onChange={(e) => setFieldForm((prev) => ({ ...prev, notes: e.target.value }))} />
+                                {fieldError && <p className="profile-inline-error">{fieldError}</p>}
+                                <div className="profile-form-actions">
                                     <button className="btn-primary" type="submit" disabled={savingField}>
                                         {savingField ? 'Kaydediliyor...' : editingFieldId ? 'Tarlayı Güncelle' : 'Tarlayı Kaydet'}
                                     </button>
@@ -521,13 +521,13 @@ const Profile = () => {
                                         </div>
                                     </div>
                                 ) : fields.map((field) => (
-                                    <div className="field-item" key={field.id} style={{ justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                                    <div className="field-item field-item--stackable" key={field.id}>
                                         <div className="field-info">
                                             <h4>{field.name}</h4>
                                             <p className="text-muted">{field.size} Dönüm • Toprak Tipi: {field.soilType || 'Belirtilmedi'}</p>
                                             <p className="text-muted">{field.city} / {field.district}</p>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                                        <div className="field-actions">
                                             <button className="btn-secondary" onClick={() => handleEditField(field)}>
                                                 <Pencil size={16} />
                                                 Düzenle
@@ -555,7 +555,7 @@ const Profile = () => {
                                         </div>
                                     </div>
                                 ) : reports.length > 0 ? reports.map((report) => (
-                                    <div className="field-item" key={report.id} style={{ justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
+                                    <div className="field-item field-item--stackable" key={report.id}>
                                         <div className="field-info">
                                             <h4>{report.type}</h4>
                                             <p className="text-muted">{report.field} • {report.date}</p>
@@ -606,7 +606,7 @@ const Profile = () => {
                                     </button>
                                 </div>
                             </div>
-                            <form onSubmit={handleProfileSave} style={{ display: 'grid', gap: '1rem' }}>
+                            <form onSubmit={handleProfileSave} className="profile-form-stack">
                                 <div style={formGridStyle}>
                                     <input style={inputStyle} placeholder="Ad Soyad" value={profileForm.fullName} onChange={(e) => setProfileForm((prev) => ({ ...prev, fullName: e.target.value }))} />
                                     <input style={inputStyle} placeholder="Telefon" value={profileForm.phone} onChange={(e) => setProfileForm((prev) => ({ ...prev, phone: e.target.value }))} />

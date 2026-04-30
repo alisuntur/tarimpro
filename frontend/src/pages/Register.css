@@ -42,3 +42,17 @@
         grid-template-columns: 1fr;
     }
 }
+
+@media (max-width: 640px) {
+    .login-form-section {
+        padding: 1rem;
+    }
+
+    .register-form-wrapper {
+        padding: 1.25rem;
+    }
+
+    .register-grid {
+        gap: 0.85rem;
+    }
+}

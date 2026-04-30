@@ -138,6 +138,10 @@
     padding: 1rem;
 }
 
+.profile-main {
+    min-width: 0;
+}
+
 .profile-nav {
     display: flex;
     flex-direction: column;
@@ -175,6 +179,51 @@
 .profile-main {
     padding: 2rem;
     min-height: 400px;
+}
+
+.profile-section-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.profile-tab-title-spread {
+    margin-bottom: 0;
+}
+
+.profile-form-stack {
+    display: grid;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.profile-fields-form {
+    min-width: 0;
+}
+
+.profile-notes-textarea {
+    min-height: 90px;
+    resize: vertical;
+}
+
+.profile-inline-error {
+    color: #b91c1c;
+    margin: 0;
+}
+
+.profile-form-actions,
+.field-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.field-item--stackable {
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
 }
 
 .profile-inline-loading {
@@ -457,5 +506,123 @@
 
     50% {
         transform: translateY(-10px);
+    }
+}
+
+@media (max-width: 900px) {
+    .profile-content {
+        grid-template-columns: 1fr;
+    }
+
+    .profile-sidebar {
+        padding: 0.75rem;
+    }
+
+    .profile-main {
+        padding: 1.25rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .profile-info-wrapper {
+        padding: 1.25rem;
+        align-items: flex-start;
+        text-align: left;
+    }
+
+    .profile-actions {
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .profile-actions .btn-secondary,
+    .profile-actions .btn-danger-outline {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .profile-section-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .profile-section-toolbar .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .profile-form-actions,
+    .field-actions {
+        width: 100%;
+    }
+
+    .profile-form-actions .btn-primary,
+    .profile-form-actions .btn-secondary,
+    .field-actions .btn-secondary,
+    .field-actions .btn-danger-outline {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .field-item--stackable {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .field-actions {
+        gap: 0.5rem;
+    }
+
+    .field-item--stackable > .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .theme-settings-panel {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
+
+@media (max-width: 640px) {
+    .profile-header {
+        border-radius: var(--radius-lg);
+    }
+
+    .name-badge-wrapper {
+        align-items: flex-start;
+    }
+
+    .profile-avatar {
+        width: 84px;
+        height: 84px;
+    }
+
+    .profile-main {
+        padding: 1rem;
+    }
+
+    .profile-form-stack {
+        margin-bottom: 1.25rem;
+    }
+
+    .profile-notes-textarea {
+        min-height: 110px;
+    }
+
+    .field-item {
+        align-items: flex-start;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+    }
+
+    .logout-modal {
+        padding: 1.5rem;
+    }
+
+    .profile-nav-btn {
+        padding: 0.9rem;
     }
 }

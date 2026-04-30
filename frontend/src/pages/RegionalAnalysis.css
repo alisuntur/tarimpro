@@ -45,6 +45,28 @@
     border-radius: var(--radius-full);
 }
 
+.regional-tooltip {
+    width: min(260px, calc(100vw - 2rem));
+    background: rgba(248, 250, 252, 0.96);
+    border: 1px solid rgba(22, 101, 52, 0.18);
+    border-radius: 10px;
+    padding: 10px 16px;
+    font-size: 0.82rem;
+    color: #0f172a;
+    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.12);
+    backdrop-filter: blur(10px);
+}
+
+.regional-tooltip-label {
+    font-weight: 700;
+    margin-bottom: 6px;
+    color: #166534;
+}
+
+.regional-tooltip-row {
+    margin: 2px 0;
+}
+
 .map-wrapper {
     display: flex;
     align-items: center;
@@ -265,8 +287,104 @@
 }
 
 @media (max-width: 640px) {
+    .map-header,
+    .chart-title-row,
+    .chart-title-row-spread {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+
+    .tooltip-info {
+        width: 100%;
+        text-align: left;
+    }
+
+    .map-wrapper {
+        height: 300px;
+        padding: 0.5rem;
+    }
+
+    .map-header h2 {
+        font-size: 1.1rem;
+    }
+
+    .city-header {
+        margin-bottom: 1rem;
+        padding-bottom: 1rem;
+    }
+
     .city-stats-grid {
         grid-template-columns: 1fr;
+    }
+
+    .stat-box {
+        padding: 0.85rem;
+    }
+
+    .city-title-group {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+
+    .city-title-group h2 {
+        font-size: 1.1rem;
+    }
+
+    .risk-badge {
+        max-width: 100%;
+    }
+
+    .range-switch {
+        width: 100%;
+    }
+
+    .range-switch-btn {
+        flex: 1 1 calc(33.333% - 0.5rem);
+        text-align: center;
+    }
+
+    .forecast-chart-card {
+        padding: 1.25rem;
+    }
+
+    .chart-title-row h2 {
+        font-size: 1.05rem;
+    }
+
+    .chart-subtitle {
+        font-size: 0.85rem;
+    }
+
+    .crop-tag {
+        font-size: 0.82rem;
+        padding: 0.45rem 0.65rem;
+    }
+
+    .regional-charts-grid {
+        gap: 1rem;
+    }
+
+    .regional-tooltip {
+        width: min(240px, calc(100vw - 1rem));
+    }
+
+    .forecast-chart-card .recharts-responsive-container {
+        height: 240px !important;
+    }
+}
+
+@media (max-width: 520px) {
+    .map-card {
+        min-height: 340px;
+    }
+
+    .map-wrapper {
+        height: 260px;
+    }
+
+    .range-switch-btn {
+        flex: 1 1 100%;
     }
 }
 .regional-note {

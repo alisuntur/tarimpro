@@ -175,8 +175,8 @@ Backtest ozeti:
 | Aday kayit | 60,820 |
 | Top-1 exact rate | %15.31 |
 | Top-3 hit rate | %74.57 |
-| Mean Spearman | 0.4142 |
-| Mean nDCG@3 | 0.9175 |
+| Mean Spearman | 0.4141 |
+| Mean nDCG@3 | 0.9178 |
 
 Bu sonuc sistemin tek bir kesin karar verici olarak degil, kullaniciya guclu bir ilk aday havuzu sunan karar destek araci olarak konumlandirilmasi gerektigini gosterir.
 

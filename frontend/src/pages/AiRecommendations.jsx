@@ -10,7 +10,6 @@ import {
     YAxis,
     CartesianGrid,
     Tooltip as RechartsTooltip,
-    Legend,
     ResponsiveContainer,
 } from 'recharts';
 import { ChevronLeft, MapPin, Scaling, Leaf, ShieldCheck, BarChart3 } from 'lucide-react';
@@ -40,6 +39,32 @@ const formatMarketTon = (value) => {
         return `${tonFormatter.format(Number(value) / 1_000)} bin ton`;
     }
     return formatTon(value);
+};
+
+const useIsCompactChart = (breakpoint = 520) => {
+    const getMatches = () => (typeof window !== 'undefined' ? window.matchMedia(`(max-width: ${breakpoint}px)`).matches : false);
+    const [isCompactChart, setIsCompactChart] = useState(getMatches);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return undefined;
+        }
+
+        const mediaQuery = window.matchMedia(`(max-width: ${breakpoint}px)`);
+        const handleChange = (event) => setIsCompactChart(event.matches);
+
+        handleChange(mediaQuery);
+
+        if (mediaQuery.addEventListener) {
+            mediaQuery.addEventListener('change', handleChange);
+            return () => mediaQuery.removeEventListener('change', handleChange);
+        }
+
+        mediaQuery.addListener(handleChange);
+        return () => mediaQuery.removeListener(handleChange);
+    }, [breakpoint]);
+
+    return isCompactChart;
 };
 
 const formatYieldValue = (value, unitLabel) => {
@@ -129,6 +154,12 @@ const seriesLabels = {
     predictedDemand: 'Türkiye tahmini tüketim (ton)',
 };
 
+const marketChartLegend = [
+    { key: 'historicalProduction', label: 'Gerçek üretim', color: 'var(--color-primary)' },
+    { key: 'predictedSupply', label: 'Tah. üretim', color: '#f59e0b' },
+    { key: 'predictedDemand', label: 'Tah. tüketim', color: '#1d4ed8' },
+];
+
 const breakdownHelp = {
     yield: 'Seçilen ilde bu ürün geçmişte ne kadar verimli olmuş?',
     forecast: 'Model bu ürünün seçilen ildeki üretim görünümünü diğer ürünlerle karşılaştırır.',
@@ -176,6 +207,21 @@ const AiRecommendations = () => {
     const [error, setError] = useState('');
     const [emptyState, setEmptyState] = useState(false);
     const isSelectionMode = !analysisId && !planId && !legacyPlan;
+    const isCompactChart = useIsCompactChart();
+    const marketChartMargin = isCompactChart
+        ? { top: 12, right: 16, left: 0, bottom: 24 }
+        : { top: 20, right: 30, left: 0, bottom: 0 };
+    const marketChartXAxisTick = {
+        fontSize: isCompactChart ? 9 : 11,
+        fill: '#64748b',
+        fontWeight: 600,
+    };
+    const marketChartYAxisTick = {
+        fontSize: isCompactChart ? 10 : 13,
+        fill: '#64748b',
+        fontWeight: 600,
+    };
+    const marketChartBarSize = isCompactChart ? 14 : 18;
 
     useEffect(() => {
         let active = true;
@@ -642,15 +688,23 @@ const AiRecommendations = () => {
                             <div className="chart-card card">
                                 {chartData.length > 0 ? (
                                     <>
-                                        <ResponsiveContainer width="100%" height={400}>
-                                            <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 0 }}>
+                                        <ResponsiveContainer width="100%" height={isCompactChart ? 240 : 400}>
+                                            <ComposedChart data={chartData} margin={marketChartMargin}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(203, 213, 225, 0.4)" />
-                                                <XAxis dataKey="year" axisLine tickLine={false} tick={{ fontSize: 13, fill: '#64748b', fontWeight: 600 }} dy={10} />
+                                                <XAxis
+                                                    dataKey="year"
+                                                    axisLine
+                                                    tickLine={false}
+                                                    tick={marketChartXAxisTick}
+                                                    dy={isCompactChart ? 6 : 10}
+                                                    interval={isCompactChart ? 1 : 'preserveStartEnd'}
+                                                    minTickGap={isCompactChart ? 0 : 18}
+                                                />
                                                 <YAxis
                                                     axisLine={false}
                                                     tickLine={false}
-                                                    tick={{ fontSize: 13, fill: '#64748b', fontWeight: 600 }}
-                                                    dx={-10}
+                                                    tick={marketChartYAxisTick}
+                                                    dx={isCompactChart ? -6 : -10}
                                                     tickCount={5}
                                                     tickFormatter={formatCompactTon}
                                                 />
@@ -666,13 +720,20 @@ const AiRecommendations = () => {
                                                     }}
                                                     formatter={(value, name) => [formatMarketTon(value), seriesLabels[name] || name]}
                                                 />
-                                                <Legend wrapperStyle={{ paddingTop: '20px', fontWeight: 600, fontSize: '14px' }} iconType="circle" />
-                                                <Bar name={seriesLabels.historicalProduction} dataKey="historicalProduction" fill="var(--color-primary)" radius={[4, 4, 0, 0]} barSize={28} />
+                                                <Bar name={seriesLabels.historicalProduction} dataKey="historicalProduction" fill="var(--color-primary)" radius={[4, 4, 0, 0]} barSize={marketChartBarSize} />
                                                 <Line type="monotone" name={seriesLabels.predictedSupply} dataKey="predictedSupply" stroke="#f59e0b" strokeWidth={4} dot={{ r: 5, fill: 'white', stroke: '#f59e0b', strokeWidth: 2 }} activeDot={{ r: 8, fill: '#f59e0b', stroke: 'white', strokeWidth: 2 }} />
                                                 <Line type="monotone" name={seriesLabels.predictedDemand} dataKey="predictedDemand" stroke="#1d4ed8" strokeWidth={3} strokeDasharray="7 5" dot={{ r: 4, fill: 'white', stroke: '#1d4ed8', strokeWidth: 2 }} activeDot={{ r: 7, fill: '#1d4ed8', stroke: 'white', strokeWidth: 2 }} />
                                             </ComposedChart>
                                         </ResponsiveContainer>
-                                        <p className="text-muted confidence-note chart-note">{'Grafikteki milyon ton değerleri Türkiye geneli toplam piyasa ölçeğidir. Yerel plan hasat hesabı üstteki Yerel Plan Çıktısı kartında gösterilir.'}</p>
+                                        <div className="market-chart-legend" aria-label="Grafik lejandı">
+                                            {marketChartLegend.map((item) => (
+                                                <div key={item.key} className="market-chart-legend-item">
+                                                    <span className="market-chart-legend-swatch" style={{ backgroundColor: item.color }} />
+                                                    <span>{item.label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <p className="text-muted confidence-note chart-note">Türkiye geneli seridir; yerel hesap üstteki karttadır.</p>
                                     </>
                                 ) : (
                                     <div className="empty-chart-state">

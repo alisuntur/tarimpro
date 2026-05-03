@@ -315,6 +315,14 @@
         font-size: 1rem;
     }
 
+    .chart-card .recharts-responsive-container {
+        height: clamp(230px, 60vw, 280px) !important;
+    }
+
+    .chart-card .recharts-cartesian-axis-tick-value {
+        font-size: 10px;
+    }
+
     .heatmap-legend {
         flex-direction: column;
         align-items: flex-start;
@@ -353,15 +361,15 @@
         padding: 1rem;
     }
 
+    .chart-card .recharts-responsive-container {
+        height: clamp(220px, 64vw, 260px) !important;
+    }
+
     .charts-column {
         gap: 1rem;
     }
 
     .climate-grid {
         gap: 1rem;
-    }
-
-    .chart-card .recharts-responsive-container {
-        height: 220px !important;
     }
 }

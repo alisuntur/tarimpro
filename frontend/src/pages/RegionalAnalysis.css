@@ -348,6 +348,10 @@
         padding: 1.25rem;
     }
 
+    .forecast-chart-card .recharts-responsive-container {
+        height: clamp(260px, 62vw, 320px) !important;
+    }
+
     .chart-title-row h2 {
         font-size: 1.05rem;
     }
@@ -370,7 +374,15 @@
     }
 
     .forecast-chart-card .recharts-responsive-container {
-        height: 240px !important;
+        height: clamp(240px, 68vw, 300px) !important;
+    }
+
+    .forecast-chart-card .recharts-cartesian-axis-tick-value {
+        font-size: 10px;
+    }
+
+    .forecast-chart-card .recharts-legend-item-text {
+        font-size: 0.78rem;
     }
 }
 
@@ -493,4 +505,22 @@
 
 .recharts-legend-item-text {
     color: #0f172a !important;
+}
+
+.forecast-chart-card .recharts-default-legend {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.35rem 0.85rem;
+}
+
+.forecast-chart-card .recharts-legend-item {
+    margin-right: 0 !important;
+    display: inline-flex !important;
+    align-items: center;
+}
+
+.forecast-chart-card .recharts-legend-item-text {
+    white-space: normal;
+    line-height: 1.25;
 }

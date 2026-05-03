@@ -93,6 +93,17 @@ const Layout = () => {
     }, []);
 
     useEffect(() => {
+        if (!isMobile) return undefined;
+
+        const previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = sidebarOpen ? 'hidden' : previousOverflow;
+
+        return () => {
+            document.body.style.overflow = previousOverflow;
+        };
+    }, [isMobile, sidebarOpen]);
+
+    useEffect(() => {
         if (!isMobile || !sidebarOpen) return undefined;
 
         const handleEscape = (event) => {
@@ -119,12 +130,19 @@ const Layout = () => {
     };
 
     const handleLogout = async () => {
+        setNotificationsOpen(false);
+        if (isMobile) {
+            setSidebarOpen(false);
+        }
         await logout();
         navigate('/login', { replace: true });
     };
 
     const handleAlertsNavigate = () => {
         setNotificationsOpen(false);
+        if (isMobile) {
+            setSidebarOpen(false);
+        }
         navigate('/dashboard#alerts');
     };
 
@@ -142,7 +160,10 @@ const Layout = () => {
 
     return (
         <div className="layout-container">
-            <aside className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}>
+            <aside
+                className={`sidebar ${sidebarOpen ? 'open' : 'closed'}`}
+                aria-hidden={isMobile && !sidebarOpen}
+            >
                 <div className="sidebar-header">
                     <div className="logo">
                         {sidebarOpen ? (
@@ -187,6 +208,12 @@ const Layout = () => {
                     </button>
                 </div>
             </aside>
+
+            <div
+                className={`sidebar-backdrop ${isMobile && sidebarOpen ? 'visible' : ''}`}
+                aria-hidden="true"
+                onClick={() => setSidebarOpen(false)}
+            />
 
             <main className="main-content">
                 <header className="top-header">
@@ -252,7 +279,13 @@ const Layout = () => {
                         <button
                             type="button"
                             className="user-profile"
-                            onClick={() => navigate('/profile')}
+                            onClick={() => {
+                                setNotificationsOpen(false);
+                                if (isMobile) {
+                                    setSidebarOpen(false);
+                                }
+                                navigate('/profile');
+                            }}
                             title={user?.name || 'Profil'}
                             aria-label="Profili aç"
                         >

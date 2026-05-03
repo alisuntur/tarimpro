@@ -24,8 +24,8 @@
     "candidateCount": 60820,
     "top1ExactRate": 15.31,
     "top3HitRate": 74.57,
-    "meanSpearman": 0.4142,
-    "meanNdcgAt3": 0.9175,
+    "meanSpearman": 0.4141,
+    "meanNdcgAt3": 0.9178,
     "sampleScenarios": [
       {
         "city": "Adana",

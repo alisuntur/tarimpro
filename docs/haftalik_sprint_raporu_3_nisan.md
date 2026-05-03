@@ -397,8 +397,8 @@ Scriptin akisi:
 | Aday sayisi | 60,820 | Urun-senaryo bazli siralama alani |
 | Top-1 exact rate | %15.31 | Sistem her zaman tek birinci urunu bulmuyor |
 | Top-3 hit rate | %74.57 | Ilk onerinin gercek ilk 3'e girme orani yuksek |
-| Mean Spearman | 0.4142 | Sistem siralamasi ile gercek siralama arasinda orta duzey korelasyon var |
-| Mean nDCG@3 | 0.9175 | Ilk 3 onerinin kalite skoru guclu |
+| Mean Spearman | 0.4141 | Sistem siralamasi ile gercek siralama arasinda orta duzey korelasyon var |
+| Mean nDCG@3 | 0.9178 | Ilk 3 onerinin kalite skoru guclu |
 
 ### Backtest Yorumu
 
@@ -406,7 +406,7 @@ Bu sonuc bize sunu gosterdi:
 
 - Sistem "kesin karar verici" olarak konumlandirilmamali.
 - Top-1 basari dusuk oldugu icin "bu urunu ekersen kesin en iyi sonuc" denemez.
-- Ancak Top-3 hit rate %74.57 ve nDCG@3 0.9175 oldugu icin sistem, ciftciye guclu bir aday havuzu sunan karar destek araci olarak savunulabilir.
+- Ancak Top-3 hit rate %74.57 ve nDCG@3 0.9178 oldugu icin sistem, ciftciye guclu bir aday havuzu sunan karar destek araci olarak savunulabilir.
 - Bu nedenle Sprint 4 sonunda anlatim "tek dogru urun tahmini" degil, "veriye dayali ilk 3 aday seti" olarak kuruldu.
 
 ## 11. Model Guveninin Degisimi
@@ -515,4 +515,4 @@ Son durum su sekilde ozetlenebilir:
 
 Sprint 3'te urun skoru calisiyordu ama agirliklar manuel olarak belirlenmisti: gecmis verim %32, model projeksiyonu %33, tuketim %17, iklim %18. Sprint 4'te bu zayiflik giderildi. AHP ikili karsilastirma matrisi olusturuldu, agirliklar sistematik olarak hesaplandi ve yeni profil su hale geldi: gecmis verim %22.7, model projeksiyonu %42.4, tuketim %12.2, iklim %22.7. Tutarlilik orani 0.00384 cikti ve 0.10 esiginin cok altinda oldugu icin matris kabul edilebilir bulundu.
 
-Son olarak AHP tabanli skor sistemi 2020-2024 walk-forward senaryolarinda test edildi. 405 senaryo ve 60,820 aday kayit uzerinde Top-1 exact rate %15.31, Top-3 hit rate %74.57, Mean Spearman 0.4142 ve Mean nDCG@3 0.9175 bulundu. Bu sonuc, sistemin tek bir kesin karar verici degil, ciftciye guclu bir ilk 3 aday havuzu sunan veri temelli karar destek araci olarak degerlendirilmesi gerektigini gosterdi.
+Son olarak AHP tabanli skor sistemi 2020-2024 walk-forward senaryolarinda test edildi. 405 senaryo ve 60,820 aday kayit uzerinde Top-1 exact rate %15.31, Top-3 hit rate %74.57, Mean Spearman 0.4141 ve Mean nDCG@3 0.9178 bulundu. Bu sonuc, sistemin tek bir kesin karar verici degil, ciftciye guclu bir ilk 3 aday havuzu sunan veri temelli karar destek araci olarak degerlendirilmesi gerektigini gosterdi.

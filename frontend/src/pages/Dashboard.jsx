@@ -379,6 +379,47 @@ const Dashboard = () => {
                                 </tbody>
                             </table>
                         </div>
+
+                        <div className="history-mobile-list">
+                            {history.length === 0 ? (
+                                <div className="history-mobile-empty">
+                                    <p className="text-muted">
+                                        Henüz üretim planı oluşturmadınız. İlk planınızı oluşturduğunuzda geçmiş kayıtlar burada listelenecek.
+                                    </p>
+                                </div>
+                            ) : history.map((plan) => (
+                                <article key={plan.id} className="history-mobile-card">
+                                    <div className="history-mobile-card-header">
+                                        <div className="plan-name-cell">
+                                            <Leaf size={16} className="text-primary" />
+                                            <span className="font-medium">{plan.name}</span>
+                                        </div>
+                                        <span className={`status-badge ${plan.status === 'Tamamlandı' ? 'success' : 'pending'}`}>
+                                            {plan.status}
+                                        </span>
+                                    </div>
+
+                                    <div className="history-mobile-meta">
+                                        <div className="history-mobile-meta-item">
+                                            <span>Planlama Tarihi</span>
+                                            <strong>{plan.date}</strong>
+                                        </div>
+                                        <div className="history-mobile-meta-item">
+                                            <span>Hedeflenen Verim</span>
+                                            <strong>{plan.targetYield}</strong>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        className="btn-secondary history-action-btn"
+                                        onClick={() => navigate(`/ai-recommendations?planId=${plan.id}`)}
+                                    >
+                                        Raporu Aç
+                                    </button>
+                                </article>
+                            ))}
+                        </div>
                     </div>
                 </div>
 

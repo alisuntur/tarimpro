@@ -103,7 +103,7 @@ API tarafında skor hesabı artık sabit katsayılar yerine `backend/scoring_pro
 - backtest sonrası yeni ağırlıklar sisteme kontrollü biçimde alınabilir
 
 ## 11. Akademik Savunma Metni
-Bu projede ürün uygunluk skoru, çok kriterli karar verme yaklaşımı ile hesaplanmaktadır. Kriter ağırlıkları Analitik Hiyerarşi Prosesi (AHP) kullanılarak uzman görüşüne dayalı olarak elde edilmiş, ardından walk-forward tahmin seti üzerinde şehir-yıl bazlı backtest ile sıralama performansı test edilmiştir. Böylece öneri sistemi hem uzman bilgisine hem de tarihsel doğrulamaya dayanan hibrit bir yapıya taşınmıştır.
+Bu projede ürün uygunluk skoru, çok kriterli karar verme yaklaşımı ile hesaplanmaktadır. Kriter ağırlıkları Analitik Hiyerarşi Prosesi (AHP) kullanılarak projenin amacına uygun olarak ekip arkadaşımla yorumlamaya dayalı olarak elde edilmiş, ardından walk-forward tahmin seti üzerinde şehir-yıl bazlı backtest ile sıralama performansı test edilmiştir. Böylece öneri sistemi hem projenin amacına hem de tarihsel doğrulamaya dayanan hibrit bir yapıya taşınmıştır.
 
 ## 12. Sonraki Aşama
 Bir sonraki aşamada aşağıdakiler önerilir:

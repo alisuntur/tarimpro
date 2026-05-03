@@ -258,8 +258,37 @@
     height: calc(100% - 3rem);
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: flex-start;
+    gap: 0.65rem;
+    align-items: stretch;
 }
+
+.market-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem 0.9rem;
+    align-items: center;
+}
+
+.market-chart-legend-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    min-width: 0;
+    white-space: nowrap;
+    color: var(--color-text-main);
+    font-size: 0.82rem;
+    font-weight: 700;
+    line-height: 1.25;
+}
+
+.market-chart-legend-swatch {
+    width: 10px;
+    height: 10px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+}
+
 .plan-context-chips {
     display: flex;
     flex-wrap: wrap;
@@ -768,7 +797,15 @@
     }
 
     .chart-card .recharts-responsive-container {
-        height: 320px !important;
+        height: clamp(220px, 56vw, 280px) !important;
+    }
+
+    .market-chart-legend {
+        gap: 0.35rem 0.75rem;
+    }
+
+    .market-chart-legend-item {
+        font-size: 0.78rem;
     }
 
     .analysis-picker-score {
@@ -836,6 +873,18 @@
     }
 
     .chart-card .recharts-responsive-container {
-        height: 280px !important;
+        height: clamp(200px, 54vw, 240px) !important;
+    }
+
+    .market-chart-legend {
+        gap: 0.3rem 0.6rem;
+    }
+
+    .market-chart-legend-item {
+        font-size: 0.74rem;
+    }
+
+    .chart-note {
+        display: none;
     }
 }

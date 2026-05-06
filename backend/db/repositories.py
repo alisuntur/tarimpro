@@ -316,6 +316,29 @@ def update_user_profile(user_id: str, payload: dict[str, object]):
     return updated
 
 
+def set_user_active_badge(user_id: str, active_badge: bool):
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                UPDATE app.users
+                SET active_badge = %(active_badge)s,
+                    updated_at = now()
+                WHERE id = %(user_id)s
+                RETURNING id, tc_identity_no, phone, email, password_hash, full_name,
+                          city, district, member_since, role, active_badge, is_active,
+                          created_at, updated_at
+                """,
+                {
+                    "user_id": user_id,
+                    "active_badge": bool(active_badge),
+                },
+            )
+            updated = cursor.fetchone()
+        connection.commit()
+    return updated
+
+
 def create_user_session(user_id: str, token_hash: str, remember_me: bool = False):
     expires_at_sql = SESSION_DURATION_SQL[bool(remember_me)]
     with get_connection(row_factory=dict_row) as connection:

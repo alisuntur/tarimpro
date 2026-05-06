@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Activity,
+  Award,
   BarChart3,
   Bell,
   Database,
@@ -104,6 +105,10 @@ const formatRoleLabel = (role) => {
   return ROLE_LABELS[key] || (role ? role : 'Kullanıcı');
 };
 
+const formatBadgeLabel = (isActiveBadge) => (isActiveBadge ? 'Rozetli' : 'Standart');
+
+const getBadgeActionLabel = (isActiveBadge) => (isActiveBadge ? 'Rozeti kaldır' : 'Rozet ver');
+
 const ALERT_TYPE_OPTIONS = [
   {
     value: 'info',
@@ -161,10 +166,10 @@ const METRIC_DEFINITIONS = [
     valueKey: 'badge_users',
     label: 'Rozetli kullanıcı',
     shortNote: 'Onaylı veya öne çıkarılmış hesaplar.',
-    detail: 'Sistem içinde rozet verilen, doğrulanmış ya da öncelikli görülen hesapları ifade eder.',
+    detail: 'Sistem içinde rozet verilen, doğrulanmış ya da öncelikli görülen hesapları ifade eder. Rozet burada yönetici tarafından verilip kaldırılabilir.',
     formula: 'active_badge = true olan kullanıcı sayısı',
     source: 'app.users',
-    interpretation: 'Güven düzeyi yüksek hesapların sayısını verir.',
+    interpretation: 'Güven düzeyi yüksek hesapların sayısını verir. Kullanıcı satırındaki rozet butonu ile yönetilir.',
   },
   {
     key: 'new_users_30d',
@@ -278,6 +283,7 @@ const AdminDashboard = () => {
     message: '',
   });
   const [selectedMetricKey, setSelectedMetricKey] = useState(null);
+  const [badgeUpdatingUserId, setBadgeUpdatingUserId] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -451,6 +457,40 @@ const AdminDashboard = () => {
       setBroadcastError(err.message || 'Uyarı gönderilemedi.');
     } finally {
       setBroadcastSending(false);
+    }
+  };
+
+  const handleBadgeToggle = async (userId, currentBadge, userName) => {
+    if (!userId || badgeUpdatingUserId) {
+      return;
+    }
+
+    const nextValue = !currentBadge;
+    const actionLabel = nextValue ? 'rozet vermek' : 'rozeti kaldırmak';
+    const confirmMessage = `${userName || 'Bu kullanıcı'} için ${actionLabel} istiyor musunuz?`;
+
+    if (!window.confirm(confirmMessage)) {
+      return;
+    }
+
+    setBadgeUpdatingUserId(userId);
+
+    try {
+      const payload = await apiFetch(`/api/admin/users/${userId}/badge`, {
+        method: 'PUT',
+        token,
+        clearOn401: false,
+        body: { activeBadge: nextValue },
+      });
+
+      setRefreshTick((value) => value + 1);
+      if (payload?.message) {
+        setBroadcastSuccess(payload.message);
+      }
+    } catch (err) {
+      setBroadcastError(err.message || 'Rozet güncellenemedi.');
+    } finally {
+      setBadgeUpdatingUserId(null);
     }
   };
 
@@ -795,7 +835,7 @@ const AdminDashboard = () => {
               <h2 className="admin-section-title">En aktif kullanıcılar</h2>
             </div>
             <p className="admin-section-note">
-              Bu liste analiz sayısına göre sıralanır.  "Çiftçi" okunur.
+              Bu liste analiz sayısına göre sıralanır. Rol, rozet ve durum alanları aynı satırdan yönetilebilir.
             </p>
           </div>
 
@@ -810,13 +850,15 @@ const AdminDashboard = () => {
                   <th>Analiz</th>
                   <th>Son hareket</th>
                   <th>Rol</th>
+                  <th>Rozet</th>
                   <th>Durum</th>
+                  <th>İşlem</th>
                 </tr>
               </thead>
               <tbody>
                 {activityRows.length === 0 ? (
                   <tr>
-                    <td colSpan="8">
+                    <td colSpan="10">
                       <div className="admin-empty-state">Aktivite kaydı bulunamadı.</div>
                     </td>
                   </tr>
@@ -838,9 +880,25 @@ const AdminDashboard = () => {
                         <span className="admin-pill info">{formatRoleLabel(row.role)}</span>
                       </td>
                       <td>
+                        <span className={`admin-pill ${row.active_badge ? 'badge' : 'neutral'}`}>
+                          {formatBadgeLabel(row.active_badge)}
+                        </span>
+                      </td>
+                      <td>
                         <span className={`admin-pill ${row.is_active ? 'success' : 'danger'}`}>
                           {row.is_active ? 'Aktif' : 'Pasif'}
                         </span>
+                      </td>
+                      <td className="admin-table-action-cell">
+                        <button
+                          type="button"
+                          className="admin-button secondary admin-detail-button"
+                          onClick={() => handleBadgeToggle(row.id, row.active_badge, row.full_name)}
+                          disabled={Boolean(badgeUpdatingUserId)}
+                        >
+                          <Award size={16} />
+                          {badgeUpdatingUserId === row.id ? 'Güncelleniyor...' : getBadgeActionLabel(row.active_badge)}
+                        </button>
                       </td>
                     </tr>
                   ))
@@ -857,7 +915,7 @@ const AdminDashboard = () => {
               <h2 className="admin-section-title">Yeni oluşan hesaplar</h2>
             </div>
             <p className="admin-section-note">
-              Bu tablo yeni gelen kullanıcıları gösterir. 
+              Bu tablo yeni gelen kullanıcıları gösterir. Buradan hesabın rozet durumunu da yönetebilirsiniz.
             </p>
           </div>
 
@@ -869,13 +927,15 @@ const AdminDashboard = () => {
                   <th>Konum</th>
                   <th>Kayıt tarihi</th>
                   <th>Rol</th>
+                  <th>Rozet</th>
                   <th>Durum</th>
+                  <th>İşlem</th>
                 </tr>
               </thead>
               <tbody>
                 {recentUsers.length === 0 ? (
                   <tr>
-                    <td colSpan="5">
+                    <td colSpan="7">
                       <div className="admin-empty-state">Kayıt bulunamadı.</div>
                     </td>
                   </tr>
@@ -894,9 +954,25 @@ const AdminDashboard = () => {
                         <span className="admin-pill info">{formatRoleLabel(row.role)}</span>
                       </td>
                       <td>
+                        <span className={`admin-pill ${row.active_badge ? 'badge' : 'neutral'}`}>
+                          {formatBadgeLabel(row.active_badge)}
+                        </span>
+                      </td>
+                      <td>
                         <span className={`admin-pill ${row.is_active ? 'success' : 'danger'}`}>
                           {row.is_active ? 'Aktif' : 'Pasif'}
                         </span>
+                      </td>
+                      <td className="admin-table-action-cell">
+                        <button
+                          type="button"
+                          className="admin-button secondary admin-detail-button"
+                          onClick={() => handleBadgeToggle(row.id, row.active_badge, row.full_name)}
+                          disabled={Boolean(badgeUpdatingUserId)}
+                        >
+                          <Award size={16} />
+                          {badgeUpdatingUserId === row.id ? 'Güncelleniyor...' : getBadgeActionLabel(row.active_badge)}
+                        </button>
                       </td>
                     </tr>
                   ))

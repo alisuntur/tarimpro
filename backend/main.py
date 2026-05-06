@@ -52,12 +52,14 @@ from db.repositories import (
     get_production_plan_for_user,
     get_production_plans_for_user,
     get_user_by_identifier,
+    get_user_by_id,
     get_walk_forward_calibration,
     get_walk_forward_summary,
     list_ai_analyses_for_user,
     list_location_options,
     list_plan_analysis_overview,
     revoke_user_session,
+    set_user_active_badge,
     update_field,
     update_plan_analysis_result,
     update_production_plan,
@@ -197,6 +199,10 @@ class AdminBroadcastAlertRequest(BaseModel):
     alertType: str = "warning"
     title: str
     message: str
+
+
+class AdminBadgeUpdateRequest(BaseModel):
+    activeBadge: bool
 
 
 class AIAnalysisRequest(BaseModel):
@@ -1501,6 +1507,24 @@ def admin_broadcast_alert(request: AdminBroadcastAlertRequest, session=Depends(r
         "recipientCount": result["count"],
         "alertType": alert_type,
         "title": title,
+        "admin": _admin_session_payload(session),
+    }
+
+
+@app.put("/api/admin/users/{user_id}/badge")
+def admin_update_user_badge(user_id: str, request: AdminBadgeUpdateRequest, session=Depends(require_admin_session)):
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanıcı bulunamadı.")
+
+    updated_user = set_user_active_badge(user_id, request.activeBadge)
+    if not updated_user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Kullanıcı güncellenemedi.")
+
+    return {
+        "success": True,
+        "message": "Rozet verildi." if request.activeBadge else "Rozet kaldırıldı.",
+        "user": _serialize_user(updated_user),
         "admin": _admin_session_payload(session),
     }
 

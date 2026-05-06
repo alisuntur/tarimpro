@@ -74,6 +74,7 @@ const formGridStyle = {
 const Profile = () => {
     const [activeTab, setActiveTab] = useState('personal');
     const [showLogoutModal, setShowLogoutModal] = useState(false);
+    const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
     const [profile, setProfile] = useState(null);
     const [profileLoading, setProfileLoading] = useState(true);
     const [fieldsLoading, setFieldsLoading] = useState(false);
@@ -89,6 +90,9 @@ const Profile = () => {
     const [editingFieldId, setEditingFieldId] = useState(null);
     const [savingField, setSavingField] = useState(false);
     const [fieldError, setFieldError] = useState('');
+    const [deleteConfirmText, setDeleteConfirmText] = useState('');
+    const [deleteAccountError, setDeleteAccountError] = useState('');
+    const [deletingAccount, setDeletingAccount] = useState(false);
     const navigate = useNavigate();
     const location = useLocation();
     const { user: authUser, logout, refreshSession } = useAuth();
@@ -235,6 +239,43 @@ const Profile = () => {
     const handleLogout = async () => {
         await logout();
         navigate('/login', { replace: true });
+    };
+
+    const openDeleteAccountModal = () => {
+        setShowLogoutModal(false);
+        setDeleteConfirmText('');
+        setDeleteAccountError('');
+        setShowDeleteAccountModal(true);
+    };
+
+    const closeDeleteAccountModal = () => {
+        if (deletingAccount) return;
+        setShowDeleteAccountModal(false);
+        setDeleteConfirmText('');
+        setDeleteAccountError('');
+    };
+
+    const handleDeleteAccount = async () => {
+        const normalizedConfirmation = deleteConfirmText.trim().toLocaleUpperCase('tr-TR');
+        if (normalizedConfirmation !== 'HESABIMI SİL') {
+            setDeleteAccountError('Onaylamak için HESABIMI SİL yazmalısın.');
+            return;
+        }
+
+        setDeletingAccount(true);
+        setDeleteAccountError('');
+
+        try {
+            await apiFetch('/api/profile/me', {
+                method: 'DELETE',
+            });
+            await logout();
+            navigate('/login', { replace: true });
+        } catch (err) {
+            setDeleteAccountError(err.message || 'Hesap silinemedi.');
+        } finally {
+            setDeletingAccount(false);
+        }
     };
 
     const handleProfileSave = async (e) => {
@@ -620,6 +661,19 @@ const Profile = () => {
                                     </button>
                                 </div>
                             </form>
+
+                            <div className="account-danger-zone">
+                                <div>
+                                    <h3>Hesabı Sil</h3>
+                                    <p className="text-muted">
+                                        Bu işlem hesabını, bağlı tarlaları, geçmiş analiz raporlarını, üretim planlarını ve oturumlarını kalıcı olarak siler.
+                                    </p>
+                                </div>
+                                <button type="button" className="btn-danger-outline" onClick={openDeleteAccountModal}>
+                                    <Trash2 size={18} />
+                                    Hesabı Sil
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -642,6 +696,51 @@ const Profile = () => {
                             </button>
                             <button className="btn-primary w-full logout-confirm-btn" onClick={handleLogout}>
                                 Çıkış Yap
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showDeleteAccountModal && (
+                <div className="modal-overlay animate-fade-in">
+                    <div className="logout-modal delete-modal card">
+                        <div className="modal-icon-wrapper delete-icon-wrapper">
+                            <Trash2 size={30} className="delete-modal-icon" />
+                        </div>
+                        <h2>Hesabını kalıcı olarak sil</h2>
+                        <p className="modal-message">
+                            Bu işlem geri alınamaz. Hesabın, tarlaların, planların ve geçmiş analiz raporların kalıcı olarak silinecek.
+                            <strong>Onaylamak için HESABIMI SİL yaz.</strong>
+                        </p>
+                        <input
+                            type="text"
+                            className="input-field delete-confirm-input"
+                            placeholder="HESABIMI SİL"
+                            value={deleteConfirmText}
+                            onChange={(event) => {
+                                setDeleteConfirmText(event.target.value);
+                                setDeleteAccountError('');
+                            }}
+                            disabled={deletingAccount}
+                        />
+                        {deleteAccountError && <p className="profile-inline-error delete-error">{deleteAccountError}</p>}
+                        <div className="modal-actions">
+                            <button
+                                type="button"
+                                className="btn-secondary w-full"
+                                onClick={closeDeleteAccountModal}
+                                disabled={deletingAccount}
+                            >
+                                Vazgeç
+                            </button>
+                            <button
+                                type="button"
+                                className="btn-danger-outline w-full delete-account-btn"
+                                onClick={handleDeleteAccount}
+                                disabled={deletingAccount || deleteConfirmText.trim().toLocaleUpperCase('tr-TR') !== 'HESABIMI SİL'}
+                            >
+                                {deletingAccount ? 'Siliniyor...' : 'Hesabımı Sil'}
                             </button>
                         </div>
                     </div>

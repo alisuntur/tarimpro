@@ -490,6 +490,22 @@ def delete_field(user_id: str, field_id: str):
     return deleted > 0
 
 
+def delete_user_account(user_id: str):
+    with get_connection() as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                DELETE FROM app.users
+                WHERE id = %(user_id)s
+                RETURNING id
+                """,
+                {"user_id": user_id},
+            )
+            deleted = cursor.fetchone()
+        connection.commit()
+    return bool(deleted)
+
+
 def create_production_plan(user_id: str, payload: dict[str, object]):
     with get_connection(row_factory=dict_row) as connection:
         with connection.cursor() as cursor:

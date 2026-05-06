@@ -22,6 +22,7 @@ from db.repositories import (
     create_user,
     create_user_session,
     delete_field,
+    delete_user_account,
     get_ai_analysis_for_user,
     get_ai_recommendations,
     get_ai_recommendations_for_analysis,
@@ -1994,6 +1995,14 @@ def update_profile(request: ProfileUpdateRequest, user=Depends(require_current_u
         "success": True,
         "user": _serialize_profile_user(updated_user),
     }
+
+
+@app.delete("/api/profile/me")
+def delete_profile(user=Depends(require_current_user)):
+    deleted = delete_user_account(user["id"])
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Hesap bulunamadı.")
+    return {"success": True}
 
 
 @app.get("/api/fields")

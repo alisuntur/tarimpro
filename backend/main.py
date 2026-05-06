@@ -59,7 +59,7 @@ from db.repositories import (
     update_production_plan,
     update_user_profile,
 )
-from dependencies import require_current_user, security
+from dependencies import get_optional_current_user, require_current_user, security
 from scoring import compute_weighted_score, get_scoring_profile
 from security import generate_session_token, hash_password, hash_session_token, verify_password
 from weather_service import TURKEY_TIMEZONE, get_daily_weather, refresh_climate_history_for_city, refresh_known_weather_cache, weather_code_label
@@ -1338,8 +1338,7 @@ def auth_me(user=Depends(require_current_user)):
     }
 
 
-@app.get("/api/locations/options")
-def get_location_options(user=Depends(require_current_user)):
+def _build_location_options_payload(user: dict | None = None) -> dict:
     rows = list_location_options()
     cities: list[str] = []
     districts_by_city: dict[str, list[str]] = {}
@@ -1385,17 +1384,27 @@ def get_location_options(user=Depends(require_current_user)):
         add_district(row.get("city_name"), row.get("district_name"))
         add_coordinates(row)
 
-    add_district(user.get("city"), user.get("district"))
+    if user:
+        add_district(user.get("city"), user.get("district"))
 
     return {
         "cities": cities,
         "districtsByCity": districts_by_city,
         "coordinatesByLocation": coordinates_by_location,
-        "profile": {
-            "city": user.get("city"),
-            "district": user.get("district"),
-        },
+        "profile": (
+            {
+                "city": user.get("city"),
+                "district": user.get("district"),
+            }
+            if user
+            else None
+        ),
     }
+
+
+@app.get("/api/locations/options")
+def get_location_options(user=Depends(get_optional_current_user)):
+    return _build_location_options_payload(user)
 
 
 @app.get("/api/dashboard/summary")

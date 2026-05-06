@@ -366,6 +366,7 @@ Detayli raporlar `docs/` altindadir:
 - `docs/ahp_metodoloji.md`
 - `docs/ahp_backtest_report.json`
 - `docs/sprint4_ahp_model_dogrulama_raporu.html`
+- `docs/tez_poster_sunum_dokumani.md` - tez poster ve sunum icin hazir akademik ozet
 
 ## Bilinen Sinirlar
 

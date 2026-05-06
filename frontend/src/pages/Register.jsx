@@ -1,9 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Sprout } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../lib/api';
 import './Login.css';
 import './Register.css';
+
+const emptyLocationOptions = {
+    cities: [],
+    districtsByCity: {},
+};
+
+const locationOptionKey = (value) => (
+    String(value || '')
+        .trim()
+        .toLocaleLowerCase('tr-TR')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/ı/g, 'i')
+        .replace(/\s+/g, ' ')
+);
+
+const addUnique = (items, value) => {
+    if (!value) return;
+    const valueKey = locationOptionKey(value);
+    if (!items.some((item) => locationOptionKey(item) === valueKey)) {
+        items.push(value);
+    }
+};
 
 const Register = () => {
     const [form, setForm] = useState({
@@ -16,6 +40,9 @@ const Register = () => {
         password: '',
         passwordConfirm: '',
     });
+    const [locationOptions, setLocationOptions] = useState(emptyLocationOptions);
+    const [locationLoading, setLocationLoading] = useState(true);
+    const [locationError, setLocationError] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
     const navigate = useNavigate();
@@ -27,10 +54,50 @@ const Register = () => {
         }
     }, [isAuthenticated, isLoading, loading, navigate]);
 
+    useEffect(() => {
+        let active = true;
+
+        const loadLocationOptions = async () => {
+            try {
+                const payload = await apiFetch('/api/locations/options', { auth: false });
+                if (!active) return;
+                setLocationOptions({
+                    cities: payload.cities || [],
+                    districtsByCity: payload.districtsByCity || {},
+                });
+            } catch (err) {
+                if (active) {
+                    setLocationError(err.message || 'İl ve ilçe listesi yüklenemedi.');
+                }
+            } finally {
+                if (active) setLocationLoading(false);
+            }
+        };
+
+        loadLocationOptions();
+        return () => {
+            active = false;
+        };
+    }, []);
+
     const updateField = (field, value) => {
         setForm((prev) => ({ ...prev, [field]: value }));
         setError('');
     };
+
+    const cityOptions = useMemo(() => {
+        const options = [];
+        (locationOptions.cities || []).forEach((city) => addUnique(options, city));
+        addUnique(options, form.city);
+        return options;
+    }, [form.city, locationOptions.cities]);
+
+    const districtOptions = useMemo(() => {
+        const options = [];
+        (locationOptions.districtsByCity[form.city] || []).forEach((district) => addUnique(options, district));
+        addUnique(options, form.district);
+        return options;
+    }, [form.city, form.district, locationOptions.districtsByCity]);
 
     const handleSubmit = async (event) => {
         event.preventDefault();
@@ -128,28 +195,42 @@ const Register = () => {
                         <div className="register-grid">
                             <div className="input-group">
                                 <label htmlFor="city">İl</label>
-                                <input
+                                <select
                                     id="city"
-                                    type="text"
                                     className="input-field"
-                                    placeholder="Örn: Konya"
                                     value={form.city}
-                                    onChange={(event) => updateField('city', event.target.value)}
-                                />
+                                    onChange={(event) => {
+                                        const city = event.target.value;
+                                        setForm((prev) => ({ ...prev, city, district: '' }));
+                                        setError('');
+                                    }}
+                                    disabled={locationLoading || cityOptions.length === 0}
+                                >
+                                    <option value="">{locationLoading ? 'İller yükleniyor...' : 'İl seçin'}</option>
+                                    {cityOptions.map((city) => (
+                                        <option key={city} value={city}>{city}</option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div className="input-group">
                                 <label htmlFor="district">İlçe</label>
-                                <input
+                                <select
                                     id="district"
-                                    type="text"
                                     className="input-field"
-                                    placeholder="Örn: Karatay"
                                     value={form.district}
                                     onChange={(event) => updateField('district', event.target.value)}
-                                />
+                                    disabled={!form.city || districtOptions.length === 0}
+                                >
+                                    <option value="">{form.city ? 'İlçe seçin' : 'Önce il seçin'}</option>
+                                    {districtOptions.map((district) => (
+                                        <option key={district} value={district}>{district}</option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
+
+                        {locationError && <p className="auth-error">{locationError}</p>}
 
                         <div className="input-group">
                             <label htmlFor="tcIdentityNo">T.C. Kimlik No <span className="optional-label">Opsiyonel</span></label>

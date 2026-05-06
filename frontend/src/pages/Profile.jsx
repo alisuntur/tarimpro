@@ -71,6 +71,25 @@ const formGridStyle = {
     gap: '1rem',
 };
 
+const memberSinceFormatter = new Intl.DateTimeFormat('tr-TR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+});
+
+const formatMemberSince = (value) => {
+    if (!value || value === '-') {
+        return '-';
+    }
+
+    const parsedDate = new Date(`${value}T00:00:00`);
+    if (Number.isNaN(parsedDate.getTime())) {
+        return String(value);
+    }
+
+    return memberSinceFormatter.format(parsedDate);
+};
+
 const Profile = () => {
     const [activeTab, setActiveTab] = useState('personal');
     const [showLogoutModal, setShowLogoutModal] = useState(false);
@@ -371,7 +390,7 @@ const Profile = () => {
         name: authUser?.name,
         city: authUser?.city,
         district: authUser?.district,
-        memberSince: '-',
+        memberSince: null,
     };
     const fields = profile?.fields || [];
     const reports = profile?.reports || [];
@@ -434,7 +453,7 @@ const Profile = () => {
                                 Aktif Çiftçi
                             </span>
                         </div>
-                        <p className="text-muted">{user?.city} / {user?.district} • Üye tarihi: {user?.memberSince || '-'}</p>
+                        <p className="text-muted">{user?.city} / {user?.district} • Üye tarihi: {formatMemberSince(user?.memberSince)}</p>
                     </div>
                     <div className="profile-actions">
                         <button className="btn-secondary" onClick={() => setActiveTab('personal')}>Profili Gör</button>

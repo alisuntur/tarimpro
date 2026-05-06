@@ -2,21 +2,23 @@ import asyncio
 import json
 import os
 import re
+import secrets
 from contextlib import asynccontextmanager, suppress
 from collections import Counter
-from datetime import date, datetime, time, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 from math import sqrt
 from statistics import mean, pstdev
 from zoneinfo import ZoneInfo
 
 from fastapi import Depends, FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPAuthorizationCredentials
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, ConfigDict
 
 from db import bootstrap_database
 from db.repositories import (
     create_ai_analysis,
+    create_broadcast_alert,
     create_field,
     create_production_plan,
     create_user,
@@ -35,6 +37,7 @@ from db.repositories import (
     get_crop_history_rows,
     get_crop_projection_series,
     get_dashboard_alerts,
+    get_admin_dashboard_overview,
     get_product_supply_demand_projection,
     get_product_supply_demand_series,
     get_product_yield_context,
@@ -161,6 +164,13 @@ app.add_middleware(
 )
 
 
+ADMIN_LOGIN_USERNAME = "admin"
+ADMIN_LOGIN_PASSWORD = "TarimPro!Admin2026"
+ADMIN_SESSION_TTL_HOURS = 12
+admin_security = HTTPBearer(auto_error=False)
+ADMIN_SESSIONS: dict[str, dict[str, object]] = {}
+
+
 class LoginRequest(BaseModel):
     identifier: str
     password: str
@@ -176,6 +186,17 @@ class RegisterRequest(BaseModel):
     district: str | None = None
     tcIdentityNo: str | None = None
     rememberMe: bool = False
+
+
+class AdminLoginRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AdminBroadcastAlertRequest(BaseModel):
+    alertType: str = "warning"
+    title: str
+    message: str
 
 
 class AIAnalysisRequest(BaseModel):
@@ -217,6 +238,84 @@ class PlanUpsertRequest(BaseModel):
     plannedAreaDecare: float | None = None
     selectedCropName: str | None = None
     seasonYear: int | None = None
+
+
+def _admin_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _admin_session_payload(session: dict[str, object] | None = None) -> dict[str, object]:
+    if not session:
+        return {
+            "username": ADMIN_LOGIN_USERNAME,
+            "displayName": "Sistem Yöneticisi",
+            "role": "admin",
+            "sessionIssuedAt": None,
+            "sessionLastSeenAt": None,
+            "sessionExpiresAt": None,
+            "sessionTtlHours": ADMIN_SESSION_TTL_HOURS,
+        }
+
+    return {
+        "username": ADMIN_LOGIN_USERNAME,
+        "displayName": "Sistem Yöneticisi",
+        "role": "admin",
+        "sessionIssuedAt": session.get("issued_at").isoformat() if session.get("issued_at") else None,
+        "sessionLastSeenAt": session.get("last_seen_at").isoformat() if session.get("last_seen_at") else None,
+        "sessionExpiresAt": session.get("expires_at").isoformat() if session.get("expires_at") else None,
+        "sessionTtlHours": ADMIN_SESSION_TTL_HOURS,
+    }
+
+
+def _prune_admin_sessions(now: datetime | None = None) -> None:
+    current_time = now or _admin_now()
+    expired_tokens = [
+        token_hash
+        for token_hash, session in ADMIN_SESSIONS.items()
+        if session.get("expires_at") and session["expires_at"] <= current_time
+    ]
+    for token_hash in expired_tokens:
+        ADMIN_SESSIONS.pop(token_hash, None)
+
+
+def _issue_admin_session() -> tuple[str, dict[str, object]]:
+    raw_token = generate_session_token()
+    now = _admin_now()
+    session = {
+        "issued_at": now,
+        "last_seen_at": now,
+        "expires_at": now + timedelta(hours=ADMIN_SESSION_TTL_HOURS),
+    }
+    ADMIN_SESSIONS[hash_session_token(raw_token)] = session
+    return raw_token, session
+
+
+def _get_admin_session(credentials: HTTPAuthorizationCredentials | None) -> dict[str, object] | None:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        return None
+
+    _prune_admin_sessions()
+    token_hash = hash_session_token(credentials.credentials)
+    session = ADMIN_SESSIONS.get(token_hash)
+    if not session:
+        return None
+
+    if session.get("expires_at") and session["expires_at"] <= _admin_now():
+        ADMIN_SESSIONS.pop(token_hash, None)
+        return None
+
+    session["last_seen_at"] = _admin_now()
+    return session
+
+
+def get_optional_admin_session(credentials: HTTPAuthorizationCredentials | None = Depends(admin_security)):
+    return _get_admin_session(credentials)
+
+
+def require_admin_session(session=Depends(get_optional_admin_session)):
+    if not session:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Yonetici oturumu gerekli.")
+    return session
 
 
 def _comparison_key(value: str | None) -> str:
@@ -347,7 +446,7 @@ def _serialize_profile_user(user: dict) -> dict:
         "email": user.get("email"),
         "city": user.get("city"),
         "district": user.get("district"),
-        "memberSince": user["member_since"].year if user.get("member_since") else None,
+        "memberSince": user["member_since"].isoformat() if user.get("member_since") else None,
         "role": user["role"],
         "activeBadge": bool(user["active_badge"]),
     }
@@ -1336,6 +1435,73 @@ def auth_me(user=Depends(require_current_user)):
     return {
         "authenticated": True,
         "user": _serialize_user(user),
+    }
+
+
+@app.post("/api/admin/login")
+def admin_login(request: AdminLoginRequest):
+    username = request.username.strip()
+    password = request.password or ""
+    if not username or not password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Kimlik bilgileri eksik.")
+
+    if not secrets.compare_digest(username, ADMIN_LOGIN_USERNAME) or not secrets.compare_digest(password, ADMIN_LOGIN_PASSWORD):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz kimlik bilgileri.")
+
+    raw_token, session = _issue_admin_session()
+    return {
+        "success": True,
+        "token": raw_token,
+        "admin": _admin_session_payload(session),
+    }
+
+
+@app.post("/api/admin/logout")
+def admin_logout(credentials: HTTPAuthorizationCredentials | None = Depends(admin_security)):
+    if credentials and credentials.credentials:
+        ADMIN_SESSIONS.pop(hash_session_token(credentials.credentials), None)
+    return {"success": True}
+
+
+@app.get("/api/admin/me")
+def admin_me(session=Depends(require_admin_session)):
+    return {
+        "authenticated": True,
+        "admin": _admin_session_payload(session),
+    }
+
+
+@app.get("/api/admin/dashboard")
+def admin_dashboard(limit: int = 12, session=Depends(require_admin_session)):
+    safe_limit = max(1, min(int(limit or 12), 50))
+    overview = get_admin_dashboard_overview(safe_limit)
+    return {
+        **overview,
+        "generatedAt": _admin_now().isoformat(),
+        "admin": _admin_session_payload(session),
+    }
+
+
+@app.post("/api/admin/alerts/broadcast")
+def admin_broadcast_alert(request: AdminBroadcastAlertRequest, session=Depends(require_admin_session)):
+    title = request.title.strip()
+    message = request.message.strip()
+    alert_type = request.alertType.strip().lower()
+
+    if not title:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Başlık boş bırakılamaz.")
+    if not message:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Mesaj boş bırakılamaz.")
+    if alert_type not in {"info", "warning", "danger"}:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Geçersiz uyarı türü.")
+
+    result = create_broadcast_alert(alert_type, title, message)
+    return {
+        "success": True,
+        "recipientCount": result["count"],
+        "alertType": alert_type,
+        "title": title,
+        "admin": _admin_session_payload(session),
     }
 
 

@@ -110,8 +110,13 @@ const Login = () => {
                         {error && <p style={{ color: '#b91c1c', marginTop: '0.75rem' }}>{error}</p>}
                     </form>
 
-                    <div className="register-link">
-                        Hesabın yok mu? <Link to="/register">Kayıt ol</Link>
+                    <div className="login-footer-links">
+                        <div className="register-link">
+                            Hesabın yok mu? <Link to="/register">Kayıt ol</Link>
+                        </div>
+                        <div className="admin-login-link">
+                            <Link to="/admin/login">Yönetici Girişi</Link>
+                        </div>
                     </div>
                 </div>
             </div>

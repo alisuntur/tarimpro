@@ -662,6 +662,38 @@ def get_dashboard_alerts(user_id: str):
             return cursor.fetchall()
 
 
+def create_broadcast_alert(alert_type: str, title: str, message: str):
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO app.alerts (
+                    user_id,
+                    alert_type,
+                    title,
+                    message
+                )
+                SELECT
+                    u.id,
+                    %(alert_type)s,
+                    %(title)s,
+                    %(message)s
+                FROM app.users AS u
+                RETURNING id
+                """,
+                {
+                    "alert_type": alert_type,
+                    "title": title,
+                    "message": message,
+                },
+            )
+            inserted = cursor.fetchall()
+        connection.commit()
+    return {
+        "count": len(inserted),
+    }
+
+
 def get_latest_climate(city_name: str):
     city_candidates = _lookup_candidates(city_name)
     if not city_candidates:
@@ -1930,6 +1962,158 @@ def list_ai_analyses_for_user(user_id: str, limit: int = 20):
             )
             return cursor.fetchall()
 
+
+
+def get_admin_dashboard_overview(limit: int = 12):
+    summary_sql = """
+        SELECT
+            COUNT(*) AS total_users,
+            COUNT(*) FILTER (WHERE is_active) AS active_users,
+            COUNT(*) FILTER (WHERE NOT is_active) AS inactive_users,
+            COUNT(*) FILTER (WHERE active_badge) AS badge_users,
+            COUNT(*) FILTER (WHERE created_at >= now() - interval '30 days') AS new_users_30d,
+            COALESCE((SELECT COUNT(*) FROM app.fields), 0) AS total_fields,
+            COALESCE((SELECT COUNT(*) FROM app.production_plans), 0) AS total_plans,
+            COALESCE((SELECT COUNT(*) FROM app.ai_analyses), 0) AS total_analyses,
+            COALESCE((SELECT COUNT(*) FROM app.ai_recommendations), 0) AS total_recommendations,
+            COALESCE((SELECT COUNT(*) FROM app.alerts), 0) AS total_alerts,
+            COALESCE((
+                SELECT COUNT(DISTINCT p.user_id)
+                FROM app.ai_analyses AS a
+                INNER JOIN app.production_plans AS p ON p.id = a.plan_id
+            ), 0) AS users_with_analyses
+        FROM app.users
+    """
+
+    activity_sql = """
+        WITH field_counts AS (
+            SELECT user_id, COUNT(*) AS field_count
+            FROM app.fields
+            GROUP BY user_id
+        ), plan_counts AS (
+            SELECT user_id, COUNT(*) AS plan_count
+            FROM app.production_plans
+            GROUP BY user_id
+        ), analysis_counts AS (
+            SELECT p.user_id, COUNT(*) AS analysis_count
+            FROM app.ai_analyses AS a
+            INNER JOIN app.production_plans AS p ON p.id = a.plan_id
+            GROUP BY p.user_id
+        ), activity_events AS (
+            SELECT id AS user_id, created_at AS activity_at
+            FROM app.users
+            UNION ALL
+            SELECT user_id, created_at AS activity_at
+            FROM app.fields
+            UNION ALL
+            SELECT user_id, created_at AS activity_at
+            FROM app.production_plans
+            UNION ALL
+            SELECT p.user_id, a.analyzed_at AS activity_at
+            FROM app.ai_analyses AS a
+            INNER JOIN app.production_plans AS p ON p.id = a.plan_id
+        ), last_activity AS (
+            SELECT user_id, MAX(activity_at) AS last_activity_at
+            FROM activity_events
+            GROUP BY user_id
+        )
+        SELECT
+            u.id,
+            u.full_name,
+            u.phone,
+            u.email,
+            u.city,
+            u.district,
+            u.role,
+            u.active_badge,
+            u.is_active,
+            u.created_at,
+            u.updated_at,
+            COALESCE(fc.field_count, 0) AS field_count,
+            COALESCE(pc.plan_count, 0) AS plan_count,
+            COALESCE(ac.analysis_count, 0) AS analysis_count,
+            la.last_activity_at
+        FROM app.users AS u
+        LEFT JOIN field_counts AS fc ON fc.user_id = u.id
+        LEFT JOIN plan_counts AS pc ON pc.user_id = u.id
+        LEFT JOIN analysis_counts AS ac ON ac.user_id = u.id
+        LEFT JOIN last_activity AS la ON la.user_id = u.id
+        ORDER BY COALESCE(ac.analysis_count, 0) DESC,
+                 COALESCE(pc.plan_count, 0) DESC,
+                 u.created_at DESC
+        LIMIT %(limit)s
+    """
+
+    recent_sql = """
+        SELECT
+            id,
+            full_name,
+            phone,
+            email,
+            city,
+            district,
+            role,
+            active_badge,
+            is_active,
+            created_at,
+            updated_at
+        FROM app.users
+        ORDER BY created_at DESC, full_name ASC
+        LIMIT %(limit)s
+    """
+
+    trend_sql = """
+        WITH months AS (
+            SELECT date_trunc('month', now() - (n * interval '1 month'))::date AS month_start
+            FROM generate_series(5, 0, -1) AS gs(n)
+        ),
+        registrations AS (
+            SELECT date_trunc('month', created_at)::date AS month_start, COUNT(*) AS registration_count
+            FROM app.users
+            WHERE created_at >= date_trunc('month', now()) - interval '5 months'
+            GROUP BY 1
+        ),
+        plans AS (
+            SELECT date_trunc('month', created_at)::date AS month_start, COUNT(*) AS plan_count
+            FROM app.production_plans
+            WHERE created_at >= date_trunc('month', now()) - interval '5 months'
+            GROUP BY 1
+        ),
+        analyses AS (
+            SELECT date_trunc('month', analyzed_at)::date AS month_start, COUNT(*) AS analysis_count
+            FROM app.ai_analyses
+            WHERE analyzed_at >= date_trunc('month', now()) - interval '5 months'
+            GROUP BY 1
+        )
+        SELECT
+            m.month_start,
+            COALESCE(r.registration_count, 0) AS registration_count,
+            COALESCE(p.plan_count, 0) AS plan_count,
+            COALESCE(a.analysis_count, 0) AS analysis_count
+        FROM months AS m
+        LEFT JOIN registrations AS r ON r.month_start = m.month_start
+        LEFT JOIN plans AS p ON p.month_start = m.month_start
+        LEFT JOIN analyses AS a ON a.month_start = m.month_start
+        ORDER BY m.month_start ASC
+    """
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(summary_sql)
+            summary = cursor.fetchone() or {}
+            cursor.execute(activity_sql, {"limit": limit})
+            activity = cursor.fetchall()
+            cursor.execute(recent_sql, {"limit": limit})
+            recent_users = cursor.fetchall()
+            cursor.execute(trend_sql)
+            monthly_trends = cursor.fetchall()
+
+    return {
+        "summary": summary,
+        "activity": activity,
+        "recent_users": recent_users,
+        "monthly_trends": monthly_trends,
+    }
 
 
 def create_ai_analysis(plan_id: str, payload: dict[str, object], recommendations: list[dict[str, object]]):

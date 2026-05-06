@@ -29,7 +29,8 @@ export function clearStoredAuth() {
 export async function apiFetch(path, options = {}) {
   const auth = options.auth !== false;
   const storedAuth = getStoredAuth();
-  const token = auth ? storedAuth?.token : null;
+  const token = options.token || (auth ? storedAuth?.token : null);
+  const clearOn401 = options.clearOn401 ?? true;
 
   const headers = {
     ...(options.body ? { 'Content-Type': 'application/json' } : {}),
@@ -53,7 +54,7 @@ export async function apiFetch(path, options = {}) {
     ? await response.json()
     : await response.text();
 
-  if (response.status === 401) {
+  if (response.status === 401 && clearOn401) {
     clearStoredAuth();
   }
 

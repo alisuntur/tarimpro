@@ -112,6 +112,8 @@ CREATE TABLE IF NOT EXISTS app.alerts (
     created_at timestamptz NOT NULL DEFAULT now()
 );
 
+ALTER TABLE app.alerts ADD COLUMN IF NOT EXISTS is_read boolean NOT NULL DEFAULT false;
+
 
 ALTER TABLE app.production_plans ADD COLUMN IF NOT EXISTS city varchar(100);
 ALTER TABLE app.production_plans ADD COLUMN IF NOT EXISTS district varchar(100);

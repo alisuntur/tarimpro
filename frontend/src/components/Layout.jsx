@@ -23,7 +23,6 @@ const Layout = () => {
         : false);
     const [sidebarOpen, setSidebarOpen] = useState(() => !getIsMobile());
     const [isMobile, setIsMobile] = useState(getIsMobile);
-    const [alertCount, setAlertCount] = useState(0);
     const [alerts, setAlerts] = useState([]);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
     const notificationRef = useRef(null);
@@ -37,13 +36,16 @@ const Layout = () => {
             try {
                 const dashboardAlerts = await apiFetch('/api/dashboard/alerts');
                 if (active) {
-                    setAlerts(dashboardAlerts);
-                    setAlertCount(dashboardAlerts.length);
+                    setAlerts(Array.isArray(dashboardAlerts)
+                        ? dashboardAlerts.map((alert) => ({
+                            ...alert,
+                            isRead: Boolean(alert.isRead),
+                        }))
+                        : []);
                 }
             } catch {
                 if (active) {
                     setAlerts([]);
-                    setAlertCount(0);
                 }
             }
         };
@@ -53,6 +55,27 @@ const Layout = () => {
             active = false;
         };
     }, []);
+
+    const markAlertsRead = async (alertIds = []) => {
+        const uniqueAlertIds = [...new Set(alertIds.filter(Boolean).map((alertId) => String(alertId)))];
+        if (uniqueAlertIds.length === 0) {
+            return;
+        }
+
+        try {
+            await apiFetch('/api/dashboard/alerts/read', {
+                method: 'POST',
+                body: { alertIds: uniqueAlertIds },
+            });
+
+            const idsToMark = new Set(uniqueAlertIds);
+            setAlerts((currentAlerts) => currentAlerts.map((alert) => (
+                idsToMark.has(alert.id) ? { ...alert, isRead: true } : alert
+            )));
+        } catch {
+            // Keep the cached list as-is; the next fetch will resync from the server.
+        }
+    };
 
     useEffect(() => {
         const handleDocumentClick = (event) => {
@@ -122,6 +145,19 @@ const Layout = () => {
         setSidebarOpen(!sidebarOpen);
     };
 
+    const unreadAlertCount = alerts.reduce((count, alert) => count + (alert.isRead ? 0 : 1), 0);
+    const recentAlerts = alerts.slice(0, 3);
+
+    const handleNotificationsToggle = () => {
+        if (notificationsOpen) {
+            setNotificationsOpen(false);
+            return;
+        }
+
+        setNotificationsOpen(true);
+        void markAlertsRead(recentAlerts.filter((alert) => !alert.isRead).map((alert) => alert.id));
+    };
+
     const handleNavItemClick = () => {
         setNotificationsOpen(false);
         if (isMobile) {
@@ -143,12 +179,11 @@ const Layout = () => {
         if (isMobile) {
             setSidebarOpen(false);
         }
+        void markAlertsRead(alerts.filter((alert) => !alert.isRead).map((alert) => alert.id));
         navigate('/dashboard#alerts');
     };
 
     const firstName = user?.name?.split(' ')[0] || 'Çiftçi';
-    const recentAlerts = alerts.slice(0, 3);
-
     const menuItems = [
         { path: '/dashboard', label: 'Ana Sayfa', icon: <Home size={20} /> },
         { path: '/plan-wizard', label: 'Yeni Üretim Planı', icon: <Map size={20} /> },
@@ -237,17 +272,17 @@ const Layout = () => {
                                 type="button"
                                 aria-expanded={notificationsOpen}
                                 aria-label="Bildirimleri aç"
-                                onClick={() => setNotificationsOpen((open) => !open)}
+                                onClick={handleNotificationsToggle}
                             >
                                 <Bell size={22} color="var(--color-text-muted)" />
-                                <span className={`badge ${alertCount === 0 ? 'badge-empty' : ''}`}>{alertCount}</span>
+                                <span className={`badge ${unreadAlertCount === 0 ? 'badge-empty' : ''}`}>{unreadAlertCount}</span>
                             </button>
 
                             {notificationsOpen && (
                                 <div className="notification-menu">
                                     <div className="notification-menu-header">
                                         <strong>Bildirimler</strong>
-                                        <span>{alertCount} uyarı</span>
+                                        <span>{unreadAlertCount} uyarı</span>
                                     </div>
 
                                     <div className="notification-menu-list">

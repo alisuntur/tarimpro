@@ -58,6 +58,7 @@ from db.repositories import (
     list_ai_analyses_for_user,
     list_location_options,
     list_plan_analysis_overview,
+    mark_dashboard_alerts_as_read,
     revoke_user_session,
     set_user_active_badge,
     update_field,
@@ -203,6 +204,10 @@ class AdminBroadcastAlertRequest(BaseModel):
 
 class AdminBadgeUpdateRequest(BaseModel):
     activeBadge: bool
+
+
+class DashboardAlertReadRequest(BaseModel):
+    alertIds: list[str] | None = None
 
 
 class AIAnalysisRequest(BaseModel):
@@ -1678,11 +1683,22 @@ def get_alerts(user=Depends(require_current_user)):
             "type": alert["alert_type"],
             "title": alert.get("title"),
             "message": alert["message"],
+            "isRead": bool(alert.get("is_read")),
             "color": "red" if alert["alert_type"] == "danger" else "yellow",
             "time": _format_relative_time(alert["created_at"]),
         }
         for alert in alerts
     ]
+
+
+@app.post("/api/dashboard/alerts/read")
+def mark_alerts_read(request: DashboardAlertReadRequest | None = None, user=Depends(require_current_user)):
+    alert_ids = request.alertIds if request and request.alertIds is not None else None
+    result = mark_dashboard_alerts_as_read(user["id"], alert_ids=alert_ids)
+    return {
+        "success": True,
+        "updatedCount": result["count"],
+    }
 
 
 @app.get("/api/dashboard/history")

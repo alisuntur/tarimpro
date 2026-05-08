@@ -675,7 +675,7 @@ def get_dashboard_alerts(user_id: str):
         with connection.cursor() as cursor:
             cursor.execute(
                 """
-                SELECT id, alert_type, title, message, created_at
+                SELECT id, alert_type, title, message, is_read, created_at
                 FROM app.alerts
                 WHERE user_id = %(user_id)s
                 ORDER BY created_at DESC
@@ -683,6 +683,37 @@ def get_dashboard_alerts(user_id: str):
                 {"user_id": user_id},
             )
             return cursor.fetchall()
+
+
+def mark_dashboard_alerts_as_read(user_id: str, alert_ids: list[str] | None = None):
+    selected_alert_ids = [
+        str(alert_id)
+        for alert_id in (alert_ids or [])
+        if alert_id is not None and str(alert_id).strip()
+    ]
+    if alert_ids is not None and not selected_alert_ids:
+        return {"count": 0}
+
+    sql = """
+        UPDATE app.alerts
+        SET is_read = true
+        WHERE user_id = %(user_id)s
+          AND is_read = false
+    """
+    params: dict[str, object] = {"user_id": user_id}
+
+    if alert_ids is not None:
+        sql += "\n          AND id = ANY(%(alert_ids)s::uuid[])"
+        params["alert_ids"] = selected_alert_ids
+
+    sql += "\n        RETURNING id"
+
+    with get_connection(row_factory=dict_row) as connection:
+        with connection.cursor() as cursor:
+            cursor.execute(sql, params)
+            updated = cursor.fetchall()
+        connection.commit()
+    return {"count": len(updated)}
 
 
 def create_broadcast_alert(alert_type: str, title: str, message: str):

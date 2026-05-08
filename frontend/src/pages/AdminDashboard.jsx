@@ -506,7 +506,7 @@ const AdminDashboard = () => {
   return (
     <div className="admin-shell">
       <div className="admin-panel">
-        <header className="admin-topbar">
+        <header className="admin-topbar card">
           <div className="admin-brand">
             <div className="admin-brand-mark">
               <Shield size={22} />
@@ -539,7 +539,7 @@ const AdminDashboard = () => {
 
         <section className="admin-kpi-grid" aria-label="Sistem özeti">
           {overviewCards.map((card) => (
-            <article key={card.label} className="admin-kpi-card">
+            <article key={card.label} className="admin-kpi-card card">
               <div className="admin-brand" style={{ gap: '0.65rem' }}>
                 <div className="admin-brand-mark" style={{ width: '2.5rem', height: '2.5rem' }}>
                   {card.icon}
@@ -557,7 +557,7 @@ const AdminDashboard = () => {
           ))}
         </section>
 
-        <section className="admin-section">
+        <section className="admin-section card">
           <div className="admin-section-header">
             <div>
               <p className="admin-section-kicker">Grafikler</p>
@@ -569,7 +569,7 @@ const AdminDashboard = () => {
           </div>
 
           <div className="admin-chart-grid">
-            <article className="admin-chart-card admin-chart-card--wide">
+            <article className="admin-chart-card admin-chart-card--wide card">
               <div className="admin-chart-card-header">
                 <div>
                   <span className="admin-chart-kicker"><LineChart size={14} /> Aylık eğilim</span>
@@ -605,7 +605,7 @@ const AdminDashboard = () => {
               </p>
             </article>
 
-            <article className="admin-chart-card">
+            <article className="admin-chart-card card">
               <div className="admin-chart-card-header">
                 <div>
                   <span className="admin-chart-kicker"><Activity size={14} /> Hesap durumu</span>
@@ -645,7 +645,7 @@ const AdminDashboard = () => {
               </p>
             </article>
 
-            <article className="admin-chart-card admin-chart-card--full">
+            <article className="admin-chart-card admin-chart-card--full card">
               <div className="admin-chart-card-header">
                 <div>
                   <span className="admin-chart-kicker"><BarChart3 size={14} /> Kullanım yoğunluğu</span>
@@ -692,7 +692,7 @@ const AdminDashboard = () => {
           </div>
 
           <div className="admin-broadcast-grid">
-            <form className="admin-broadcast-form" onSubmit={handleBroadcastSubmit}>
+            <form className="admin-broadcast-form card" onSubmit={handleBroadcastSubmit}>
               <div className="admin-form-grid">
                 <label className="admin-input-group">
                   <span>Uyarı türü</span>
@@ -748,7 +748,7 @@ const AdminDashboard = () => {
               </div>
             </form>
 
-            <aside className="admin-broadcast-preview">
+            <aside className="admin-broadcast-preview card">
               <div className="admin-broadcast-preview-header">
                 <Bell size={18} />
                 <h3>Gönderim özeti</h3>
@@ -781,7 +781,7 @@ const AdminDashboard = () => {
           </div>
         </section>
 
-        <section className="admin-section">
+        <section className="admin-section card">
           <div className="admin-section-header">
             <div>
               <p className="admin-section-kicker">Metrikler</p>
@@ -828,7 +828,7 @@ const AdminDashboard = () => {
           </div>
         </section>
 
-        <section className="admin-section">
+        <section className="admin-section card">
           <div className="admin-section-header">
             <div>
               <p className="admin-section-kicker">Kullanıcı listesi</p>
@@ -908,7 +908,7 @@ const AdminDashboard = () => {
           </div>
         </section>
 
-        <section className="admin-section">
+        <section className="admin-section card">
           <div className="admin-section-header">
             <div>
               <p className="admin-section-kicker">Son kayıtlar</p>
@@ -985,7 +985,7 @@ const AdminDashboard = () => {
 
       {selectedMetric && (
         <div className="admin-modal-backdrop" role="presentation" onClick={closeMetricDetail}>
-          <div className="admin-modal-panel" role="dialog" aria-modal="true" aria-labelledby="admin-metric-title" onClick={(event) => event.stopPropagation()}>
+          <div className="admin-modal-panel card" role="dialog" aria-modal="true" aria-labelledby="admin-metric-title" onClick={(event) => event.stopPropagation()}>
             <div className="admin-modal-header">
               <div>
                 <p className="admin-section-kicker">Metrik detay</p>

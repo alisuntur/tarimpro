@@ -36,7 +36,7 @@ const AdminLogin = () => {
   return (
     <div className="admin-shell">
       <div className="admin-login-grid">
-        <section className="admin-login-hero">
+        <section className="admin-login-hero card">
           <div className="admin-login-grid-copy">
             <div className="admin-brand" style={{ alignItems: 'center' }}>
               <div className="admin-brand-mark">
@@ -74,7 +74,7 @@ const AdminLogin = () => {
           </div>
         </section>
 
-        <section className="admin-login-panel">
+        <section className="admin-login-panel card">
           <p className="admin-login-kicker">Panel girişi</p>
           <h2 className="admin-section-title">Yönetici kimlik doğrulama</h2>
           <p className="admin-login-text">

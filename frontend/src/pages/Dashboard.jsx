@@ -11,7 +11,7 @@ import {
     CheckCircle2,
 } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { apiFetch } from '../lib/api';
+import { ALERTS_EVENT, apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import './Dashboard.css';
 
@@ -124,6 +124,15 @@ const renderAlertIcon = (type) => {
     return <AlertTriangle size={20} />;
 };
 
+const normalizeAlerts = (items) => (
+    Array.isArray(items)
+        ? items.map((alert) => ({
+            ...alert,
+            isRead: Boolean(alert.isRead),
+        }))
+        : []
+);
+
 const Dashboard = () => {
     const navigate = useNavigate();
     const routeLocation = useLocation();
@@ -159,7 +168,7 @@ const Dashboard = () => {
                 ]);
 
                 if (!active) return;
-                setAlerts(alertsData);
+                setAlerts(normalizeAlerts(alertsData));
                 setHistory(historyData);
                 setLocationOptions({
                     cities: locationsData.cities || [],
@@ -186,6 +195,30 @@ const Dashboard = () => {
             active = false;
         };
     }, [profileLocation.city, profileLocation.district]);
+
+    useEffect(() => {
+        let active = true;
+
+        const refreshAlerts = async () => {
+            try {
+                const alertsData = await apiFetch('/api/dashboard/alerts');
+                if (!active) return;
+                setAlerts(normalizeAlerts(alertsData));
+            } catch {
+                // Keep the current alerts visible if the refresh fails.
+            }
+        };
+
+        const handleAlertsChanged = () => {
+            void refreshAlerts();
+        };
+
+        window.addEventListener(ALERTS_EVENT, handleAlertsChanged);
+        return () => {
+            active = false;
+            window.removeEventListener(ALERTS_EVENT, handleAlertsChanged);
+        };
+    }, []);
 
     useEffect(() => {
         let active = true;
@@ -243,8 +276,9 @@ const Dashboard = () => {
     const weatherSource = [summary.weather.source, summary.weather.date].filter(Boolean).join(' • ');
     const currentLocationLabel = weatherLocation || formatLocation(appliedLocation.city, appliedLocation.district) || 'Profil konumu';
     const smartNotes = useMemo(() => buildSmartNotes(summary, currentLocationLabel), [summary, currentLocationLabel]);
-    const displayedAlerts = alerts.length > 0 ? alerts : smartNotes;
-    const showingSmartNotes = alerts.length === 0;
+    const unreadAlerts = alerts.filter((alert) => !alert.isRead);
+    const displayedAlerts = unreadAlerts.length > 0 ? unreadAlerts : smartNotes;
+    const showingSmartNotes = unreadAlerts.length === 0;
 
     const handleCityChange = (event) => {
         setLocationForm({ city: event.target.value, district: '' });

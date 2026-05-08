@@ -13,7 +13,7 @@ import {
     Globe,
     X,
 } from 'lucide-react';
-import { apiFetch } from '../lib/api';
+import { ALERTS_EVENT, apiFetch } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
 import './Layout.css';
 
@@ -72,6 +72,7 @@ const Layout = () => {
             setAlerts((currentAlerts) => currentAlerts.map((alert) => (
                 idsToMark.has(alert.id) ? { ...alert, isRead: true } : alert
             )));
+            window.dispatchEvent(new Event(ALERTS_EVENT));
         } catch {
             // Keep the cached list as-is; the next fetch will resync from the server.
         }
@@ -174,12 +175,12 @@ const Layout = () => {
         navigate('/login', { replace: true });
     };
 
-    const handleAlertsNavigate = () => {
+    const handleAlertsNavigate = async () => {
         setNotificationsOpen(false);
         if (isMobile) {
             setSidebarOpen(false);
         }
-        void markAlertsRead(alerts.filter((alert) => !alert.isRead).map((alert) => alert.id));
+        await markAlertsRead(alerts.filter((alert) => !alert.isRead).map((alert) => alert.id));
         navigate('/dashboard#alerts');
     };
 

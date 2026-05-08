@@ -1,6 +1,7 @@
 const API_BASE = (import.meta.env.VITE_API_BASE ?? '').replace(/\/$/, '');
 const AUTH_STORAGE_KEY = 'tarimpro.auth';
 const AUTH_EVENT = 'tarimpro-auth-changed';
+const ALERTS_EVENT = 'tarimpro-alerts-changed';
 
 export function getStoredAuth() {
   try {
@@ -66,4 +67,4 @@ export async function apiFetch(path, options = {}) {
   return payload;
 }
 
-export { API_BASE, AUTH_EVENT, AUTH_STORAGE_KEY };
+export { API_BASE, ALERTS_EVENT, AUTH_EVENT, AUTH_STORAGE_KEY };

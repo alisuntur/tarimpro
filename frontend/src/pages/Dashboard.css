@@ -317,6 +317,12 @@
     vertical-align: middle;
 }
 
+.history-table th:nth-child(4),
+.history-table td:nth-child(4) {
+    width: 1%;
+    white-space: nowrap;
+}
+
 .history-action-cell {
     white-space: nowrap;
 }
@@ -360,10 +366,16 @@
 }
 
 .status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    line-height: 1;
     padding: 0.35rem 0.75rem;
     border-radius: var(--radius-full);
     font-size: 0.8rem;
     font-weight: 600;
+    min-width: 6.5rem;
 }
 
 .status-badge.success {

@@ -1,6 +1,6 @@
-# TarimPro / TarimZeka
+#  TarimZeka
 
-TarimPro, ciftcilerin il, tarla buyuklugu ve urun tercihine gore daha bilincli ekim karari alabilmesi icin gelistirilmis web tabanli bir tarimsal karar destek platformudur. Sistem; tarihsel uretim ve verim verilerini, iklim gostergelerini, tuketim egilimlerini ve XGBoost tabanli uretim projeksiyonlarini birlestirerek kullaniciya siralanmis urun onerileri sunar.
+TarimZeka, ciftcilerin il, tarla buyuklugu ve urun tercihine gore daha bilincli ekim karari alabilmesi icin gelistirilmis web tabanli bir tarimsal karar destek platformudur. Sistem; tarihsel uretim ve verim verilerini, iklim gostergelerini, tuketim egilimlerini ve XGBoost tabanli uretim projeksiyonlarini birlestirerek kullaniciya siralanmis urun onerileri sunar.
 
 Proje Sprint 1-4 boyunca demo/prototip seviyesinden; gercek kullanici oturumu, veritabanina kaydedilen planlar, tekrar acilabilen AI analiz raporlari, AHP tabanli agirliklandirma, walk-forward backtest ve arz-talep dengesi iceren daha savunulabilir bir MVP yapisina tasinmistir.
 

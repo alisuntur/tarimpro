@@ -627,14 +627,14 @@
       <thead><tr><th>Kriter</th><th>Temsil Ettiği Boyut</th><th>Veri Kaynağı</th></tr></thead>
       <tbody>
         <tr><td>Geçmiş Verim</td><td>İlin aynı üründeki tarihsel agronomik performansı</td><td><code>analytics.production_history</code></td></tr>
-        <tr><td>Model Projeksiyonu</td><td>XGBoost tabanlı gelecek dönem üretim potansiyeli</td><td><code>analytics.model_predictions</code> / <code>analytics.walk_forward_predictions</code></td></tr>
+        <tr><td>Model Projeksiyonu</td><td>XGBoost tabanlı gelecek dönem üretim potansiyeli</td><td><code>analytics.model_predictions</code> (canlı) / <code>analytics.walk_forward_predictions</code> (tarihsel)</td></tr>
         <tr><td>Tüketim Eğilimi</td><td>Ulusal düzeyde ürüne yönelik talep yönü</td><td><code>analytics.consumption_history</code></td></tr>
         <tr><td>İklim Dayanıklılığı</td><td>Bölgenin iklim riski ve tarihsel stabilitesi</td><td><code>analytics.climate_history</code></td></tr>
       </tbody>
     </table>
 
     <div class="not">
-      <p><strong>Model projeksiyonu kaynağı:</strong> Üretim tahmini tarafında kullanılan ana model çıktısı <code>Dengeli_XGBoost_DirectHorizon</code> adıyla sistemde tutulmaktadır. Uygulama içindeki güncel analizlerde bu modelden gelen tahminler <code>analytics.model_predictions</code> tablosundan okunur; backtest senaryolarında ise geçmiş tahmin-gerçekleşen karşılaştırmaları <code>analytics.walk_forward_predictions</code> tablosu üzerinden değerlendirilir.</p>
+      <p><strong>Model projeksiyonu kaynağı:</strong> Üretim tahmini tarafında kullanılan ana model çıktısı <code>Dengeli_XGBoost_DirectHorizon</code> adıyla sistemde tutulmaktadır. Uygulama içindeki güncel analizlerde bu modelden gelen 2025-2027 tahminleri <code>analytics.model_predictions</code> tablosundan okunur; backtest senaryolarında ise geçmiş tahmin-gerçekleşen karşılaştırmaları <code>analytics.walk_forward_predictions</code> tablosu üzerinden değerlendirilir. Yeni backtest mimarisinde <code>horizon=1</code> kayıtları alınır ve aynı <code>city + product + forecast_year</code> içindeki method satırları tek adayda toplanır.</p>
     </div>
     </div>
 
@@ -698,34 +698,34 @@
 
     <h3>Amaç ve Tasarım</h3>
     <p>AHP ile bulunan ağırlıkların geçmiş veriler üzerinde nasıl sonuç verdiğini görmek için <code>backend/devtools/ahp_backtest.py</code> betiği yazıldı. Walk-forward yaklaşımında her tahmin yalnızca o döneme kadar bulunan verilerle yapıldığı için test yapısı daha gerçekçi hale geldi.</p>
-    <p><strong>Teknik netleştirme:</strong> <code>backend/devtools/ahp_backtest.py</code> betiği modeli yeniden eğitmez. Betiğin görevi, daha önce oluşturulmuş <code>analytics.walk_forward_predictions</code> tablosundaki hazır tahmin-gerçekleşen kayıtlarını okumak ve AHP ile hesaplanan ağırlıkların bu geçmiş senaryolarda nasıl bir ürün sıralaması ürettiğini test etmektir.</p>
+    <p><strong>Teknik netleştirme:</strong> <code>backend/devtools/ahp_backtest.py</code> betiği modeli yeniden eğitmez. Betiğin görevi, daha önce oluşturulmuş <code>analytics.walk_forward_predictions</code> tablosundaki hazır tahmin-gerçekleşen kayıtlarını okumak ve AHP ile hesaplanan ağırlıkların bu geçmiş senaryolarda nasıl bir ürün sıralaması ürettiğini test etmektir. Yeni mimaride ölçüm düzeyi satır değil ürün seviyesidir; bu yüzden aynı şehir, ürün ve tahmin yılı için biriken method satırları tek aday olarak değerlendirilir.</p>
     <p>Yani backtest sürecinde odak, XGBoost modelini tekrar kurmak veya eğitmek değil; mevcut walk-forward tahmin seti üzerinde AHP tabanlı skor motorunun sıralama performansını ölçmektir. Bu nedenle Top-1, Top-3, Spearman ve nDCG@3 metrikleri model eğitim başarısından çok, AHP ağırlıklı öneri sıralamasının tarihsel karar destek kalitesini göstermektedir.</p>
 
-    <p>Her senaryo bir <strong>il + tahmin yılı</strong> kombinasyonu olarak tanımlandı. 2020-2024 aralığındaki walk-forward tahminleri kullanılarak 405 senaryo oluşturuldu ve her senaryoda sistem sıralaması gerçek üretim sıralamasıyla karşılaştırıldı.</p>
+    <p>Her senaryo bir <strong>il + ürün + tahmin yılı</strong> kombinasyonu olarak tanımlandı. 2020-2024 aralığındaki walk-forward tahminleri kullanılarak 405 senaryo oluşturuldu ve her senaryoda sistem sıralaması gerçek üretim sıralamasıyla karşılaştırıldı. Ölçüm varsayılan olarak <code>horizon=1</code> kayıtları üzerinden yapılır.</p>
 
     <table>
       <thead><tr><th>Backtest Parametresi</th><th>Değer</th></tr></thead>
       <tbody>
         <tr><td>Veri dönemi</td><td>2020 – 2024 (5 yıl)</td></tr>
-        <tr><td>Senaryo tanımı</td><td>İl + Tahmin Yılı</td></tr>
+        <tr><td>Senaryo tanımı</td><td>İl + Ürün + Tahmin Yılı</td></tr>
         <tr><td>Minimum ürün sayısı / senaryo</td><td>4</td></tr>
         <tr><td>Toplam senaryo</td><td>405</td></tr>
-        <tr><td>Toplam aday kayıt</td><td>60.820</td></tr>
+        <tr><td>Toplam aday kayıt</td><td>21.281</td></tr>
       </tbody>
     </table>
     <h3>Performans Metrikleri ve Sonuçlar</h3>
     <table>
       <thead><tr><th>Metrik</th><th>Sonuç</th><th>Açıklama</th></tr></thead>
       <tbody>
-        <tr><td>Top-1 Exact Rate</td><td><strong>%15.31</strong></td><td>Sistemin birinci sıradaki önerisi gerçekte de birinci ürün</td></tr>
-        <tr><td>Top-3 Hit Rate</td><td><strong>%74.57</strong></td><td>Gerçek birinci ürünün sistemin ilk üç önerisi arasında yer alma oranı</td></tr>
-        <tr><td>Mean Spearman Korelasyonu</td><td><strong>0.4141</strong></td><td>Sistem sıralaması ile gerçek sıralama arasındaki korelasyon</td></tr>
-        <tr><td>Mean nDCG@3</td><td><strong>0.9178</strong></td><td>İlk üç önerinin sıra-duyarlı kalite skoru</td></tr>
+        <tr><td>Top-1 Exact Rate</td><td><strong>%82.72</strong></td><td>Sistemin birinci sıradaki önerisi gerçekte de birinci ürün</td></tr>
+        <tr><td>Top-3 Hit Rate</td><td><strong>%98.52</strong></td><td>Gerçek birinci ürünün sistemin ilk üç önerisi arasında yer alma oranı</td></tr>
+        <tr><td>Mean Spearman Korelasyonu</td><td><strong>0.5079</strong></td><td>Sistem sıralaması ile gerçek sıralama arasındaki korelasyon</td></tr>
+        <tr><td>Mean nDCG@3</td><td><strong>0.9303</strong></td><td>İlk üç önerinin sıra-duyarlı kalite skoru</td></tr>
       </tbody>
     </table>
 
     <div class="not">
-      <p><strong>Yorum:</strong> Top-1 exact rate değeri düşük görünse de sistemin amacı tek bir ürünü kesin olarak seçmekten çok kullanıcıya güçlü adaylar sunmaktır. Bu açıdan bakıldığında %74.57 Top-3 hit rate ve 0.92 nDCG@3 değerleri yararlı bir sonuç vermektedir.</p>
+      <p><strong>Yorum:</strong> Yeni granülerlikte sistem yalnızca tek bir ürün seçmekten ziyade, ürün bazlı adayları çok güçlü bir şekilde sıralıyor. Bu nedenle araç, kesin tek ürün kararı veren bir sistem değil; veriye dayalı karar desteği sağlayan bir planlama motoru olarak konumlandırılmalıdır.</p>
     </div>
     </div>
 

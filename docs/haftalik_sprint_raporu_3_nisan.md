@@ -4,6 +4,8 @@ Bu rapor, 03.04.2026 tarihinden itibaren GitHub commit gecmisine bakilarak hazir
 
 Raporun ana kaynagi 03.04.2026 ve 06.04.2026 tarihli commitlerdir. Mevcut teknik baglam icin `docs/mvp_sprint_plan.html`, `docs/ahp_metodoloji.md`, `docs/ahp_backtest_report.json`, `backend/scoring.py`, `backend/scoring_profile.json` ve `backend/devtools/ahp_backtest.py` dosyalari da dikkate alinmistir.
 
+Not: Bu rapordaki backtest sayilari Sprint 4'ün ilk koşusuna aittir. Güncel canonical ürün-level ve `horizon=1` raporu `docs/ahp_backtest_report.json` dosyasindadir.
+
 ## 1. Commit Zaman Cizelgesi
 
 | Sira | Commit | Tarih | Baslik | Ana anlam |
@@ -370,6 +372,8 @@ Bu sonuc, uzman yorumu ile verilen karsilastirmalarin kendi icinde celiskili olm
 ## 10. Backtest: AHP Agirliklari Gercek Veride Ne Yaptı?
 
 AHP agirliklari teoride mantikli olabilir, fakat sistemin gecmis senaryolarda nasil davrandigini gormek gerekiyordu. Bu nedenle `backend/devtools/ahp_backtest.py` scripti yazildi.
+
+Not: Aşağıdaki metrikler ilk Sprint 4 koşusunun ham çıktısıdır; ürün-level horizon=1 mimarisine göre güncel değerlendirme için `docs/ahp_backtest_report.json` esas alınmalıdır.
 
 ### Backtest Tasarimi
 

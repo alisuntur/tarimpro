@@ -21,11 +21,11 @@
   },
   "backtest": {
     "scenarioCount": 405,
-    "candidateCount": 21281,
-    "top1ExactRate": 82.72,
-    "top3HitRate": 98.52,
-    "meanSpearman": 0.5079,
-    "meanNdcgAt3": 0.9303,
+    "candidateCount": 21290,
+    "top1ExactRate": 81.98,
+    "top3HitRate": 98.27,
+    "meanSpearman": 0.5112,
+    "meanNdcgAt3": 0.9311,
     "sampleScenarios": [
       {
         "city": "Adana",
@@ -46,9 +46,9 @@
         "topPick": "Karpuz",
         "topPickScore": 66.9,
         "topPickActualRank": 1,
-        "topPickActualProduction": 1257917.0,
+        "topPickActualProduction": 2515834.0,
         "bestActualProduct": "Karpuz",
-        "spearman": 0.7479,
+        "spearman": 0.7438,
         "ndcgAt3": 1.0
       },
       {
@@ -58,10 +58,10 @@
         "topPick": "Karpuz",
         "topPickScore": 66.5,
         "topPickActualRank": 1,
-        "topPickActualProduction": 1067875.0,
+        "topPickActualProduction": 3203625.0,
         "bestActualProduct": "Karpuz",
-        "spearman": 0.7303,
-        "ndcgAt3": 0.9634
+        "spearman": 0.7312,
+        "ndcgAt3": 0.9872
       },
       {
         "city": "Adana",
@@ -70,22 +70,22 @@
         "topPick": "Karpuz",
         "topPickScore": 66.9,
         "topPickActualRank": 3,
-        "topPickActualProduction": 966845.0,
+        "topPickActualProduction": 2900535.0,
         "bestActualProduct": "Mandalina (Diğer)",
-        "spearman": 0.7601,
-        "ndcgAt3": 0.9763
+        "spearman": 0.7518,
+        "ndcgAt3": 0.8305
       },
       {
         "city": "Adana",
         "forecastYear": 2024,
         "candidateCount": 68,
-        "topPick": "Mandalina (Diğer)",
-        "topPickScore": 69.2,
-        "topPickActualRank": 3,
-        "topPickActualProduction": 709237.0,
+        "topPick": "Karpuz",
+        "topPickScore": 65.8,
+        "topPickActualRank": 1,
+        "topPickActualProduction": 2951487.0,
         "bestActualProduct": "Karpuz",
-        "spearman": 0.7516,
-        "ndcgAt3": 0.8203
+        "spearman": 0.762,
+        "ndcgAt3": 0.9858
       },
       {
         "city": "Adıyaman",
@@ -104,11 +104,11 @@
         "forecastYear": 2021,
         "candidateCount": 52,
         "topPick": "Buğday, Durum Buğdayı Hariç",
-        "topPickScore": 70.1,
+        "topPickScore": 69.5,
         "topPickActualRank": 1,
-        "topPickActualProduction": 185514.0,
+        "topPickActualProduction": 371028.0,
         "bestActualProduct": "Buğday, Durum Buğdayı Hariç",
-        "spearman": 0.5684,
+        "spearman": 0.6243,
         "ndcgAt3": 1.0
       },
       {
@@ -118,9 +118,9 @@
         "topPick": "Buğday, Durum Buğdayı Hariç",
         "topPickScore": 70.2,
         "topPickActualRank": 2,
-        "topPickActualProduction": 160378.0,
+        "topPickActualProduction": 481134.0,
         "bestActualProduct": "Arpa (Diğer)",
-        "spearman": 0.549,
+        "spearman": 0.6033,
         "ndcgAt3": 0.994
       },
       {
@@ -128,11 +128,11 @@
         "forecastYear": 2023,
         "candidateCount": 51,
         "topPick": "Buğday, Durum Buğdayı Hariç",
-        "topPickScore": 67.3,
+        "topPickScore": 70.1,
         "topPickActualRank": 2,
-        "topPickActualProduction": 198256.0,
+        "topPickActualProduction": 594768.0,
         "bestActualProduct": "Arpa (Diğer)",
-        "spearman": 0.6069,
+        "spearman": 0.5284,
         "ndcgAt3": 0.9861
       },
       {
@@ -140,11 +140,11 @@
         "forecastYear": 2024,
         "candidateCount": 54,
         "topPick": "Buğday, Durum Buğdayı Hariç",
-        "topPickScore": 65.0,
+        "topPickScore": 68.8,
         "topPickActualRank": 1,
-        "topPickActualProduction": 181380.0,
+        "topPickActualProduction": 544140.0,
         "bestActualProduct": "Buğday, Durum Buğdayı Hariç",
-        "spearman": 0.5293,
+        "spearman": 0.5723,
         "ndcgAt3": 1.0
       },
       {
@@ -166,9 +166,9 @@
         "topPick": "Patates (Tatlı Patates Hariç)",
         "topPickScore": 86.2,
         "topPickActualRank": 1,
-        "topPickActualProduction": 562927.0,
+        "topPickActualProduction": 1125854.0,
         "bestActualProduct": "Patates (Tatlı Patates Hariç)",
-        "spearman": 0.4726,
+        "spearman": 0.4747,
         "ndcgAt3": 0.9999
       },
       {
@@ -178,22 +178,22 @@
         "topPick": "Patates (Tatlı Patates Hariç)",
         "topPickScore": 86.6,
         "topPickActualRank": 1,
-        "topPickActualProduction": 607539.0,
+        "topPickActualProduction": 1822617.0,
         "bestActualProduct": "Patates (Tatlı Patates Hariç)",
-        "spearman": 0.4658,
+        "spearman": 0.4651,
         "ndcgAt3": 0.9076
       },
       {
         "city": "Afyonkarahisar",
         "forecastYear": 2023,
-        "candidateCount": 61,
+        "candidateCount": 62,
         "topPick": "Patates (Tatlı Patates Hariç)",
         "topPickScore": 86.7,
         "topPickActualRank": 1,
-        "topPickActualProduction": 581850.0,
+        "topPickActualProduction": 1745550.0,
         "bestActualProduct": "Patates (Tatlı Patates Hariç)",
-        "spearman": 0.5306,
-        "ndcgAt3": 0.9978
+        "spearman": 0.4815,
+        "ndcgAt3": 0.9286
       },
       {
         "city": "Afyonkarahisar",
@@ -202,10 +202,10 @@
         "topPick": "Patates (Tatlı Patates Hariç)",
         "topPickScore": 85.9,
         "topPickActualRank": 1,
-        "topPickActualProduction": 688152.0,
+        "topPickActualProduction": 2064456.0,
         "bestActualProduct": "Patates (Tatlı Patates Hariç)",
-        "spearman": 0.5286,
-        "ndcgAt3": 0.9746
+        "spearman": 0.5294,
+        "ndcgAt3": 0.9947
       },
       {
         "city": "Aksaray",
@@ -224,11 +224,11 @@
         "forecastYear": 2021,
         "candidateCount": 55,
         "topPick": "Patates (Tatlı Patates Hariç)",
-        "topPickScore": 84.3,
+        "topPickScore": 83.7,
         "topPickActualRank": 1,
-        "topPickActualProduction": 309132.0,
+        "topPickActualProduction": 618264.0,
         "bestActualProduct": "Patates (Tatlı Patates Hariç)",
-        "spearman": 0.4459,
+        "spearman": 0.4215,
         "ndcgAt3": 1.0
       },
       {
@@ -238,22 +238,22 @@
         "topPick": "Patates (Tatlı Patates Hariç)",
         "topPickScore": 85.2,
         "topPickActualRank": 2,
-        "topPickActualProduction": 294829.0,
+        "topPickActualProduction": 884487.0,
         "bestActualProduct": "Arpa (Diğer)",
-        "spearman": 0.4114,
-        "ndcgAt3": 0.901
+        "spearman": 0.4021,
+        "ndcgAt3": 0.9346
       },
       {
         "city": "Aksaray",
         "forecastYear": 2023,
         "candidateCount": 55,
         "topPick": "Patates (Tatlı Patates Hariç)",
-        "topPickScore": 78.6,
+        "topPickScore": 85.7,
         "topPickActualRank": 1,
-        "topPickActualProduction": 313453.0,
+        "topPickActualProduction": 940359.0,
         "bestActualProduct": "Patates (Tatlı Patates Hariç)",
-        "spearman": 0.367,
-        "ndcgAt3": 1.0
+        "spearman": 0.3894,
+        "ndcgAt3": 0.9481
       },
       {
         "city": "Aksaray",
@@ -262,10 +262,10 @@
         "topPick": "Patates (Tatlı Patates Hariç)",
         "topPickScore": 84.8,
         "topPickActualRank": 2,
-        "topPickActualProduction": 279027.0,
+        "topPickActualProduction": 837081.0,
         "bestActualProduct": "Arpa (Diğer)",
-        "spearman": 0.3963,
-        "ndcgAt3": 0.9608
+        "spearman": 0.3959,
+        "ndcgAt3": 0.9822
       }
     ]
   }

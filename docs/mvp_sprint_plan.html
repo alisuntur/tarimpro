@@ -337,14 +337,14 @@
       <tbody>
         <tr><td>backend/scoring.py</td><td>Yeni</td><td>AHP agirlik okuma, agirlik normlama ve toplam skor hesap katmani.</td></tr>
         <tr><td>backend/scoring_profile.json</td><td>Yeni</td><td>AHP ile uretilen aktif agirlik profili ve tutarlilik metrikleri.</td></tr>
-        <tr><td>backend/devtools/ahp_backtest.py</td><td>Yeni</td><td>Walk-forward veri seti uzerinde AHP tabanli skorun performansini olcen arac.</td></tr>
+        <tr><td>backend/devtools/ahp_backtest.py</td><td>Yeni</td><td>Walk-forward veri seti uzerinde horizon=1 ve ürün bazlı AHP skorunun performansini olcen arac.</td></tr>
         <tr><td>backend/main.py</td><td>Revize</td><td>Guven hesabi, yeni score breakdown, arz-talep karti ve AI cevap semasi.</td></tr>
         <tr><td>backend/db/repositories.py</td><td>Revize</td><td>Urun verim baglami, arz-talep projeksiyonu, tuketim serisi ve walk-forward kalibrasyon sorgulari.</td></tr>
         <tr><td>frontend/src/pages/AiRecommendations.jsx</td><td>Revize</td><td>Oneri guveni, arz-talep karti ve uretim-tuketim grafigi eklendi.</td></tr>
         <tr><td>frontend/src/pages/AiRecommendations.css</td><td>Revize</td><td>Yeni guven ve piyasa denge bloklarinin sunum duzeni guncellendi.</td></tr>
         <tr><td>docs/ahp_pairwise_matrix.csv</td><td>Yeni</td><td>AHP ikili karsilastirma matrisi.</td></tr>
         <tr><td>docs/ahp_metodoloji.md</td><td>Yeni</td><td>Hocaya sunulabilir metodoloji ve akademik savunma metni.</td></tr>
-        <tr><td>docs/ahp_backtest_report.json</td><td>Yeni</td><td>Backtest sonucu uretilen resmi rapor.</td></tr>
+        <tr><td>docs/ahp_backtest_report.json</td><td>Yeni</td><td>Ürün bazlı canonical backtest raporu.</td></tr>
       </tbody>
     </table>
 
@@ -395,15 +395,15 @@
       <thead><tr><th>Metrik</th><th>Deger</th><th>Ne anlatir?</th></tr></thead>
       <tbody>
         <tr><td>Senaryo sayisi</td><td>405</td><td>Backtestte kullanilan sehir-yil senaryosu.</td></tr>
-        <tr><td>Aday sayisi</td><td>60,820</td><td>Siralamaya giren toplam urun kaydi.</td></tr>
-        <tr><td>Top-1 exact rate</td><td>%15.31</td><td>Sistemin ilk onerisi gercekte tam birinci cikti mi?</td></tr>
-        <tr><td>Top-3 hit rate</td><td>%74.57</td><td>Ilk onerinin gercek ilk 3 icine girme basarisi.</td></tr>
-        <tr><td>Mean Spearman</td><td>0.4141</td><td>Sistem siralamasi ile gercek siralama arasindaki genel korelasyon.</td></tr>
-        <tr><td>Mean nDCG@3</td><td>0.9178</td><td>Ilk 3 onerinin kalite ve uygunluk skoru.</td></tr>
+        <tr><td>Aday sayisi</td><td>21,281</td><td>Ürün bazına indirgenmiş toplam aday kaydı.</td></tr>
+        <tr><td>Top-1 exact rate</td><td>%82.72</td><td>Sistemin ilk onerisi gercekte tam birinci cikti mi?</td></tr>
+        <tr><td>Top-3 hit rate</td><td>%98.52</td><td>Ilk onerinin gercek ilk 3 icine girme basarisi.</td></tr>
+        <tr><td>Mean Spearman</td><td>0.5079</td><td>Sistem siralamasi ile gercek siralama arasindaki genel korelasyon.</td></tr>
+        <tr><td>Mean nDCG@3</td><td>0.9303</td><td>Ilk 3 onerinin kalite ve uygunluk skoru.</td></tr>
       </tbody>
     </table>
 
-    <div class='callout'><strong>Backtest yorumu:</strong> Sistem her seferinde tam birinci urunu secmiyor; ancak ilk 3 oneride yuksek kapsama sagliyor. Bu nedenle arac, kesin tek urun karari veren bir sistem degil; veriye dayali karar destegi saglayan bir planlama motoru olarak konumlanmalidir.</div>
+    <div class='callout'><strong>Backtest yorumu:</strong> Yeni mimaride ölçüm ürün seviyesine indirildiği için sistemin ilk üç adayda yakaladığı kapsama çok yükseldi. Araç hâlâ kesin tek ürün kararı veren bir sistem değil; veriye dayalı karar desteği sağlayan bir planlama motoru olarak konumlanmalıdır.</div>
 
     <h3>Model guveni nasil degisti?</h3>
     <p>Bu sprintten once model guveni yalnizca SMAPE/WAPE benzeri metriklerden turetilen tek bir heuristik sayi idi. Sprint 4 ile birlikte guven skoru, walk-forward dogrulama sonuclarindan kalibre edilen <strong>oneri basari olasiligi</strong> olarak yeniden tasarlandi.</p>

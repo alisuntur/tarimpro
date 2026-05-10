@@ -43,26 +43,42 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--start-year", type=int, default=2020)
     parser.add_argument("--end-year", type=int, default=2024)
     parser.add_argument("--min-products", type=int, default=4)
+    parser.add_argument(
+        "--forecast-horizon",
+        type=int,
+        default=1,
+        help="Backtestte kullanılacak horizon. Varsayılan 1'dir.",
+    )
     parser.add_argument("--write-profile", action="store_true")
     return parser.parse_args()
 
 
-def fetch_walk_forward_predictions(start_year: int, end_year: int) -> list[dict]:
+def fetch_walk_forward_predictions(start_year: int, end_year: int, forecast_horizon: int) -> list[dict]:
     with get_connection(row_factory=dict_row) as connection:
         with connection.cursor() as cursor:
             cursor.execute(
                 """
+                WITH horizon_rows AS (
+                    SELECT city_name,
+                           product_name,
+                           forecast_year,
+                           production_method,
+                           predicted_production,
+                           actual_production
+                    FROM analytics.walk_forward_predictions
+                    WHERE forecast_year BETWEEN %(start_year)s AND %(end_year)s
+                      AND horizon = %(forecast_horizon)s
+                )
                 SELECT city_name,
                        product_name,
                        forecast_year,
-                       predicted_production,
-                       actual_production,
-                       horizon
-                FROM analytics.walk_forward_predictions
-                WHERE forecast_year BETWEEN %(start_year)s AND %(end_year)s
+                       SUM(predicted_production) AS predicted_production,
+                       SUM(actual_production) AS actual_production
+                FROM horizon_rows
+                GROUP BY city_name, product_name, forecast_year
                 ORDER BY city_name ASC, forecast_year ASC, product_name ASC
                 """,
-                {"start_year": start_year, "end_year": end_year},
+                {"start_year": start_year, "end_year": end_year, "forecast_horizon": forecast_horizon},
             )
             return cursor.fetchall()
 
@@ -245,8 +261,14 @@ def ndcg_at_3(rows: list[dict]) -> float | None:
     return scored_dcg / ideal_dcg
 
 
-def run_backtest(start_year: int, end_year: int, min_products: int, weights: dict[str, float]) -> dict[str, object]:
-    predictions = fetch_walk_forward_predictions(start_year, end_year)
+def run_backtest(
+    start_year: int,
+    end_year: int,
+    min_products: int,
+    weights: dict[str, float],
+    forecast_horizon: int,
+) -> dict[str, object]:
+    predictions = fetch_walk_forward_predictions(start_year, end_year, forecast_horizon=forecast_horizon)
     production_rows = fetch_production_rows(start_year, end_year)
     consumption_rows = fetch_consumption_rows(start_year, end_year)
     climate_rows = fetch_climate_rows(start_year, end_year)
@@ -342,7 +364,7 @@ def main() -> None:
     ahp_result = ahp_weights_from_matrix(matrix_payload["criteria"], matrix_payload["matrix"])
     ahp_result["matrix"] = matrix_payload["matrix"]
     weights = normalize_weights(ahp_result["weights"])
-    backtest = run_backtest(args.start_year, args.end_year, args.min_products, weights)
+    backtest = run_backtest(args.start_year, args.end_year, args.min_products, weights, args.forecast_horizon)
 
     payload = {
         "matrixPath": repo_relative(matrix_path),

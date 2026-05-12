@@ -14,6 +14,7 @@ import {
   Users,
   X,
   Info,
+  Trash2,
 } from 'lucide-react';
 import {
   Bar,
@@ -282,6 +283,10 @@ const AdminDashboard = () => {
     title: '',
     message: '',
   });
+  const [deleteUserIdentifier, setDeleteUserIdentifier] = useState('');
+  const [deleteUserError, setDeleteUserError] = useState('');
+  const [deleteUserSuccess, setDeleteUserSuccess] = useState('');
+  const [deleteUserLoading, setDeleteUserLoading] = useState(false);
   const [selectedMetricKey, setSelectedMetricKey] = useState(null);
   const [badgeUpdatingUserId, setBadgeUpdatingUserId] = useState(null);
 
@@ -491,6 +496,46 @@ const AdminDashboard = () => {
       setBroadcastError(err.message || 'Rozet güncellenemedi.');
     } finally {
       setBadgeUpdatingUserId(null);
+    }
+  };
+
+  const handleDeleteUserSubmit = async (event) => {
+    event.preventDefault();
+
+    setDeleteUserError('');
+    setDeleteUserSuccess('');
+
+    const identifier = deleteUserIdentifier.trim();
+    if (!identifier) {
+      setDeleteUserError('Silmek için telefon, e-posta veya T.C. kimlik no girin.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `"${identifier}" ile eşleşen hesabı silmek istediğinize emin misiniz? Bu işlem geri alınamaz ve bağlı verileri de kaldırır.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeleteUserLoading(true);
+
+    try {
+      const payload = await apiFetch('/api/admin/users/delete', {
+        method: 'POST',
+        token,
+        clearOn401: false,
+        body: { identifier },
+      });
+
+      setDeleteUserSuccess(payload.message || 'Kullanıcı hesabı silindi.');
+      setDeleteUserIdentifier('');
+      setRefreshTick((value) => value + 1);
+    } catch (err) {
+      setDeleteUserError(err.message || 'Kullanıcı silinemedi.');
+    } finally {
+      setDeleteUserLoading(false);
     }
   };
 
@@ -980,6 +1025,57 @@ const AdminDashboard = () => {
               </tbody>
             </table>
           </div>
+        </section>
+
+        <section className="admin-section card admin-danger-section">
+          <div className="admin-section-header">
+            <div>
+              <p className="admin-section-kicker">Tehlikeli işlem</p>
+              <h2 className="admin-section-title">Kullanıcı hesabı sil</h2>
+            </div>
+            <p className="admin-section-note">
+              Telefon, e-posta veya T.C. kimlik numarası ile hesabı bulup kalıcı olarak silebilirsin. Bu işlem geri alınamaz.
+            </p>
+          </div>
+
+          <form className="admin-delete-card" onSubmit={handleDeleteUserSubmit}>
+            <label className="admin-input-group">
+              <span>Kullanıcı bilgisi</span>
+              <input
+                className="admin-input"
+                type="text"
+                placeholder="Telefon, e-posta veya T.C. kimlik no"
+                value={deleteUserIdentifier}
+                onChange={(event) => {
+                  setDeleteUserIdentifier(event.target.value);
+                  if (deleteUserError) {
+                    setDeleteUserError('');
+                  }
+                  if (deleteUserSuccess) {
+                    setDeleteUserSuccess('');
+                  }
+                }}
+                autoComplete="off"
+                required
+              />
+              <small className="admin-form-help">
+                Hesabın tarlaları, planları, analizleri, uyarıları ve oturumları da silinir.
+              </small>
+            </label>
+
+            <div className="admin-form-actions">
+              <button type="submit" className="admin-button danger" disabled={deleteUserLoading}>
+                <Trash2 size={16} />
+                {deleteUserLoading ? 'Siliniyor...' : 'Hesabı sil'}
+              </button>
+              <p className="admin-form-help">
+                Önce bir onay penceresi açılır, ardından eşleşen hesap kalıcı olarak silinir.
+              </p>
+            </div>
+
+            {deleteUserError && <div className="admin-error-banner">{deleteUserError}</div>}
+            {deleteUserSuccess && <div className="admin-success-banner">{deleteUserSuccess}</div>}
+          </form>
         </section>
       </div>
 

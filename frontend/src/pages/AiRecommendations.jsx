@@ -12,7 +12,21 @@ import {
     Tooltip as RechartsTooltip,
     ResponsiveContainer,
 } from 'recharts';
-import { ChevronLeft, MapPin, Scaling, Leaf, ShieldCheck, BarChart3 } from 'lucide-react';
+import {
+    BarChart3,
+    CheckCircle2,
+    ChevronLeft,
+    Database,
+    Droplets,
+    Leaf,
+    MapPin,
+    Satellite,
+    Scaling,
+    Settings2,
+    ShieldCheck,
+    Sprout,
+    ThermometerSun,
+} from 'lucide-react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { apiFetch } from '../lib/api';
 import './AiRecommendations.css';
@@ -189,9 +203,121 @@ const emptyAnalysis = {
     supplyDemand: null,
 };
 
+const ANALYSIS_LOADING_STEPS = [
+    {
+        key: 'collecting',
+        label: 'Veriler toplanıyor',
+        caption: 'Plan, hava ve geçmiş kayıtlar taranıyor.',
+        Icon: Database,
+    },
+    {
+        key: 'processing',
+        label: 'Analiz yapılıyor',
+        caption: 'Model ve piyasa sinyalleri işleniyor.',
+        Icon: Settings2,
+    },
+    {
+        key: 'finalizing',
+        label: 'Sonuçlar hazırlanıyor',
+        caption: 'Öneriler ve güven katmanı oluşturuluyor.',
+        Icon: CheckCircle2,
+    },
+];
+
+const ANALYSIS_LOADING_DECORATIONS = [
+    { key: 'satellite', Icon: Satellite, className: 'analysis-loading-orbit-item--left analysis-loading-orbit-item--top' },
+    { key: 'leaf-left', Icon: Leaf, className: 'analysis-loading-orbit-item--left analysis-loading-orbit-item--mid' },
+    { key: 'chart-left', Icon: BarChart3, className: 'analysis-loading-orbit-item--left analysis-loading-orbit-item--bottom' },
+    { key: 'droplets', Icon: Droplets, className: 'analysis-loading-orbit-item--right analysis-loading-orbit-item--top' },
+    { key: 'thermometer', Icon: ThermometerSun, className: 'analysis-loading-orbit-item--right analysis-loading-orbit-item--mid' },
+    { key: 'sprout', Icon: Sprout, className: 'analysis-loading-orbit-item--right analysis-loading-orbit-item--bottom' },
+];
+
 const shouldRefreshStalePlanAnalysis = (payload) => {
     const plannedArea = Number(payload?.plan?.plannedAreaDecare || 0);
     return Boolean(payload?.plan?.id && plannedArea > 0 && payload?.selectedCrop?.expectedProductionTon == null);
+};
+
+const getLoadingStageIndex = (progress) => {
+    if (progress < 34) {
+        return 0;
+    }
+    if (progress < 67) {
+        return 1;
+    }
+    return 2;
+};
+
+const AnalysisLoadingScreen = ({ progress }) => {
+    const safeProgress = Math.max(0, Math.min(100, Number(progress || 0)));
+    const stageIndex = getLoadingStageIndex(safeProgress);
+    const currentStage = ANALYSIS_LOADING_STEPS[stageIndex] || ANALYSIS_LOADING_STEPS[0];
+
+    return (
+        <section className="analysis-loading-screen" aria-live="polite">
+            <div className="analysis-loading-hero">
+                <div className="analysis-loading-stage">
+                    <div className="analysis-loading-orbits" aria-hidden="true">
+                        {ANALYSIS_LOADING_DECORATIONS.map(({ key, Icon, className }) => (
+                            <div key={key} className={`analysis-loading-orbit-item ${className}`}>
+                                <Icon size={18} />
+                            </div>
+                        ))}
+                    </div>
+
+                    <div
+                        className="analysis-loading-ring"
+                        role="progressbar"
+                        aria-label="Analiz hazırlama ilerlemesi"
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={Math.round(safeProgress)}
+                        style={{ '--loading-progress': `${safeProgress}%` }}
+                    >
+                        <div className="analysis-loading-ring-track" />
+                        <div className="analysis-loading-ring-shell">
+                            <div className="analysis-loading-ring-core">
+                                <img className="analysis-loading-logo" src="/tarimzeka.svg" alt="" aria-hidden="true" />
+                            </div>
+                        </div>
+                        <div className="analysis-loading-ring-badge">
+                            <strong>{`${Math.round(safeProgress)}%`}</strong>
+                            <span>{currentStage.label}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="analysis-loading-copy">
+                    <p className="analysis-loading-kicker">Yapay zeka analizi</p>
+                    <h2>
+                        <span>Analiz</span>
+                        <strong>hazırlanıyor</strong>
+                    </h2>
+                    <p>
+                        Veriler işleniyor, en doğru sonuçlar için çalışıyoruz. Bu görsel ilerleme halkası
+                        JavaScript ile güncelleniyor.
+                    </p>
+                </div>
+
+                <div className="analysis-loading-steps" role="list" aria-label="Analiz aşamaları">
+                    {ANALYSIS_LOADING_STEPS.map((step, index) => {
+                        const state = index < stageIndex ? 'done' : index === stageIndex ? 'active' : 'idle';
+                        return (
+                            <article key={step.key} className={`analysis-loading-step ${state}`} role="listitem">
+                                <div className="analysis-loading-step-icon">
+                                    <step.Icon size={18} />
+                                </div>
+                                <div className="analysis-loading-step-copy">
+                                    <span>{step.label}</span>
+                                    <small>{step.caption}</small>
+                                </div>
+                            </article>
+                        );
+                    })}
+                </div>
+            </div>
+        </section>
+    );
 };
 
 const AiRecommendations = () => {
@@ -204,6 +330,7 @@ const AiRecommendations = () => {
     const [analysis, setAnalysis] = useState(emptyAnalysis);
     const [planItems, setPlanItems] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [loadingProgress, setLoadingProgress] = useState(0);
     const [error, setError] = useState('');
     const [emptyState, setEmptyState] = useState(false);
     const isSelectionMode = !analysisId && !planId && !legacyPlan;
@@ -289,6 +416,34 @@ const AiRecommendations = () => {
         };
     }, [analysisId, isSelectionMode, legacyPlan, planId]);
 
+    useEffect(() => {
+        if (isSelectionMode) {
+            setLoadingProgress(0);
+            return undefined;
+        }
+
+        if (!loading) {
+            setLoadingProgress(100);
+            return undefined;
+        }
+
+        setLoadingProgress(8);
+
+        const timerId = window.setInterval(() => {
+            setLoadingProgress((current) => {
+                const cap = 94;
+                if (current >= cap) {
+                    return current;
+                }
+
+                const next = current + Math.max(0.35, (cap - current) * 0.08);
+                return Math.min(cap, next);
+            });
+        }, 70);
+
+        return () => window.clearInterval(timerId);
+    }, [loading, isSelectionMode]);
+
     const score = analysis.score || 0;
     const confidence = analysis.confidence || { score: 0, label: '' };
     const chartData = analysis.trendSeries || [];
@@ -320,6 +475,7 @@ const AiRecommendations = () => {
         { name: 'Score', value: shouldShowEmptyState ? 0 : score },
         { name: 'Rest', value: shouldShowEmptyState ? 100 : Math.max(0, 100 - score) },
     ];
+    const showAnalysisLoadingScreen = loading && !isSelectionMode;
 
     const handlePlanItemOpen = (item) => {
         if (item.analysisId) {
@@ -415,6 +571,27 @@ const AiRecommendations = () => {
                     )}
                     {error && <p style={{ color: '#b91c1c', marginTop: '1rem' }}>{error}</p>}
                 </div>
+            </div>
+        );
+    }
+
+    if (showAnalysisLoadingScreen) {
+        return (
+            <div className="recommendations-container animate-fade-in">
+                <div className="recommendations-header">
+                    <div className="recommendations-header-group">
+                        <button className="back-btn" onClick={() => navigate(-1)}>
+                            <ChevronLeft size={20} />
+                            {'Geri Dön'}
+                        </button>
+                        <div className="header-text">
+                            <h1>{'Yapay Zeka Analiz Sonuçları'}</h1>
+                            <p className="text-muted">{'Kaydedilen plan ve geçmiş veri üzerinden analiz hazırlanıyor'}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <AnalysisLoadingScreen progress={loadingProgress} />
             </div>
         );
     }

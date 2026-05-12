@@ -206,6 +206,10 @@ class AdminBadgeUpdateRequest(BaseModel):
     activeBadge: bool
 
 
+class AdminUserDeleteRequest(BaseModel):
+    identifier: str
+
+
 class DashboardAlertReadRequest(BaseModel):
     alertIds: list[str] | None = None
 
@@ -1530,6 +1534,27 @@ def admin_update_user_badge(user_id: str, request: AdminBadgeUpdateRequest, sess
         "success": True,
         "message": "Rozet verildi." if request.activeBadge else "Rozet kaldırıldı.",
         "user": _serialize_user(updated_user),
+        "admin": _admin_session_payload(session),
+    }
+
+
+@app.post("/api/admin/users/delete")
+def admin_delete_user(request: AdminUserDeleteRequest, session=Depends(require_admin_session)):
+    identifier = (request.identifier or "").strip()
+    if not identifier:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="KullanÄ±cÄ± bilgisi boÅŸ bÄ±rakÄ±lamaz.")
+
+    user = get_user_by_identifier(identifier)
+    if not user:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="KullanÄ±cÄ± bulunamadÄ±.")
+
+    deleted = delete_user_account(user["id"])
+    if not deleted:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="KullanÄ±cÄ± silinemedi.")
+
+    return {
+        "success": True,
+        "message": f"{user['full_name']} hesabÄ± silindi.",
         "admin": _admin_session_payload(session),
     }
 
